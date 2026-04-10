@@ -135,7 +135,10 @@ ohos_source_set("usbservice_source_set") {
   }
 
   if (usb_manager_pass_through) {
-    external_deps += [ "drivers_interface_usb:libusb_proxy_2.0" ]
+    external_deps += [ 
+      "drivers_interface_usb:libusb_proxy_2.0",
+      "drivers_interface_usb:libusb_proxy_2.1"
+    ]
   } else {
     external_deps += [
       "drivers_interface_usb:libusb_proxy_1.1",

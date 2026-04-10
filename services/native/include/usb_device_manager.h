@@ -30,6 +30,7 @@
 #ifdef USB_MANAGER_V2_0
 #include "usb_manager_subscriber.h"
 #include "v2_0/iusb_device_interface.h"
+#include "v2_1/iusb_device_interface.h"
 #include "mem_mgr_proxy.h"
 #include "mem_mgr_client.h"
 #include "system_ability_definition.h"
@@ -49,6 +50,7 @@ public:
     void Stop();
     int32_t BindUsbdSubscriber(const sptr<HDI::Usb::V2_0::IUsbdSubscriber> &subscriber);
     int32_t UnbindUsbdSubscriber(const sptr<HDI::Usb::V2_0::IUsbdSubscriber> &subscriber);
+    void ProcessCustomControlRequestUevent(int32_t status);
 #endif // USB_MANAGER_V2_0
     UsbDeviceManager();
     int32_t Init();
@@ -95,7 +97,10 @@ private:
     std::mutex functionMutex_;
     bool phyConnect_ {false};
 #ifdef USB_MANAGER_V2_0
+    int32_t GetCustomControlRequestData(int32_t id, std::vector<uint8_t> &data);
+
     sptr<HDI::Usb::V2_0::IUsbDeviceInterface> usbDeviceInterface_ = nullptr;
+    sptr<HDI::Usb::V2_1::IUsbDeviceInterface> usbDeviceInterfaceV2_1_ = nullptr;
     sptr<UsbManagerSubscriber> usbManagerSubscriber_;
 #endif // USB_MANAGER_V2_0
 };
