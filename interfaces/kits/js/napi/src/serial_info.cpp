@@ -267,21 +267,21 @@ static auto g_serialWriteExecute = [](napi_env env, void* data) {
         return;
     }
 
-    void* bufferValue = context->pData;
-    if (context->size == 0) {
+    if (context->size == 0 || context->buffer == nullptr) {
         USB_HILOGE(MODULE_USB_NAPI, "no valid data to write");
         return;
     }
 
-    std::vector<uint8_t> bufferVector(static_cast<uint8_t*>(bufferValue),
-        static_cast<uint8_t*>(bufferValue) + context->size);
+    std::vector<uint8_t> bufferVector(context->buffer, context->buffer + context->size);
+    delete[] context->buffer;
+    context->buffer = nullptr;
 
     uint32_t actualSize = 0;
     int32_t ret = g_usbClient.SerialWrite(context->portId, bufferVector, context->size, actualSize, context->timeout);
     if (ret != 0) {
         context->contextErrno = ErrorCodeConversion(ret);
     }
-    
+
     context->ret = actualSize;
 };
 
@@ -296,6 +296,10 @@ static auto g_serialWriteComplete = [](napi_env env, napi_status status, void *d
         napi_resolve_deferred(env, context->deferred, result);
     }
     napi_delete_async_work(env, context->work);
+    if (context->buffer != nullptr) {
+        delete[] context->buffer;
+        context->buffer = nullptr;
+    }
     delete context;
 };
 
@@ -334,7 +338,26 @@ static napi_value SerialWriteNapi(napi_env env, napi_callback_info info)
     asyncContext->timeout = timeoutValue;
     asyncContext->contextErrno = 0;
     asyncContext->size = bufferLength;
-    asyncContext->pData = bufferValue;
+    asyncContext->buffer = nullptr;
+
+    if (bufferLength > 0 && bufferValue != nullptr) {
+        uint8_t *nativeBuffer = new (std::nothrow) uint8_t[bufferLength];
+        if (nativeBuffer == nullptr) {
+            USB_HILOGE(MODULE_USB_NAPI, "new native buffer failed");
+            delete asyncContext;
+            return nullptr;
+        }
+
+        errno_t ret = memcpy_s(nativeBuffer, bufferLength, bufferValue, bufferLength);
+        if (ret != EOK) {
+            USB_HILOGE(MODULE_USB_NAPI, "memcpy_s failed");
+            delete[] nativeBuffer;
+            delete asyncContext;
+            return nullptr;
+        }
+        asyncContext->buffer = nativeBuffer;
+    }
+
     napi_value resourceName;
     napi_create_string_utf8(env, "SerialWrite", NAPI_AUTO_LENGTH, &resourceName);
     napi_create_async_work(env, nullptr, resourceName, g_serialWriteExecute, g_serialWriteComplete, asyncContext,
