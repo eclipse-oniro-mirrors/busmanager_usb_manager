@@ -27,10 +27,6 @@ public:
     static int32_t ParseDeviceDescriptor(const uint8_t *buffer, uint32_t length, UsbDevice &dev);
     static int32_t ParseConfigDescriptors(std::vector<uint8_t> &descriptor, uint32_t offset,
         std::vector<USBConfig> &configs);
-    static int32_t ParseConfigDescriptor(const uint8_t *buffer, uint32_t length, uint32_t &cursor, USBConfig &config);
-    static int32_t ParseInterfaceDescriptor(const uint8_t *buffer, uint32_t length, uint32_t &cursor,
-        UsbInterface &interface);
-    static int32_t ParseEndpointDescriptor(const uint8_t *buffer, uint32_t length, uint32_t &cursor, USBEndpoint &ep);
 };
 } // namespace USB
 } // namespace OHOS
