@@ -303,6 +303,29 @@ static auto g_serialWriteComplete = [](napi_env env, napi_status status, void *d
     delete context;
 };
 
+static bool InitWriteBuffer(napi_env env, void* bufferValue, size_t bufferLength, SerialWriteAsyncContext* asyncContext)
+{
+    asyncContext->size = bufferLength;
+    asyncContext->buffer = nullptr;
+
+    if (bufferLength > 0 && bufferValue != nullptr) {
+        uint8_t *nativeBuffer = new (std::nothrow) uint8_t[bufferLength];
+        if (nativeBuffer == nullptr) {
+            USB_HILOGE(MODULE_USB_NAPI, "new native buffer failed");
+            return false;
+        }
+
+        errno_t ret = memcpy_s(nativeBuffer, bufferLength, bufferValue, bufferLength);
+        if (ret != EOK) {
+            USB_HILOGE(MODULE_USB_NAPI, "memcpy_s failed");
+            delete[] nativeBuffer;
+            return false;
+        }
+        asyncContext->buffer = nativeBuffer;
+    }
+    return true;
+}
+
 static napi_value SerialWriteNapi(napi_env env, napi_callback_info info)
 {
     USB_HILOGI(MODULE_USB_NAPI, "start write Napi");
@@ -337,25 +360,10 @@ static napi_value SerialWriteNapi(napi_env env, napi_callback_info info)
     asyncContext->portId = portIdValue;
     asyncContext->timeout = timeoutValue;
     asyncContext->contextErrno = 0;
-    asyncContext->size = bufferLength;
-    asyncContext->buffer = nullptr;
 
-    if (bufferLength > 0 && bufferValue != nullptr) {
-        uint8_t *nativeBuffer = new (std::nothrow) uint8_t[bufferLength];
-        if (nativeBuffer == nullptr) {
-            USB_HILOGE(MODULE_USB_NAPI, "new native buffer failed");
-            delete asyncContext;
-            return nullptr;
-        }
-
-        errno_t ret = memcpy_s(nativeBuffer, bufferLength, bufferValue, bufferLength);
-        if (ret != EOK) {
-            USB_HILOGE(MODULE_USB_NAPI, "memcpy_s failed");
-            delete[] nativeBuffer;
-            delete asyncContext;
-            return nullptr;
-        }
-        asyncContext->buffer = nativeBuffer;
+    if (!InitWriteBuffer(env, bufferValue, bufferLength, asyncContext)) {
+        delete asyncContext;
+        return nullptr;
     }
 
     napi_value resourceName;
