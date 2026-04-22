@@ -281,7 +281,7 @@ static auto g_serialWriteExecute = [](napi_env env, void* data) {
     if (ret != 0) {
         context->contextErrno = ErrorCodeConversion(ret);
     }
-    
+
     context->ret = actualSize;
 };
 
@@ -296,6 +296,9 @@ static auto g_serialWriteComplete = [](napi_env env, napi_status status, void *d
         napi_resolve_deferred(env, context->deferred, result);
     }
     napi_delete_async_work(env, context->work);
+    if (context->bufferRef) {
+        napi_delete_reference(env, context->bufferRef);
+    }
     delete context;
 };
 
@@ -335,6 +338,14 @@ static napi_value SerialWriteNapi(napi_env env, napi_callback_info info)
     asyncContext->contextErrno = 0;
     asyncContext->size = bufferLength;
     asyncContext->pData = bufferValue;
+    napi_ref bufferRef = nullptr;
+    napi_status refStatus = napi_create_reference(env, buffer, 1, &bufferRef);
+    if (refStatus != napi_ok) {
+        USB_HILOGE(MODULE_USB_NAPI, "create buffer reference failed");
+        delete asyncContext;
+        return nullptr;
+    }
+    asyncContext->bufferRef = bufferRef;
     napi_value resourceName;
     napi_create_string_utf8(env, "SerialWrite", NAPI_AUTO_LENGTH, &resourceName);
     napi_create_async_work(env, nullptr, resourceName, g_serialWriteExecute, g_serialWriteComplete, asyncContext,

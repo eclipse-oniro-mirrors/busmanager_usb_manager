@@ -40,9 +40,18 @@ UsbIsoParcel *UsbIsoParcel::Unmarshalling(Parcel &in)
         return nullptr;
     }
 
-    usbIsoParcel->isoInfo.isoLength = in.ReadInt32();
-    usbIsoParcel->isoInfo.isoActualLength = in.ReadInt32();
-    usbIsoParcel->isoInfo.isoStatus = in.ReadInt32();
+    if (!in.ReadInt32(usbIsoParcel->isoInfo.isoLength)) {
+        delete usbIsoParcel;
+        return nullptr;
+    }
+    if (!in.ReadInt32(usbIsoParcel->isoInfo.isoActualLength)) {
+        delete usbIsoParcel;
+        return nullptr;
+    }
+    if (!in.ReadInt32(usbIsoParcel->isoInfo.isoStatus)) {
+        delete usbIsoParcel;
+        return nullptr;
+    }
     return usbIsoParcel;
 }
 
@@ -123,9 +132,18 @@ UsbPassIsoParcel *UsbPassIsoParcel::Unmarshalling(Parcel &in)
         return nullptr;
     }
 
-    usbPassIsoParcel->isoInfo.isoLength = in.ReadInt32();
-    usbPassIsoParcel->isoInfo.isoActualLength = in.ReadInt32();
-    usbPassIsoParcel->isoInfo.isoStatus = in.ReadInt32();
+    if (!in.ReadInt32(usbPassIsoParcel->isoInfo.isoLength)) {
+        delete usbPassIsoParcel;
+        return nullptr;
+    }
+    if (!in.ReadInt32(usbPassIsoParcel->isoInfo.isoActualLength)) {
+        delete usbPassIsoParcel;
+        return nullptr;
+    }
+    if (!in.ReadInt32(usbPassIsoParcel->isoInfo.isoStatus)) {
+        delete usbPassIsoParcel;
+        return nullptr;
+    }
     return usbPassIsoParcel;
 }
 
