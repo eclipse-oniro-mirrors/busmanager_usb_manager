@@ -73,7 +73,8 @@ typedef struct SerialWriteAsyncContext {
     int32_t portId;
     uint32_t size;
     uint32_t timeout;
-    uint8_t* buffer;
+    void* pData;
+    napi_ref bufferRef;
 } SerialWriteAsyncContext;
 
 typedef struct SerialReadAsyncContext {

@@ -267,14 +267,14 @@ static auto g_serialWriteExecute = [](napi_env env, void* data) {
         return;
     }
 
-    if (context->size == 0 || context->buffer == nullptr) {
+    void* bufferValue = context->pData;
+    if (context->size == 0) {
         USB_HILOGE(MODULE_USB_NAPI, "no valid data to write");
         return;
     }
 
-    std::vector<uint8_t> bufferVector(context->buffer, context->buffer + context->size);
-    delete[] context->buffer;
-    context->buffer = nullptr;
+    std::vector<uint8_t> bufferVector(static_cast<uint8_t*>(bufferValue),
+        static_cast<uint8_t*>(bufferValue) + context->size);
 
     uint32_t actualSize = 0;
     int32_t ret = g_usbClient.SerialWrite(context->portId, bufferVector, context->size, actualSize, context->timeout);
@@ -296,35 +296,11 @@ static auto g_serialWriteComplete = [](napi_env env, napi_status status, void *d
         napi_resolve_deferred(env, context->deferred, result);
     }
     napi_delete_async_work(env, context->work);
-    if (context->buffer != nullptr) {
-        delete[] context->buffer;
-        context->buffer = nullptr;
+    if (context->bufferRef) {
+        napi_delete_reference(env, context->bufferRef);
     }
     delete context;
 };
-
-static bool InitWriteBuffer(napi_env env, void* bufferValue, size_t bufferLength, SerialWriteAsyncContext* asyncContext)
-{
-    asyncContext->size = bufferLength;
-    asyncContext->buffer = nullptr;
-
-    if (bufferLength > 0 && bufferValue != nullptr) {
-        uint8_t *nativeBuffer = new (std::nothrow) uint8_t[bufferLength];
-        if (nativeBuffer == nullptr) {
-            USB_HILOGE(MODULE_USB_NAPI, "new native buffer failed");
-            return false;
-        }
-
-        errno_t ret = memcpy_s(nativeBuffer, bufferLength, bufferValue, bufferLength);
-        if (ret != EOK) {
-            USB_HILOGE(MODULE_USB_NAPI, "memcpy_s failed");
-            delete[] nativeBuffer;
-            return false;
-        }
-        asyncContext->buffer = nativeBuffer;
-    }
-    return true;
-}
 
 static napi_value SerialWriteNapi(napi_env env, napi_callback_info info)
 {
@@ -360,12 +336,16 @@ static napi_value SerialWriteNapi(napi_env env, napi_callback_info info)
     asyncContext->portId = portIdValue;
     asyncContext->timeout = timeoutValue;
     asyncContext->contextErrno = 0;
-
-    if (!InitWriteBuffer(env, bufferValue, bufferLength, asyncContext)) {
+    asyncContext->size = bufferLength;
+    asyncContext->pData = bufferValue;
+    napi_ref bufferRef = nullptr;
+    napi_status refStatus = napi_create_reference(env, buffer, 1, &bufferRef);
+    if (refStatus != napi_ok) {
+        USB_HILOGE(MODULE_USB_NAPI, "create buffer reference failed");
         delete asyncContext;
         return nullptr;
     }
-
+    asyncContext->bufferRef = bufferRef;
     napi_value resourceName;
     napi_create_string_utf8(env, "SerialWrite", NAPI_AUTO_LENGTH, &resourceName);
     napi_create_async_work(env, nullptr, resourceName, g_serialWriteExecute, g_serialWriteComplete, asyncContext,
