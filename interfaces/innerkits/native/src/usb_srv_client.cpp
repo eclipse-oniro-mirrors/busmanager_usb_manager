@@ -489,8 +489,6 @@ int32_t UsbSrvClient::BulkCancel(USBDevicePipe &pipe, const USBEndpoint &endpoin
     return ret;
 }
 
-}
-
 int32_t UsbSrvClient::AddAccessRight(const std::string &tokenId, const std::string &deviceName)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
