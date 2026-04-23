@@ -489,15 +489,6 @@ int32_t UsbSrvClient::BulkCancel(USBDevicePipe &pipe, const USBEndpoint &endpoin
     return ret;
 }
 
-int32_t UsbSrvClient::AddRight(const std::string &bundleName, const std::string &deviceName)
-{
-    RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
-    USB_HILOGI(MODULE_USB_INNERKIT, "Calling AddRight");
-    int32_t ret = proxy_->AddRight(bundleName, deviceName);
-    if (ret != UEC_OK) {
-        USB_HILOGE(MODULE_USB_INNERKIT, "failed ret = %{public}d!", ret);
-    }
-    return ret;
 }
 
 int32_t UsbSrvClient::AddAccessRight(const std::string &tokenId, const std::string &deviceName)
@@ -796,11 +787,6 @@ int32_t UsbSrvClient::BulkCancel(USBDevicePipe &pipe, const USBEndpoint &endpoin
     return CAPABILITY_NOT_SUPPORT;
 }
 
-int32_t UsbSrvClient::AddRight(const std::string &bundleName, const std::string &deviceName)
-{
-    USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
-    return CAPABILITY_NOT_SUPPORT;
-}
 
 int32_t UsbSrvClient::AddAccessRight(const std::string &tokenId, const std::string &deviceName)
 {

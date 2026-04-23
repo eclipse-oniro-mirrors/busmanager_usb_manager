@@ -155,7 +155,6 @@ public:
     int32_t HasRight(const std::string &deviceName, bool &hasRight) override;
     int32_t RequestRight(const std::string &deviceName) override;
     int32_t RemoveRight(const std::string &deviceName) override;
-    int32_t AddRight(const std::string &bundleName, const std::string &deviceName) override;
     int32_t AddAccessRight(const std::string &tokenId, const std::string &deviceName) override;
 #endif // USB_MANAGER_FEATURE_HOST
 #ifdef USB_MANAGER_FEATURE_DEVICE
@@ -272,7 +271,6 @@ private:
     void ReportUsbSerialOperationFaultSysEvent(int32_t portId, const std::string &operationType, int32_t failReason,
         const std::string &failDescription);
 #ifdef USB_MANAGER_FEATURE_HOST
-    bool GetBundleInfo(std::string &tokenId, int32_t &userId);
     void UsbCtrlTransferChange(HDI::Usb::V1_0::UsbCtrlTransfer &param, const UsbCtlSetUp &ctlSetup);
     void UsbCtrlTransferChange(HDI::Usb::V1_2::UsbCtrlTransferParams &param, const UsbCtlSetUp &ctlSetup);
     void UsbDeviceIdChange(const std::vector<UsbDeviceIdInfo> &deviceIdInfoList,

@@ -62,7 +62,6 @@ interface OHOS.USB.IUsbServer {
     [macrodef USB_MANAGER_FEATURE_HOST] void HasRight([in]String deviceName, [out]boolean hasRight);
     [macrodef USB_MANAGER_FEATURE_HOST] void RequestRight([in]String deviceName);
     [macrodef USB_MANAGER_FEATURE_HOST] void RemoveRight([in]String deviceName);
-    [macrodef USB_MANAGER_FEATURE_HOST] void AddRight([in]String bundleName, [in]String deviceName);
     [macrodef USB_MANAGER_FEATURE_HOST] void AddAccessRight([in]String tokenId, [in]String deviceName);
 
     [macrodef USB_MANAGER_FEATURE_DEVICE] void GetCurrentFunctions([out] int funcs);

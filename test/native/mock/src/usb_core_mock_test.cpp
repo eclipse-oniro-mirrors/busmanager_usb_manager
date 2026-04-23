@@ -416,28 +416,6 @@ HWTEST_F(UsbCoreMockTest, UsbHasRight001, TestSize.Level1)
 }
 
 /**
- * @tc.name: UsbHasRight002
- * @tc.desc: bool HasRight(const std::string deviceName)
- * @tc.desc: Positive test: program correctly
- * @tc.type: FUNC
- */
-HWTEST_F(UsbCoreMockTest, UsbHasRight002, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : UsbHasRight002: SetConfig");
-    std::string deviceName = "device_80";
-    bool result = usbSrv_->HasRight(deviceName);
-    ASSERT_TRUE(result);
-
-    std::string bundleName;
-    UsbCoreMockTest::GetBundleName(bundleName);
-    // AddRight is called for system app,and third-party app should use RequestRight
-    usbSrv_->AddRight(bundleName, deviceName);
-
-    result = usbSrv_->HasRight(deviceName);
-    ASSERT_TRUE(result);
-}
-
-/**
  * @tc.name: UsbHasRight003
  * @tc.desc: bool HasRight(const std::string deviceName)
  * @tc.desc: Negative test: first AddRight ,second HasRight
@@ -456,79 +434,6 @@ HWTEST_F(UsbCoreMockTest, UsbHasRight003, TestSize.Level1)
     deviceName = "device_81";
     result = usbSrv_->HasRight(deviceName);
     ASSERT_TRUE(result);
-}
-
-/**
- * @tc.name: UsbHasRight004
- * @tc.desc: bool HasRight(const std::string deviceName)
- * @tc.desc: Positive test: program correctly
- * @tc.type: FUNC
- */
-HWTEST_F(UsbCoreMockTest, UsbHasRight004, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : UsbHasRight004: SetConfig");
-    std::string deviceName = "device_82";
-    bool result = usbSrv_->HasRight(deviceName);
-    ASSERT_TRUE(result);
-
-    std::string bundleName;
-    UsbCoreMockTest::GetBundleName(bundleName);
-    // AddRight is called for system app,and third-party app should use RequestRight
-    usbSrv_->AddRight(bundleName, deviceName);
-
-    result = usbSrv_->HasRight(deviceName);
-    ASSERT_TRUE(result);
-
-    int32_t ret = usbSrv_->RemoveRight(deviceName);
-    ASSERT_EQ(0, ret);
-}
-
-/**
- * @tc.name: UsbAddRight001
- * @tc.desc: Test functions of requestright
- * @tc.desc: int32_t requestRight(const std::string deviceName)
- * @tc.desc: RequestRight then RemoveRight
- * @tc.type: FUNC
- */
-HWTEST_F(UsbCoreMockTest, UsbAddRight001, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : Usbrequestright001: SetConfig");
-    std::string deviceName = "device_83";
-    std::string bundleName;
-    UsbCoreMockTest::GetBundleName(bundleName);
-    // AddRight is called for system app,and third-party app should use RequestRight
-    usbSrv_->AddRight(bundleName, deviceName);
-
-    bool result = usbSrv_->HasRight(deviceName);
-    ASSERT_TRUE(result);
-
-    int32_t ret = usbSrv_->RemoveRight(deviceName);
-    ASSERT_EQ(0, ret);
-}
-
-/**
- * @tc.name: UsbAddRight002
- * @tc.desc: Test functions of requestright
- * @tc.desc: int32_t requestRight(const std::string deviceName)
- * @tc.type: FUNC
- */
-HWTEST_F(UsbCoreMockTest, UsbAddRight002, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : UsbAddRight002: SetConfig");
-    std::string deviceName = "device_81";
-    bool result = usbSrv_->HasRight(deviceName);
-    ASSERT_TRUE(result);
-
-    std::string bundleName;
-    UsbCoreMockTest::GetBundleName(bundleName);
-    // AddRight is called for system app,and third-party app should use RequestRight
-    usbSrv_->AddRight(bundleName, deviceName);
-
-    result = usbSrv_->HasRight(deviceName);
-    ASSERT_TRUE(result);
-
-    int32_t ret = usbSrv_->RemoveRight(deviceName);
-    ASSERT_EQ(0, ret);
 }
 
 /**
