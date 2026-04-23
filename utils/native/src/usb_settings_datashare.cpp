@@ -91,7 +91,7 @@ bool UsbSettingDataShare::Query(Uri &uri, const std::string &key, std::string &v
     if (result->GoToFirstRow() != DataShare::E_OK) {
         USB_HILOGE(MODULE_USB_UTILS, "query error, go to first row error");
         result->Close();
-        return false;
+        return true;
     }
  
     int columnIndex = 0;
