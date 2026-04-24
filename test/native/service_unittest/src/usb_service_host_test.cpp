@@ -625,42 +625,6 @@ HWTEST_F(UsbServiceHostTest, RemoveRight002, TestSize.Level1)
     USB_HILOGI(MODULE_USB_SERVICE, "Case End : RemoveRight002");
 }
 
-HWTEST_F(UsbServiceHostTest, AddRight001, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : AddRight001");
-    std::string bundleName = "com.test.bundle";
-    std::string deviceName = "1-2";
-    auto &instance = UsbSrvClient::GetInstance();
-    int32_t ret = instance.AddRight(bundleName, deviceName);
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbServiceHostTest::AddRight001 ret=%{public}d", ret);
-    ASSERT_TRUE(ret == UEC_OK || ret == UEC_SERVICE_PERMISSION_DENIED);
-    USB_HILOGI(MODULE_USB_SERVICE, "Case End : AddRight001");
-}
-
-HWTEST_F(UsbServiceHostTest, AddRight002, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : AddRight002");
-    std::string bundleName = "";
-    std::string deviceName = "1-2";
-    auto &instance = UsbSrvClient::GetInstance();
-    int32_t ret = instance.AddRight(bundleName, deviceName);
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbServiceHostTest::AddRight002 ret=%{public}d", ret);
-    ASSERT_TRUE(ret != UEC_OK);
-    USB_HILOGI(MODULE_USB_SERVICE, "Case End : AddRight002");
-}
-
-HWTEST_F(UsbServiceHostTest, AddRight003, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : AddRight003");
-    std::string bundleName = "com.test.bundle";
-    std::string deviceName = "";
-    auto &instance = UsbSrvClient::GetInstance();
-    int32_t ret = instance.AddRight(bundleName, deviceName);
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbServiceHostTest::AddRight003 ret=%{public}d", ret);
-    ASSERT_TRUE(ret != UEC_OK);
-    USB_HILOGI(MODULE_USB_SERVICE, "Case End : AddRight003");
-}
-
 HWTEST_F(UsbServiceHostTest, ResetDevice001, TestSize.Level1)
 {
     USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ResetDevice001");
@@ -686,18 +650,6 @@ HWTEST_F(UsbServiceHostTest, ResetDevice002, TestSize.Level1)
 }
 
 #endif // USB_MANAGER_FEATURE_HOST
-
-HWTEST_F(UsbServiceHostTest, AddRight003, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : AddRight003");
-    std::string bundleName = "com.test.bundle";
-    std::string deviceName = "";
-    auto &instance = UsbSrvClient::GetInstance();
-    int32_t ret = instance.AddRight(bundleName, deviceName);
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbServiceHostTest::AddRight003 ret=%{public}d", ret);
-    ASSERT_TRUE(ret != UEC_OK);
-    USB_HILOGI(MODULE_USB_SERVICE, "Case End : AddRight003");
-}
 
 HWTEST_F(UsbServiceHostTest, ResetDevice001, TestSize.Level1)
 {
@@ -925,30 +877,6 @@ HWTEST_F(UsbServiceHostTest, RequestRight005, TestSize.Level1)
     USB_HILOGI(MODULE_USB_SERVICE, "UsbServiceHostTest::RequestRight005 ret=%{public}d", ret);
     ASSERT_TRUE(ret != UEC_OK);
     USB_HILOGI(MODULE_USB_SERVICE, "Case End : RequestRight005");
-}
-
-HWTEST_F(UsbServiceHostTest, AddDeviceRight001, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : AddDeviceRight001");
-    std::string bundleName = "test.bundle.name";
-    std::string deviceName = "test";
-    auto &instance = UsbSrvClient::GetInstance();
-    int32_t ret = instance.AddRight(bundleName, deviceName);
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbServiceHostTest::AddDeviceRight001 ret=%{public}d", ret);
-    ASSERT_TRUE(ret != UEC_OK);
-    USB_HILOGI(MODULE_USB_SERVICE, "Case End : AddDeviceRight001");
-}
-
-HWTEST_F(UsbServiceHostTest, AddDeviceRight002, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : AddDeviceRight002");
-    std::string bundleName = "com.example.test";
-    std::string deviceName = "0-0";
-    auto &instance = UsbSrvClient::GetInstance();
-    int32_t ret = instance.AddRight(bundleName, deviceName);
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbServiceHostTest::AddDeviceRight002 ret=%{public}d", ret);
-    ASSERT_TRUE(ret != UEC_OK);
-    USB_HILOGI(MODULE_USB_SERVICE, "Case End : AddDeviceRight002");
 }
 
 HWTEST_F(UsbServiceHostTest, RemoveDeviceRight001, TestSize.Level1)
@@ -1319,30 +1247,6 @@ HWTEST_F(UsbServiceHostTest, RightManagement006, TestSize.Level1)
     USB_HILOGI(MODULE_USB_SERVICE, "UsbServiceHostTest::RightManagement006 ret=%{public}d", ret);
     ASSERT_TRUE(ret == UEC_OK || ret == UEC_SERVICE_INVALID_VALUE);
     USB_HILOGI(MODULE_USB_SERVICE, "Case End : RightManagement006");
-}
-
-HWTEST_F(UsbServiceHostTest, AddRight004, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : AddRight004");
-    std::string bundleName = "com.test.addright";
-    std::string deviceName = "8-9";
-    auto &instance = UsbSrvClient::GetInstance();
-    int32_t ret = instance.AddRight(bundleName, deviceName);
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbServiceHostTest::AddRight004 ret=%{public}d", ret);
-    ASSERT_TRUE(ret == UEC_OK || ret == UEC_SERVICE_PERMISSION_DENIED);
-    USB_HILOGI(MODULE_USB_SERVICE, "Case End : AddRight004");
-}
-
-HWTEST_F(UsbServiceHostTest, AddRight005, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : AddRight005");
-    std::string bundleName = "com.test.bundle1";
-    std::string deviceName = "11-12";
-    auto &instance = UsbSrvClient::GetInstance();
-    int32_t ret = instance.AddRight(bundleName, deviceName);
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbServiceHostTest::AddRight005 ret=%{public}d", ret);
-    ASSERT_TRUE(ret == UEC_OK || ret == UEC_SERVICE_PERMISSION_DENIED);
-    USB_HILOGI(MODULE_USB_SERVICE, "Case End : AddRight005");
 }
 
 HWTEST_F(UsbServiceHostTest, DeviceSearch001, TestSize.Level1)

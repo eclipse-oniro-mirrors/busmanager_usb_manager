@@ -711,42 +711,6 @@ static napi_value DeviceCloseAccessory(napi_env env, napi_callback_info info)
     return nullptr;
 }
 
-static napi_value DeviceAddRight(napi_env env, napi_callback_info info)
-{
-    if (!HasFeature(FEATURE_HOST)) {
-        ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
-        return nullptr;
-    }
-    size_t argc = PARAM_COUNT_2;
-    napi_value argv[PARAM_COUNT_2] = {nullptr};
-    NAPI_CHECK(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr), "Get call back info failed");
-    USB_ASSERT(env, (argc >= PARAM_COUNT_2), OHEC_COMMON_PARAM_ERROR, "The function at least takes two argument.");
-
-    napi_valuetype type;
-    NAPI_CHECK(env, napi_typeof(env, argv[INDEX_0], &type), "Get args 1 type failed");
-    USB_ASSERT(env, type == napi_string, OHEC_COMMON_PARAM_ERROR, "The type of bundleName must be string.");
-    std::string bundleName;
-    NapiUtil::JsValueToString(env, argv[INDEX_0], STR_DEFAULT_SIZE, bundleName);
-
-    NAPI_CHECK(env, napi_typeof(env, argv[INDEX_1], &type), "Get args 2 type failed");
-    USB_ASSERT(env, type == napi_string, OHEC_COMMON_PARAM_ERROR, "The type of deviceName must be string.");
-    std::string deviceName;
-    NapiUtil::JsValueToString(env, argv[INDEX_1], STR_DEFAULT_SIZE, deviceName);
-
-    napi_value result;
-    int32_t ret = g_usbClient.AddRight(bundleName, deviceName);
-    USB_HILOGD(MODULE_USB_NAPI, "Device call AddRight ret: %{public}d", ret);
-    if (ret == UEC_OK) {
-        napi_get_boolean(env, true, &result);
-    } else {
-        USB_ASSERT_RETURN_UNDEF(env, (ret != UEC_SERVICE_PERMISSION_DENIED_SYSAPI),
-            OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
-        USB_ASSERT_RETURN_UNDEF(env, (ret != UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED),
-            OHEC_COMMON_PERMISSION_NOT_ALLOWED, "");
-        napi_get_boolean(env, false, &result);
-    }
-    return result;
-}
 
 static napi_value DeviceAddAccessoryRight(napi_env env, napi_callback_info info)
 {
@@ -2878,7 +2842,6 @@ napi_value UsbInit(napi_env env, napi_value exports)
 
         /* fort test get usb service version */
         DECLARE_NAPI_FUNCTION("getVersion", GetVersion),
-        DECLARE_NAPI_FUNCTION("addRight", DeviceAddRight),
         DECLARE_NAPI_FUNCTION("addDeviceAccessRight", DeviceAddAccessRight),
         DECLARE_NAPI_FUNCTION("removeRight", DeviceRemoveRight),
         DECLARE_NAPI_FUNCTION("getAccessoryList", DeviceGetAccessoryList),

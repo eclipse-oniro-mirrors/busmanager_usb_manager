@@ -561,30 +561,6 @@ HWTEST_F(UsbServiceTest, RemoveRight001, TestSize.Level1)
     USB_HILOGI(MODULE_USB_SERVICE, "Case End : RemoveRight001");
 }
 
-HWTEST_F(UsbServiceTest, AddRight001, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : AddRight001");
-    auto &instance = UsbSrvClient::GetInstance();
-    std::string deviceName = std::to_string(TEST_BUS_NUM_1) + "-" + std::to_string(TEST_DEV_ADDR_1);
-    std::string bundleName = "com.example.usbtest";
-    int32_t ret = instance.AddRight(bundleName, deviceName);
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbServiceTest::ret=%{public}d", ret);
-    ASSERT_GE(ret, UEC_OK);
-    USB_HILOGI(MODULE_USB_SERVICE, "Case End : AddRight001");
-}
-
-HWTEST_F(UsbServiceTest, AddRight002, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : AddRight002");
-    auto &instance = UsbSrvClient::GetInstance();
-    std::string deviceName = std::to_string(TEST_BUS_NUM_2) + "-" + std::to_string(TEST_DEV_ADDR_2);
-    std::string bundleName = "com.example.usbtest2";
-    int32_t ret = instance.AddRight(bundleName, deviceName);
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbServiceTest::ret=%{public}d", ret);
-    ASSERT_GE(ret, UEC_OK);
-    USB_HILOGI(MODULE_USB_SERVICE, "Case End : AddRight002");
-}
-
 HWTEST_F(UsbServiceTest, BulkTransferRead001, TestSize.Level1)
 {
     USB_HILOGI(MODULE_USB_SERVICE, "Case Start : BulkTransferRead001");
@@ -3253,18 +3229,6 @@ HWTEST_F(UsbServiceTest, RemoveRight003, TestSize.Level1)
     USB_HILOGI(MODULE_USB_SERVICE, "UsbServiceTest::ret=%{public}d", ret);
     ASSERT_GE(ret, UEC_OK);
     USB_HILOGI(MODULE_USB_SERVICE, "Case End : RemoveRight003");
-}
-
-HWTEST_F(UsbServiceTest, AddRight003, TestSize.Level1)
-{
-    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : AddRight003");
-    auto &instance = UsbSrvClient::GetInstance();
-    std::string deviceName = "1-1";
-    std::string bundleName = "com.example.test3";
-    int32_t ret = instance.AddRight(bundleName, deviceName);
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbServiceTest::ret=%{public}d", ret);
-    ASSERT_GE(ret, UEC_OK);
-    USB_HILOGI(MODULE_USB_SERVICE, "Case End : AddRight003");
 }
 
 HWTEST_F(UsbServiceTest, HasRight003, TestSize.Level1)
