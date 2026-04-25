@@ -38,6 +38,7 @@ constexpr int32_t ERR_CODE_IOEXCEPTION = -1;
 constexpr int32_t ERR_CODE_DEVICENOTOPEN = -6;
 constexpr int32_t ERR_CODE_TIMEOUT = -7;
 constexpr int32_t ERR_CODE_ERROR_OVERFLOW = -8;
+constexpr int32_t ERR_CODE_ERROR_DEVICE_BUSY = -16;
 
 SerialManager::SerialManager()
 {
@@ -64,6 +65,8 @@ inline int32_t ErrorCodeWrap(int32_t errorCode)
         return USB::UEC_SERIAL_DEVICENOTOPEN;
     } else if (errorCode == ERR_CODE_TIMEOUT) {
         return USB::UEC_INTERFACE_TIMED_OUT;
+    } else if (errorCode == ERR_CODE_ERROR_DEVICE_BUSY) {
+        return USB::UEC_SERIAL_PORT_REPEAT_OPEN;
     } else {
         return USB::UEC_SERIAL_OTHER_ERROR;
     }
