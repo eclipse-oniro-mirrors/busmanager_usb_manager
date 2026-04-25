@@ -1160,7 +1160,8 @@ static napi_value UsbFunctionsToString(napi_env env, napi_callback_info info, st
     int32_t funcs;
     napi_get_value_int32(env, argv[INDEX_0], &funcs);
     std::string strFuncs = g_usbClient.UsbFunctionsToString(funcs);
-    int32_t ret = (strFuncs == PERMISSION_DENIED_SYSAPI || strFuncs == SYS_APP_PERMISSION_DENIED_SYSAPI) ? UEC_SERVICE_PERMISSION_DENIED_SYSAPI : UEC_OK;
+    int32_t ret = (strFuncs == PERMISSION_DENIED_SYSAPI ||
+        strFuncs == SYS_APP_PERMISSION_DENIED_SYSAPI) ? UEC_SERVICE_PERMISSION_DENIED_SYSAPI : UEC_OK;
     metrics.MetricsEnumAndTime(ret);
     USB_ASSERT_RETURN_UNDEF(env, (strFuncs != PERMISSION_DENIED_SYSAPI), OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
     USB_ASSERT_RETURN_UNDEF(env, (strFuncs != SYS_APP_PERMISSION_DENIED_SYSAPI),

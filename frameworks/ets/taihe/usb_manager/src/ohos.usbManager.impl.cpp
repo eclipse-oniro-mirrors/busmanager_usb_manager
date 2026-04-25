@@ -494,7 +494,9 @@ string getStringFromFunctions(int32_t funcs)
         return "";
     }
     std::string strFuncs = g_usbClient.UsbFunctionsToString(funcs);
-    int32_t ret = (strFuncs == OHOS::USB::PERMISSION_DENIED_SYSAPI || strFuncs == OHOS::USB::SYS_APP_PERMISSION_DENIED_SYSAPI) ? OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI : OHOS::USB::UEC_OK;
+    int32_t ret = (strFuncs == OHOS::USB::PERMISSION_DENIED_SYSAPI ||
+        strFuncs == OHOS::USB::SYS_APP_PERMISSION_DENIED_SYSAPI) ?
+        OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI : OHOS::USB::UEC_OK;
     metrics.MetricsEnumAndTime(ret);
     if (strFuncs == OHOS::USB::PERMISSION_DENIED_SYSAPI) {
         ThrowBusinessError(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
