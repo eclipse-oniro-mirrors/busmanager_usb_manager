@@ -82,6 +82,7 @@ struct USBAccessoryRightAsyncContext : USBAsyncContext {
 struct USBFunctionAsyncContext : USBAsyncContext {
     int32_t functions;
     int32_t errCode;
+    std::string metricsName;
 };
 
 struct USBPortRoleAsyncContext : USBAsyncContext {
@@ -89,6 +90,7 @@ struct USBPortRoleAsyncContext : USBAsyncContext {
     int32_t powerRole;
     int32_t dataRole;
     int32_t errCode;
+    std::string metricsName;
 };
 
 struct USBControlTransferAsyncContext : USBAsyncContext {

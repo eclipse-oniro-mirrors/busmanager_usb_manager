@@ -537,6 +537,7 @@ static void ParseAccessoryObj(const napi_env env, const napi_value accessoryObj,
 
 static napi_value CoreGetDevices(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetDevices");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -548,6 +549,7 @@ static napi_value CoreGetDevices(napi_env env, napi_callback_info info)
 
     std::vector<UsbDevice> deviceList;
     int32_t ret = g_usbClient.GetDevices(deviceList);
+    metrics.MetricsEnumAndTime(ret);
 
     napi_value result;
     napi_create_array(env, &result);
@@ -571,6 +573,7 @@ static napi_value CoreGetDevices(napi_env env, napi_callback_info info)
 
 static napi_value DeviceGetAccessoryList(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetAccessoryList");
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -582,6 +585,7 @@ static napi_value DeviceGetAccessoryList(napi_env env, napi_callback_info info)
 
     std::vector<USBAccessory> accessoryList;
     int32_t ret = g_usbClient.GetAccessoryList(accessoryList);
+    metrics.MetricsEnumAndTime(ret);
     if (ret == UEC_OK) {
         napi_value result;
         napi_create_array(env, &result);
@@ -604,6 +608,7 @@ static napi_value DeviceGetAccessoryList(napi_env env, napi_callback_info info)
 
 static napi_value CoreConnectDevice(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.ConnectDevice");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -622,6 +627,7 @@ static napi_value CoreConnectDevice(napi_env env, napi_callback_info info)
 
     USBDevicePipe pipe;
     int32_t ret = g_usbClient.OpenDevice(dev, pipe);
+    metrics.MetricsEnumAndTime(ret);
     napi_value pipObj = nullptr;
     if (ret == UEC_OK) {
         CreateUsbDevicePipe(env, pipObj, pipe);
@@ -637,6 +643,7 @@ static napi_value CoreConnectDevice(napi_env env, napi_callback_info info)
 
 static napi_value DeviceOpenAccessory(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.OpenAccessory");
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -655,6 +662,7 @@ static napi_value DeviceOpenAccessory(napi_env env, napi_callback_info info)
 
     int32_t fd = -1;
     int32_t ret = g_usbClient.OpenAccessory(accessory, fd);
+    metrics.MetricsEnumAndTime(ret);
 
     napi_value handleObj = nullptr;
     if (ret == UEC_OK) {
@@ -681,6 +689,7 @@ static napi_value DeviceOpenAccessory(napi_env env, napi_callback_info info)
 
 static napi_value DeviceCloseAccessory(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.CloseAccessory");
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -703,6 +712,7 @@ static napi_value DeviceCloseAccessory(napi_env env, napi_callback_info info)
     close(accessoryFd);
     accessoryFd = 0;
     int32_t ret = g_usbClient.CloseAccessory(g_accFd);
+    metrics.MetricsEnumAndTime(ret);
     g_accFd = 0;
     if (ret != UEC_OK) {
         ThrowBusinessError(env, UEC_COMMON_SERVICE_EXCEPTION,
@@ -714,6 +724,7 @@ static napi_value DeviceCloseAccessory(napi_env env, napi_callback_info info)
 
 static napi_value DeviceAddAccessoryRight(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.AddAccessoryRight");
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -737,6 +748,7 @@ static napi_value DeviceAddAccessoryRight(napi_env env, napi_callback_info info)
     ParseAccessoryObj(env, accessoryObj, accessory);
 
     int32_t ret = g_usbClient.AddAccessoryRight(tokenId, accessory);
+    metrics.MetricsEnumAndTime(ret);
     if (ret == UEC_OK) {
         return nullptr;
     } else if (ret == UEC_SERVICE_GET_TOKEN_INFO_FAILED) {
@@ -761,6 +773,7 @@ static napi_value DeviceAddAccessoryRight(napi_env env, napi_callback_info info)
 
 static napi_value DeviceAddAccessRight(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.AddAccessRight");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -783,6 +796,7 @@ static napi_value DeviceAddAccessRight(napi_env env, napi_callback_info info)
 
     napi_value result;
     int32_t ret = g_usbClient.AddAccessRight(tokenId, deviceName);
+    metrics.MetricsEnumAndTime(ret);
     USB_HILOGD(MODULE_USB_NAPI, "Device call AddRight ret: %{public}d", ret);
     if (ret == UEC_OK) {
         napi_get_boolean(env, true, &result);
@@ -798,6 +812,7 @@ static napi_value DeviceAddAccessRight(napi_env env, napi_callback_info info)
 
 static napi_value DeviceRemoveRight(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.RemoveRight");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -815,6 +830,7 @@ static napi_value DeviceRemoveRight(napi_env env, napi_callback_info info)
 
     napi_value result;
     int32_t ret = g_usbClient.RemoveRight(deviceName);
+    metrics.MetricsEnumAndTime(ret);
     USB_HILOGD(MODULE_USB_NAPI, "Device call RemoveRight ret: %{public}d", ret);
     if (ret == UEC_OK) {
         napi_get_boolean(env, true, &result);
@@ -827,6 +843,7 @@ static napi_value DeviceRemoveRight(napi_env env, napi_callback_info info)
 
 static napi_value DeviceCancelAccessoryRight(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.CancelAccessoryRight");
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -850,6 +867,7 @@ static napi_value DeviceCancelAccessoryRight(napi_env env, napi_callback_info in
     }
 
     int32_t ret = g_usbClient.CancelAccessoryRight(accessory);
+    metrics.MetricsEnumAndTime(ret);
     if (ret == UEC_OK) {
         return nullptr;
     } else if (ret == UEC_SERVICE_ACCESSORY_NOT_MATCH) {
@@ -868,6 +886,7 @@ static napi_value DeviceCancelAccessoryRight(napi_env env, napi_callback_info in
 
 static napi_value CoreHasRight(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.HasRight");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -884,6 +903,7 @@ static napi_value CoreHasRight(napi_env env, napi_callback_info info)
     NapiUtil::JsValueToString(env, args[INDEX_0], STR_DEFAULT_SIZE, deviceName);
 
     bool result = g_usbClient.HasRight(deviceName);
+    metrics.MetricsEnumAndTime(result ? UEC_OK : UEC_SERVICE_INNER_ERR);
     USB_HILOGD(MODULE_USB_NAPI, "client called result %{public}d", result);
 
     napi_value napiValue = nullptr;
@@ -894,6 +914,7 @@ static napi_value CoreHasRight(napi_env env, napi_callback_info info)
 
 static napi_value DeviceHasAccessoryRight(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.HasAccessoryRight");
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -911,6 +932,7 @@ static napi_value DeviceHasAccessoryRight(napi_env env, napi_callback_info info)
     ParseAccessoryObj(env, accessoryObj, accessory);
     bool result = false;
     int32_t ret = g_usbClient.HasAccessoryRight(accessory, result);
+    metrics.MetricsEnumAndTime(ret);
     if (ret == UEC_OK) {
         napi_value napiValue = nullptr;
         napi_get_boolean(env, result, &napiValue);
@@ -930,8 +952,10 @@ static napi_value DeviceHasAccessoryRight(napi_env env, napi_callback_info info)
 }
 
 static auto g_requestRightExecute = [](napi_env env, void *data) {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.RequestRight");
     USBRightAsyncContext *asyncContext = reinterpret_cast<USBRightAsyncContext *>(data);
     int32_t ret = g_usbClient.RequestRight(asyncContext->deviceName);
+    metrics.MetricsEnumAndTime(ret);
     if (ret == UEC_OK) {
         asyncContext->status = napi_ok;
     } else {
@@ -991,6 +1015,7 @@ static napi_value CoreRequestRight(napi_env env, napi_callback_info info)
 }
 
 static auto g_requestAccessoryRightExecute = [](napi_env env, void *data) {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.RequestAccessoryRight");
     if (data == nullptr) {
         USB_HILOGE(MODULE_USB_NAPI, "Failed to create async work, data is nullptr");
         return;
@@ -998,6 +1023,7 @@ static auto g_requestAccessoryRightExecute = [](napi_env env, void *data) {
     USBAccessoryRightAsyncContext *asyncContext = reinterpret_cast<USBAccessoryRightAsyncContext *>(data);
     bool result = false;
     asyncContext->errCode = g_usbClient.RequestAccessoryRight(asyncContext->accessory, result);
+    metrics.MetricsEnumAndTime(asyncContext->errCode);
     asyncContext->hasRight = result;
 };
 
@@ -1068,8 +1094,9 @@ static napi_value DeviceRequestAccessoryRight(napi_env env, napi_callback_info i
     return result;
 }
 
-static napi_value CoreUsbFunctionsFromString(napi_env env, napi_callback_info info)
+static napi_value UsbFunctionsFromString(napi_env env, napi_callback_info info, string metricsName)
 {
+    UsbApiMetrics metrics(metricsName);
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -1089,6 +1116,8 @@ static napi_value CoreUsbFunctionsFromString(napi_env env, napi_callback_info in
     NapiUtil::JsValueToString(env, argv[INDEX_0], STR_DEFAULT_SIZE, funcs);
 
     int32_t numFuncs = g_usbClient.UsbFunctionsFromString(funcs);
+    int32_t ret = (numFuncs < 0) ? numFuncs : UEC_OK;
+    metrics.MetricsEnumAndTime(ret);
     USB_HILOGI(MODULE_USB_NAPI, "usb functions from string failed ret = %{public}d", numFuncs);
     USB_ASSERT_RETURN_UNDEF(env, (numFuncs != UEC_SERVICE_PERMISSION_DENIED_SYSAPI),
         OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
@@ -1100,8 +1129,19 @@ static napi_value CoreUsbFunctionsFromString(napi_env env, napi_callback_info in
     return result;
 }
 
-static napi_value CoreUsbFunctionsToString(napi_env env, napi_callback_info info)
+static napi_value CoreUsbFunctionsFromString(napi_env env, napi_callback_info info)
 {
+    return UsbFunctionsFromString(env, info, "BasicServicesKit.UsbManager.UsbFunctionsFromString");
+}
+
+static napi_value CoreGetFunctionsFromString(napi_env env, napi_callback_info info)
+{
+    return UsbFunctionsFromString(env, info, "BasicServicesKit.UsbManager.GetFunctionsFromString");
+}
+
+static napi_value UsbFunctionsToString(napi_env env, napi_callback_info info, string metricsName)
+{
+    UsbApiMetrics metrics(metricsName);
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -1119,6 +1159,8 @@ static napi_value CoreUsbFunctionsToString(napi_env env, napi_callback_info info
     int32_t funcs;
     napi_get_value_int32(env, argv[INDEX_0], &funcs);
     std::string strFuncs = g_usbClient.UsbFunctionsToString(funcs);
+    int32_t ret = (strFuncs == PERMISSION_DENIED_SYSAPI || strFuncs == SYS_APP_PERMISSION_DENIED_SYSAPI) ? UEC_SERVICE_PERMISSION_DENIED_SYSAPI : UEC_OK;
+    metrics.MetricsEnumAndTime(ret);
     USB_ASSERT_RETURN_UNDEF(env, (strFuncs != PERMISSION_DENIED_SYSAPI), OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
     USB_ASSERT_RETURN_UNDEF(env, (strFuncs != SYS_APP_PERMISSION_DENIED_SYSAPI),
         OHEC_COMMON_PERMISSION_NOT_ALLOWED, "");
@@ -1128,9 +1170,21 @@ static napi_value CoreUsbFunctionsToString(napi_env env, napi_callback_info info
     return result;
 }
 
+static napi_value CoreUsbFunctionsToString(napi_env env, napi_callback_info info)
+{
+    return UsbFunctionsToString(env, info, "BasicServicesKit.UsbManager.UsbFunctionsToString");
+}
+
+static napi_value CoreGetStringFromFunctions(napi_env env, napi_callback_info info)
+{
+    return UsbFunctionsToString(env, info, "BasicServicesKit.UsbManager.GetStringFromFunctions");
+}
+
 static auto g_setCurrentFunctionExecute = [](napi_env env, void *data) {
     USBFunctionAsyncContext *asyncContext = reinterpret_cast<USBFunctionAsyncContext *>(data);
+    UsbApiMetrics metrics(asyncContext->metricsName);
     int32_t ret = g_usbClient.SetCurrentFunctions(asyncContext->functions);
+    metrics.MetricsEnumAndTime(ret);
     asyncContext->errCode = ret;
 };
 
@@ -1162,7 +1216,7 @@ static auto g_setCurrentFunctionComplete = [](napi_env env, napi_status status, 
     delete asyncContext;
 };
 
-static napi_value CoreSetCurrentFunctions(napi_env env, napi_callback_info info)
+static napi_value SetCurrentFunctions(napi_env env, napi_callback_info info, string metricsName)
 {
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
@@ -1189,6 +1243,7 @@ static napi_value CoreSetCurrentFunctions(napi_env env, napi_callback_info info)
 
     asyncContext->env = env;
     asyncContext->functions = funcs;
+    asyncContext->metricsName = metricsName;
     napi_value result = nullptr;
     napi_create_promise(env, &asyncContext->deferred, &result);
 
@@ -1202,8 +1257,19 @@ static napi_value CoreSetCurrentFunctions(napi_env env, napi_callback_info info)
     return result;
 }
 
-static napi_value CoreGetCurrentFunctions(napi_env env, napi_callback_info info)
+static napi_value CoreSetCurrentFunctions(napi_env env, napi_callback_info info)
 {
+    return SetCurrentFunctions(env, info, "BasicServicesKit.UsbManager.SetCurrentFunctions");
+}
+
+static napi_value CoreSetDeviceFunctions(napi_env env, napi_callback_info info)
+{
+    return SetCurrentFunctions(env, info, "BasicServicesKit.UsbManager.SetDeviceFunctions");
+}
+
+static napi_value GetCurrentFunctions(napi_env env, napi_callback_info info, string metricsName)
+{
+    UsbApiMetrics metrics(metricsName);
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -1215,6 +1281,7 @@ static napi_value CoreGetCurrentFunctions(napi_env env, napi_callback_info info)
 
     int32_t cfuncs;
     int32_t ret = g_usbClient.GetCurrentFunctions(cfuncs);
+    metrics.MetricsEnumAndTime(ret);
     napi_value result;
     USB_HILOGI(MODULE_USB_NAPI, "get current functions failed ret = %{public}d", ret);
     USB_ASSERT_RETURN_UNDEF(env, (ret != UEC_SERVICE_PERMISSION_DENIED_SYSAPI), OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
@@ -1230,8 +1297,19 @@ static napi_value CoreGetCurrentFunctions(napi_env env, napi_callback_info info)
     return result;
 }
 
-static napi_value CoreGetPorts(napi_env env, napi_callback_info info)
+static napi_value CoreGetCurrentFunctions(napi_env env, napi_callback_info info)
 {
+    return GetCurrentFunctions(env, info, "BasicServicesKit.UsbManager.GetCurrentFunctions");
+}
+
+static napi_value CoreGetDeviceFunctions(napi_env env, napi_callback_info info)
+{
+    return GetCurrentFunctions(env, info, "BasicServicesKit.UsbManager.GetDeviceFunctions");
+}
+
+static napi_value GetPorts(napi_env env, napi_callback_info info, string metricsName)
+{
+    UsbApiMetrics metrics(metricsName);
     if (!HasFeature(FEATURE_PORT)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -1243,6 +1321,7 @@ static napi_value CoreGetPorts(napi_env env, napi_callback_info info)
 
     std::vector<UsbPort> ports;
     int32_t ret = g_usbClient.GetPorts(ports);
+    metrics.MetricsEnumAndTime(ret);
     napi_value result;
     USB_ASSERT_RETURN_UNDEF(env, (ret != UEC_SERVICE_PERMISSION_DENIED_SYSAPI), OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
     USB_ASSERT_RETURN_UNDEF(env, (ret != UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED),
@@ -1271,10 +1350,21 @@ static napi_value CoreGetPorts(napi_env env, napi_callback_info info)
     return result;
 }
 
+static napi_value CoreGetPorts(napi_env env, napi_callback_info info)
+{
+    return GetPorts(env, info, "BasicServicesKit.UsbManager.GetPorts");
+}
+
+static napi_value CoreGetPortList(napi_env env, napi_callback_info info)
+{
+    return GetPorts(env, info, "BasicServicesKit.UsbManager.GetPortList");
+}
+
 /* ============================================= Usb Port ============================================= */
 
-static napi_value PortGetSupportedModes(napi_env env, napi_callback_info info)
+static napi_value GetSupportedModes(napi_env env, napi_callback_info info, string metricsName)
 {
+    UsbApiMetrics metrics(metricsName);
     if (!HasFeature(FEATURE_PORT)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -1293,6 +1383,7 @@ static napi_value PortGetSupportedModes(napi_env env, napi_callback_info info)
     int32_t result = 0;
     napi_get_value_int32(env, args[INDEX_0], &id);
     int32_t ret = g_usbClient.GetSupportedModes(id, result);
+    metrics.MetricsEnumAndTime(ret);
     USB_ASSERT_RETURN_UNDEF(env, (ret != UEC_SERVICE_PERMISSION_DENIED_SYSAPI), OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
     USB_ASSERT_RETURN_UNDEF(env, (ret != UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED),
         OHEC_COMMON_PERMISSION_NOT_ALLOWED, "");
@@ -1306,9 +1397,21 @@ static napi_value PortGetSupportedModes(napi_env env, napi_callback_info info)
     return napiValue;
 }
 
+static napi_value PortGetSupportedModes(napi_env env, napi_callback_info info)
+{
+    return GetSupportedModes(env, info, "BasicServicesKit.UsbManager.GetSupportedModes");
+}
+
+static napi_value PortGetPortSupportedModes(napi_env env, napi_callback_info info)
+{
+    return GetSupportedModes(env, info, "BasicServicesKit.UsbManager.GetPortSupportedModes");
+}
+
 static auto g_setPortRoleExecute = [](napi_env env, void *data) {
     USBPortRoleAsyncContext *asyncContext = reinterpret_cast<USBPortRoleAsyncContext *>(data);
+    UsbApiMetrics metrics(asyncContext->metricsName);
     int32_t ret = g_usbClient.SetPortRole(asyncContext->portId, asyncContext->powerRole, asyncContext->dataRole);
+    metrics.MetricsEnumAndTime(ret);
     asyncContext->errCode = ret;
 };
 
@@ -1337,7 +1440,7 @@ static auto g_setPortRoleComplete = [](napi_env env, napi_status status, void *d
     delete asyncContext;
 };
 
-static napi_value PortSetPortRole(napi_env env, napi_callback_info info)
+static napi_value SetPortRoles(napi_env env, napi_callback_info info, string metricsName)
 {
     if (!HasFeature(FEATURE_PORT)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
@@ -1374,6 +1477,7 @@ static napi_value PortSetPortRole(napi_env env, napi_callback_info info)
     asyncContext->portId = id;
     asyncContext->dataRole = dataRole;
     asyncContext->powerRole = powerRole;
+    asyncContext->metricsName = metricsName;
 
     napi_value result = nullptr;
     napi_create_promise(env, &asyncContext->deferred, &result);
@@ -1388,8 +1492,19 @@ static napi_value PortSetPortRole(napi_env env, napi_callback_info info)
     return result;
 }
 
+static napi_value PortSetPortRoles(napi_env env, napi_callback_info info)
+{
+    return SetPortRoles(env, info, "BasicServicesKit.UsbManager.SetPortRoles");
+}
+
+static napi_value PortSetPortRoleTypes(napi_env env, napi_callback_info info)
+{
+    return SetPortRoles(env, info, "BasicServicesKit.UsbManager.SetPortRoleTypes");
+}
+
 static napi_value PipeClaimInterface(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.ClaimInterface");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -1426,6 +1541,7 @@ static napi_value PipeClaimInterface(napi_env env, napi_callback_info info)
     }
 
     int32_t ret = pipe.ClaimInterface(interface, isForce);
+    metrics.MetricsEnumAndTime(ret);
     USB_HILOGD(MODULE_USB_NAPI, "pipe call ClaimInterface ret: %{public}d", ret);
     napi_value result;
     napi_create_int32(env, ret, &result);
@@ -1435,6 +1551,7 @@ static napi_value PipeClaimInterface(napi_env env, napi_callback_info info)
 
 static napi_value PipeReleaseInterface(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.ReleaseInterface");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -1459,6 +1576,7 @@ static napi_value PipeReleaseInterface(napi_env env, napi_callback_info info)
     USB_ASSERT(env, type == napi_object, OHEC_COMMON_PARAM_ERROR, "The type of iface must be USBInterface.");
     ParseInterfaceObj(env, obj2, interface);
     int32_t ret = pipe.ReleaseInterface(interface);
+    metrics.MetricsEnumAndTime(ret);
     USB_HILOGD(MODULE_USB_NAPI, "pipe call PipeReleaseInterface ret: %{public}d", ret);
     napi_value result;
     napi_create_int32(env, ret, &result);
@@ -1468,6 +1586,7 @@ static napi_value PipeReleaseInterface(napi_env env, napi_callback_info info)
 
 static napi_value PipeSetInterface(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.SetInterface");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -1492,6 +1611,7 @@ static napi_value PipeSetInterface(napi_env env, napi_callback_info info)
     UsbInterface interface;
     ParseInterfaceObj(env, interfaceObj, interface);
     int32_t ret = g_usbClient.SetInterface(pipe, interface);
+    metrics.MetricsEnumAndTime(ret);
     napi_value result;
     napi_create_int32(env, ret, &result);
 
@@ -1500,6 +1620,7 @@ static napi_value PipeSetInterface(napi_env env, napi_callback_info info)
 
 static napi_value PipeSetConfiguration(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.SetConfiguration");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -1524,6 +1645,7 @@ static napi_value PipeSetConfiguration(napi_env env, napi_callback_info info)
     ParseConfigObj(env, configObj, config);
 
     int32_t ret = g_usbClient.SetConfiguration(pipe, config);
+    metrics.MetricsEnumAndTime(ret);
     napi_value result;
     napi_create_int32(env, ret, &result);
 
@@ -1532,6 +1654,7 @@ static napi_value PipeSetConfiguration(napi_env env, napi_callback_info info)
 
 static napi_value PipeGetRawDescriptors(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetRawDescriptors");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -1552,6 +1675,7 @@ static napi_value PipeGetRawDescriptors(napi_env env, napi_callback_info info)
     napi_value result;
     std::vector<uint8_t> bufferData;
     int32_t ret = g_usbClient.GetRawDescriptors(pipe, bufferData);
+    metrics.MetricsEnumAndTime(ret);
     if (ret == UEC_OK) {
         NapiUtil::Uint8ArrayToJsValue(env, bufferData, bufferData.size(), result);
     } else {
@@ -1563,6 +1687,7 @@ static napi_value PipeGetRawDescriptors(napi_env env, napi_callback_info info)
 
 static napi_value PipeGetFileDescriptor(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetFileDescriptor");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -1583,12 +1708,14 @@ static napi_value PipeGetFileDescriptor(napi_env env, napi_callback_info info)
     int32_t fd = -1;
     napi_value result;
     g_usbClient.GetFileDescriptor(pipe, fd);
+    metrics.MetricsEnumAndTime((fd >= 0) ? UEC_OK : UEC_SERVICE_INNER_ERR);
     napi_create_int32(env, fd, &result);
 
     return result;
 }
 
 static auto g_controlTransferExecute = [](napi_env env, void *data) {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.ControlTransfer");
     USBControlTransferAsyncContext *asyncContext = (USBControlTransferAsyncContext *)data;
     std::vector<uint8_t> bufferData(asyncContext->buffer, asyncContext->buffer + asyncContext->bufferLength);
     if ((asyncContext->reqType & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_DIR_OUT) {
@@ -1602,6 +1729,7 @@ static auto g_controlTransferExecute = [](napi_env env, void *data) {
     size_t bufLen = bufferData.size();
     do {
         ret = asyncContext->pipe.ControlTransfer(tctrl, bufferData);
+    metrics.MetricsEnumAndTime(ret);
         if (ret != UEC_OK) {
             USB_HILOGE(MODULE_USB_NAPI, "ControlTransferExecute failed");
             break;
@@ -1761,6 +1889,7 @@ static napi_value PipeControlTransfer(napi_env env, napi_callback_info info)
 }
 
 static auto g_usbControlTransferExecute = [](napi_env env, void *data) {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.UsbControlTransfer");
     USBDeviceControlTransferAsyncContext *asyncContext = (USBDeviceControlTransferAsyncContext *)data;
     std::vector<uint8_t> bufferData(asyncContext->buffer, asyncContext->buffer + asyncContext->bufferLength);
     if ((asyncContext->reqType & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_DIR_OUT && asyncContext->buffer != nullptr) {
@@ -1774,6 +1903,7 @@ static auto g_usbControlTransferExecute = [](napi_env env, void *data) {
     size_t bufLen = bufferData.size();
     do {
         ret = asyncContext->pipe.UsbControlTransfer(tctrl, bufferData);
+    metrics.MetricsEnumAndTime(ret);
         if (ret != UEC_OK) {
             USB_HILOGE(MODULE_USB_NAPI, "ControlTransferExecute failed");
             break;
@@ -1936,6 +2066,7 @@ static napi_value PipeUsbControlTransfer(napi_env env, napi_callback_info info)
 }
 
 static auto g_bulkTransferExecute = [](napi_env env, void *data) {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.BulkTransfer");
     USBBulkTransferAsyncContext *asyncContext = reinterpret_cast<USBBulkTransferAsyncContext *>(data);
     std::vector<uint8_t> bufferData(asyncContext->buffer, asyncContext->buffer + asyncContext->bufferLength);
     if (asyncContext->endpoint.GetDirection() == USB_ENDPOINT_DIR_OUT) {
@@ -1947,6 +2078,7 @@ static auto g_bulkTransferExecute = [](napi_env env, void *data) {
     size_t bufLen = bufferData.size();
     do {
         ret = asyncContext->pipe.BulkTransfer(asyncContext->endpoint, bufferData, asyncContext->timeOut);
+    metrics.MetricsEnumAndTime(ret);
         if (ret != UEC_OK) {
             USB_HILOGE(MODULE_USB_NAPI, "BulkTransferExecute failed");
             break;
@@ -2307,6 +2439,8 @@ static bool CreateAndWriteAshmem(USBTransferAsyncContext *asyncContext, HDI::Usb
     int32_t bufLen = asyncContext->length <= 0 ? DEFAULT_SUBMIT_BUFFER_SIZE : asyncContext->length;
     asyncContext->ashmem = Ashmem::CreateAshmem(asyncContext->name.c_str(), bufLen);
     FinishTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB);
+    metrics.MetricsEnumAndTime(ret);
+    metrics.MetricsEnumAndTime(ret);
     if (asyncContext->ashmem == nullptr) {
         USB_HILOGE(MODULE_USB_NAPI, "Ashmem::CreateAshmem failed");
         return false;
@@ -2319,12 +2453,16 @@ static bool CreateAndWriteAshmem(USBTransferAsyncContext *asyncContext, HDI::Usb
         StartTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB, "NAPI:WriteToAshmem");
         if (!asyncContext->ashmem->WriteToAshmem(asyncContext->buffer, bufferData.size(), 0)) {
             FinishTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB);
+    metrics.MetricsEnumAndTime(ret);
+    metrics.MetricsEnumAndTime(ret);
             asyncContext->ashmem->UnmapAshmem();
             asyncContext->ashmem->CloseAshmem();
             USB_HILOGE(MODULE_USB_NAPI, "napi UsbSubmitTransfer Failed to UsbSubmitTransfer to ashmem.");
             return false;
         }
         FinishTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB);
+    metrics.MetricsEnumAndTime(ret);
+    metrics.MetricsEnumAndTime(ret);
     }
     return true;
 }
@@ -2353,6 +2491,7 @@ static int32_t UsbSubmitTransferErrorCode(int32_t &error)
 
 static napi_value UsbSubmitTransfer(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.SubmitTransfer");
     HITRACE_METER_NAME(HITRACE_TAG_USB, "NAPI:UsbSubmitTransfer");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
@@ -2386,6 +2525,8 @@ static napi_value UsbSubmitTransfer(napi_env env, napi_callback_info info)
     StartTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB, "NAPI:UsbSubmitTransfer");
     int32_t ret = asyncContext->pipe.UsbSubmitTransfer(obj, func, asyncContext->ashmem);
     FinishTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB);
+    metrics.MetricsEnumAndTime(ret);
+    metrics.MetricsEnumAndTime(ret);
     if (ret != napi_ok) {
         asyncContext->ashmem->UnmapAshmem();
         asyncContext->ashmem->CloseAshmem();
@@ -2447,6 +2588,7 @@ static bool GetCancelParamsFromJsObj(const napi_env &env, const napi_callback_in
 
 static napi_value UsbCancelTransfer(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.CancelTransfer");
     HITRACE_METER_NAME(HITRACE_TAG_USB, "NAPI:UsbCancelTransfer");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
@@ -2466,6 +2608,8 @@ static napi_value UsbCancelTransfer(napi_env env, napi_callback_info info)
     StartTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB, "NAPI:pipe.UsbCancelTransfer");
     int32_t ret = asyncContext->pipe.UsbCancelTransfer(asyncContext->endpoint);
     FinishTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB);
+    metrics.MetricsEnumAndTime(ret);
+    metrics.MetricsEnumAndTime(ret);
     if (ret != napi_ok) {
         ret = UsbSubmitTransferErrorCode(ret);
         ThrowBusinessError(env, ret, "");
@@ -2476,6 +2620,7 @@ static napi_value UsbCancelTransfer(napi_env env, napi_callback_info info)
 
 static napi_value PipeResetDevice(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.ResetDevice");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -2495,6 +2640,7 @@ static napi_value PipeResetDevice(napi_env env, napi_callback_info info)
 
     napi_value napiValue;
     int32_t ret = g_usbClient.ResetDevice(pipe);
+    metrics.MetricsEnumAndTime(ret);
     if (ret == UEC_OK) {
         napi_get_boolean(env, true, &napiValue);
     } else if (ret == HDF_DEV_ERR_NO_DEVICE || ret == UEC_INTERFACE_NAME_NOT_FOUND) {
@@ -2590,6 +2736,7 @@ static napi_value NapiCreateStatusEnum(napi_env env)
 
 static napi_value PipeClose(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Close");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -2608,6 +2755,7 @@ static napi_value PipeClose(napi_env env, napi_callback_info info)
     USBDevicePipe pipe;
     ParseUsbDevicePipe(env, obj, pipe);
     int32_t ret = pipe.Close();
+    metrics.MetricsEnumAndTime(ret);
     napi_value result;
     napi_create_int32(env, ret, &result);
 
@@ -2616,7 +2764,9 @@ static napi_value PipeClose(napi_env env, napi_callback_info info)
 
 static napi_value GetVersion(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetVersion");
     auto version = g_usbClient.GetVersion();
+    metrics.MetricsEnumAndTime(version.empty() ? UEC_SERVICE_INNER_ERR : UEC_OK);
     USB_HILOGD(MODULE_USB_NAPI, "version is %{public}s", version.c_str());
     napi_value result;
     napi_create_string_utf8(env, version.c_str(), NAPI_AUTO_LENGTH, &result);
@@ -2809,21 +2959,21 @@ napi_value UsbInit(napi_env env, napi_value exports)
         DECLARE_NAPI_FUNCTION("hasRight", CoreHasRight),
         DECLARE_NAPI_FUNCTION("requestRight", CoreRequestRight),
         DECLARE_NAPI_FUNCTION("usbFunctionsFromString", CoreUsbFunctionsFromString),
-        DECLARE_NAPI_FUNCTION("getFunctionsFromString", CoreUsbFunctionsFromString),
+        DECLARE_NAPI_FUNCTION("getFunctionsFromString", CoreGetFunctionsFromString),
         DECLARE_NAPI_FUNCTION("usbFunctionsToString", CoreUsbFunctionsToString),
-        DECLARE_NAPI_FUNCTION("getStringFromFunctions", CoreUsbFunctionsToString),
+        DECLARE_NAPI_FUNCTION("getStringFromFunctions", CoreGetStringFromFunctions),
         DECLARE_NAPI_FUNCTION("setCurrentFunctions", CoreSetCurrentFunctions),
-        DECLARE_NAPI_FUNCTION("setDeviceFunctions", CoreSetCurrentFunctions),
+        DECLARE_NAPI_FUNCTION("setDeviceFunctions", CoreSetDeviceFunctions),
         DECLARE_NAPI_FUNCTION("getCurrentFunctions", CoreGetCurrentFunctions),
-        DECLARE_NAPI_FUNCTION("getDeviceFunctions", CoreGetCurrentFunctions),
+        DECLARE_NAPI_FUNCTION("getDeviceFunctions", CoreGetDeviceFunctions),
         DECLARE_NAPI_FUNCTION("getPorts", CoreGetPorts),
-        DECLARE_NAPI_FUNCTION("getPortList", CoreGetPorts),
+        DECLARE_NAPI_FUNCTION("getPortList", CoreGetPortList),
 
         /* usb port */
         DECLARE_NAPI_FUNCTION("getSupportedModes", PortGetSupportedModes),
-        DECLARE_NAPI_FUNCTION("getPortSupportModes", PortGetSupportedModes),
-        DECLARE_NAPI_FUNCTION("setPortRoles", PortSetPortRole),
-        DECLARE_NAPI_FUNCTION("setPortRoleTypes", PortSetPortRole),
+        DECLARE_NAPI_FUNCTION("getPortSupportModes", PortGetPortSupportedModes),
+        DECLARE_NAPI_FUNCTION("setPortRoles", PortSetPortRoles),
+        DECLARE_NAPI_FUNCTION("setPortRoleTypes", PortSetPortRoleTypes),
 
         /* usb device pipe */
         DECLARE_NAPI_FUNCTION("claimInterface", PipeClaimInterface),

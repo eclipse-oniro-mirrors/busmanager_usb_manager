@@ -62,7 +62,8 @@
                 "selinux_adapter",
                 "hdf_core",
                 "external_device_manager",
-                "eventhandler"
+                "eventhandler",
+                "api_metrics"
             ]
         },
         "build": {
