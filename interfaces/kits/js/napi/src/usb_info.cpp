@@ -903,7 +903,7 @@ static napi_value CoreHasRight(napi_env env, napi_callback_info info)
     NapiUtil::JsValueToString(env, args[INDEX_0], STR_DEFAULT_SIZE, deviceName);
 
     bool result = g_usbClient.HasRight(deviceName);
-    metrics.MetricsEnumAndTime(result ? UEC_OK : UEC_SERVICE_INNER_ERR);
+    metrics.MetricsEnumAndTime(result ? UEC_OK : UEC_INTERFACE_INNER_ERR);
     USB_HILOGD(MODULE_USB_NAPI, "client called result %{public}d", result);
 
     napi_value napiValue = nullptr;
@@ -1116,7 +1116,7 @@ static napi_value UsbFunctionsFromString(napi_env env, napi_callback_info info, 
     NapiUtil::JsValueToString(env, argv[INDEX_0], STR_DEFAULT_SIZE, funcs);
 
     int32_t numFuncs = g_usbClient.UsbFunctionsFromString(funcs);
-    int32_t ret = (numFuncs < 0) ? numFuncs : UEC_OK;
+    int32_t ret = (numFuncs < 0) ? UEC_INTERFACE_INNER_ERR : UEC_OK;
     metrics.MetricsEnumAndTime(ret);
     USB_HILOGI(MODULE_USB_NAPI, "usb functions from string failed ret = %{public}d", numFuncs);
     USB_ASSERT_RETURN_UNDEF(env, (numFuncs != UEC_SERVICE_PERMISSION_DENIED_SYSAPI),
@@ -1708,7 +1708,7 @@ static napi_value PipeGetFileDescriptor(napi_env env, napi_callback_info info)
     int32_t fd = -1;
     napi_value result;
     g_usbClient.GetFileDescriptor(pipe, fd);
-    metrics.MetricsEnumAndTime((fd >= 0) ? UEC_OK : UEC_SERVICE_INNER_ERR);
+    metrics.MetricsEnumAndTime((fd >= 0) ? UEC_OK : UEC_INTERFACE_INNER_ERR);
     napi_create_int32(env, fd, &result);
 
     return result;
@@ -2439,8 +2439,6 @@ static bool CreateAndWriteAshmem(USBTransferAsyncContext *asyncContext, HDI::Usb
     int32_t bufLen = asyncContext->length <= 0 ? DEFAULT_SUBMIT_BUFFER_SIZE : asyncContext->length;
     asyncContext->ashmem = Ashmem::CreateAshmem(asyncContext->name.c_str(), bufLen);
     FinishTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB);
-    metrics.MetricsEnumAndTime(ret);
-    metrics.MetricsEnumAndTime(ret);
     if (asyncContext->ashmem == nullptr) {
         USB_HILOGE(MODULE_USB_NAPI, "Ashmem::CreateAshmem failed");
         return false;
@@ -2453,16 +2451,12 @@ static bool CreateAndWriteAshmem(USBTransferAsyncContext *asyncContext, HDI::Usb
         StartTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB, "NAPI:WriteToAshmem");
         if (!asyncContext->ashmem->WriteToAshmem(asyncContext->buffer, bufferData.size(), 0)) {
             FinishTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB);
-    metrics.MetricsEnumAndTime(ret);
-    metrics.MetricsEnumAndTime(ret);
             asyncContext->ashmem->UnmapAshmem();
             asyncContext->ashmem->CloseAshmem();
             USB_HILOGE(MODULE_USB_NAPI, "napi UsbSubmitTransfer Failed to UsbSubmitTransfer to ashmem.");
             return false;
         }
         FinishTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB);
-    metrics.MetricsEnumAndTime(ret);
-    metrics.MetricsEnumAndTime(ret);
     }
     return true;
 }
@@ -2526,7 +2520,6 @@ static napi_value UsbSubmitTransfer(napi_env env, napi_callback_info info)
     int32_t ret = asyncContext->pipe.UsbSubmitTransfer(obj, func, asyncContext->ashmem);
     FinishTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB);
     metrics.MetricsEnumAndTime(ret);
-    metrics.MetricsEnumAndTime(ret);
     if (ret != napi_ok) {
         asyncContext->ashmem->UnmapAshmem();
         asyncContext->ashmem->CloseAshmem();
@@ -2588,7 +2581,7 @@ static bool GetCancelParamsFromJsObj(const napi_env &env, const napi_callback_in
 
 static napi_value UsbCancelTransfer(napi_env env, napi_callback_info info)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.CancelTransfer");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.UsbCancelTransfer");
     HITRACE_METER_NAME(HITRACE_TAG_USB, "NAPI:UsbCancelTransfer");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
@@ -2608,7 +2601,6 @@ static napi_value UsbCancelTransfer(napi_env env, napi_callback_info info)
     StartTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB, "NAPI:pipe.UsbCancelTransfer");
     int32_t ret = asyncContext->pipe.UsbCancelTransfer(asyncContext->endpoint);
     FinishTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB);
-    metrics.MetricsEnumAndTime(ret);
     metrics.MetricsEnumAndTime(ret);
     if (ret != napi_ok) {
         ret = UsbSubmitTransferErrorCode(ret);
@@ -2766,7 +2758,7 @@ static napi_value GetVersion(napi_env env, napi_callback_info info)
 {
     UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetVersion");
     auto version = g_usbClient.GetVersion();
-    metrics.MetricsEnumAndTime(version.empty() ? UEC_SERVICE_INNER_ERR : UEC_OK);
+    metrics.MetricsEnumAndTime(version.empty() ? UEC_INTERFACE_INNER_ERR : UEC_OK);
     USB_HILOGD(MODULE_USB_NAPI, "version is %{public}s", version.c_str());
     napi_value result;
     napi_create_string_utf8(env, version.c_str(), NAPI_AUTO_LENGTH, &result);
