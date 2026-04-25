@@ -94,7 +94,7 @@ inline bool CheckAndThrowOnError(bool assertion, int errCode, const std::string 
 
 array<SerialPort> GetPortList()
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetPortList");
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Static.GetPortList");
     USB_HILOGI(MODULE_USB_NAPI, "GetPortList start.");
     std::vector<OHOS::USB::UsbSerialPort> portIds;
     std::vector<SerialPort> tempPortList;
@@ -116,7 +116,7 @@ array<SerialPort> GetPortList()
 
 bool HasSerialRight(int32_t portId)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.HasSerialRight");
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Static.HasSerialRight");
     USB_HILOGI(MODULE_USB_NAPI, "HasSerialRight start.");
     if (!CheckAndThrowOnError((portId >= 0), SYSPARAM_INVALID_INPUT, "HasSerialRight failed.")) {
         USB_HILOGE(MODULE_USB_NAPI, "HasSerialRight failed, invalid portId [%{public}d]", portId);
@@ -132,7 +132,7 @@ bool HasSerialRight(int32_t portId)
 
 bool RequestSerialRight(int32_t portId)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.RequestSerialRight");
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Static.RequestSerialRight");
     USB_HILOGI(MODULE_USB_NAPI, "RequestSerialRight start.");
     if (!CheckAndThrowOnError((portId >= 0), SYSPARAM_INVALID_INPUT, "RequestSerialRight failed.")) {
         USB_HILOGE(MODULE_USB_NAPI, "RequestSerialRight failed, invalid portId [%{public}d]", portId);
@@ -149,7 +149,7 @@ bool RequestSerialRight(int32_t portId)
 
 void AddSerialRight(int32_t tokenId, int32_t portId)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.AddSerialRight");
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Static.AddSerialRight");
     USB_HILOGI(MODULE_USB_NAPI, "AddSerialRight start.");
     if (!CheckAndThrowOnError((tokenId > 0), SYSPARAM_INVALID_INPUT, "AddSerialRight failed.")) {
         USB_HILOGE(MODULE_USB_NAPI, "AddSerialRight failed, invalid tokenId [%{public}d]", tokenId);
@@ -167,7 +167,7 @@ void AddSerialRight(int32_t tokenId, int32_t portId)
 
 void CancelSerialRight(int32_t portId)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.CancelSerialRight");
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Static.CancelSerialRight");
     USB_HILOGI(MODULE_USB_NAPI, "CancelSerialRight start.");
     if (!CheckAndThrowOnError((portId >= 0), SYSPARAM_INVALID_INPUT, "CancelSerialRight failed.")) {
         USB_HILOGE(MODULE_USB_NAPI, "CancelSerialRight failed, invalid portId [%{public}d]", portId);
@@ -178,14 +178,10 @@ void CancelSerialRight(int32_t portId)
     CheckAndThrowOnError((ret == 0), ErrorCodeConversion(ret), "CancelSerialRight failed.");
     USB_HILOGI(MODULE_USB_NAPI, "CancelSerialRight finish. ErrCode: %{public}d", ret);
 }
-    int32_t ret = g_usbClient.CancelSerialRight(portId);
-    CheckAndThrowOnError((ret == 0), ErrorCodeConversion(ret), "CancelSerialRight failed.");
-    USB_HILOGI(MODULE_USB_NAPI, "CancelSerialRight finish. ErrCode: %{public}d", ret);
-}
 
 void OpenSerial(int32_t portId)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.OpenSerial");
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Static.OpenSerial");
     USB_HILOGI(MODULE_USB_NAPI, "OpenSerial start.");
     if (!CheckAndThrowOnError((portId >= 0), SYSPARAM_INVALID_INPUT, "OpenSerial failed.")) {
         USB_HILOGE(MODULE_USB_NAPI, "OpenSerial failed, invalid portId [%{public}d]", portId);
@@ -196,14 +192,10 @@ void OpenSerial(int32_t portId)
     CheckAndThrowOnError((ret == 0), ErrorCodeConversion(ret), "OpenSerial failed.");
     USB_HILOGI(MODULE_USB_NAPI, "OpenSerial finish. ErrCode: %{public}d", ret);
 }
-    int ret = g_usbClient.SerialOpen(portId);
-    CheckAndThrowOnError((ret == 0), ErrorCodeConversion(ret), "OpenSerial failed.");
-    USB_HILOGI(MODULE_USB_NAPI, "OpenSerial finish. ErrCode: %{public}d", ret);
-}
 
 void CloseSerial(int32_t portId)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.CloseSerial");
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Static.CloseSerial");
     USB_HILOGI(MODULE_USB_NAPI, "CloseSerial start.");
     if (!CheckAndThrowOnError((portId >= 0), SYSPARAM_INVALID_INPUT, "CloseSerial failed.")) {
         USB_HILOGE(MODULE_USB_NAPI, "CloseSerial failed, invalid portId [%{public}d]", portId);
@@ -211,10 +203,6 @@ void CloseSerial(int32_t portId)
     }
     int ret = g_usbClient.SerialClose(portId);
     metrics.MetricsEnumAndTime(ret);
-    CheckAndThrowOnError((ret == 0), ErrorCodeConversion(ret), "CloseSerial failed.");
-    USB_HILOGI(MODULE_USB_NAPI, "CloseSerial finish. ErrCode: %{public}d", ret);
-}
-    int ret = g_usbClient.SerialClose(portId);
     CheckAndThrowOnError((ret == 0), ErrorCodeConversion(ret), "CloseSerial failed.");
     USB_HILOGI(MODULE_USB_NAPI, "CloseSerial finish. ErrCode: %{public}d", ret);
 }
@@ -233,7 +221,7 @@ void SerialAttributeToTaihe(const UsbSerialAttr serialAttribute, SerialAttribute
 
 ::ohos::usbManager::serial::SerialAttribute GetAttribute(int32_t portId)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetAttribute");
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Static.GetAttribute");
     USB_HILOGI(MODULE_USB_NAPI, "getAttribute start. portId: %{public}d", portId);
     SerialAttribute taiheSerialAttribute = {BaudRates::key_t::BAUDRATE_50};
     if (portId < 0) {
@@ -257,7 +245,7 @@ void SerialAttributeToTaihe(const UsbSerialAttr serialAttribute, SerialAttribute
 
 void SetAttribute(int32_t portId, ::ohos::usbManager::serial::SerialAttribute const& attribute)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.SetAttribute");
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Static.SetAttribute");
     USB_HILOGI(MODULE_USB_NAPI, "setAttribute start. portId: %{public}d", portId);
     if (portId < 0) {
         USB_HILOGE(MODULE_USB_NAPI, "portId is invalid!");
@@ -303,7 +291,7 @@ void SetAttribute(int32_t portId, ::ohos::usbManager::serial::SerialAttribute co
 
 int32_t ReadSync(int32_t portId, uintptr_t buffer, ::taihe::optional_view<int32_t> timeout)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.ReadSync");
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Static.ReadSync");
     USB_HILOGI(MODULE_USB_NAPI, "readSync start. portId: %{public}d", portId);
     if (portId < 0) {
         USB_HILOGE(MODULE_USB_NAPI, "portId is invalid!");
@@ -370,7 +358,7 @@ int32_t ReadSync(int32_t portId, uintptr_t buffer, ::taihe::optional_view<int32_
 
 int32_t WriteSync(int32_t portId, ::taihe::array_view<uint8_t> buffer, ::taihe::optional_view<int32_t> timeout)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.WriteSync");
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Static.WriteSync");
     USB_HILOGI(MODULE_USB_NAPI, "writeSync start. portId: %{public}d", portId);
     if (portId < 0) {
         USB_HILOGE(MODULE_USB_NAPI, "portId is invalid!");
