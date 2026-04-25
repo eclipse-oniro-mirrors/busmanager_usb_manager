@@ -33,6 +33,7 @@
 #include "napi_util.h"
 #include "serial_async_context.h"
 #include "serial_napi_errors.h"
+#include "usb_api_metrics.h"
 #include "usb_errors.h"
 
 #include "usb_srv_client.h"
@@ -72,9 +73,11 @@ static int32_t ErrorCodeConversion(int32_t value)
 
 static napi_value SerialGetPortListNapi(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.GetPortList");
     USB_HILOGI(MODULE_USB_NAPI, "SerialGetPortListNapi start");
     std::vector<OHOS::USB::UsbSerialPort> portIds;
     int32_t ret = g_usbClient.SerialGetPortList(portIds);
+    metrics.MetricsEnumAndTime(ret);
     napi_value result = nullptr;
     napi_create_array(env, &result);
     if (ret < 0) {
@@ -97,6 +100,7 @@ static napi_value SerialGetPortListNapi(napi_env env, napi_callback_info info)
 
 static napi_value SerialGetAttributeNapi(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.GetAttribute");
     USB_HILOGI(MODULE_USB_NAPI, "SerialGetAttributeNapi start");
     size_t argc = ARGC_1;
     napi_value argv[ARGC_1] = {nullptr};
@@ -121,6 +125,7 @@ static napi_value SerialGetAttributeNapi(napi_env env, napi_callback_info info)
     }
     UsbSerialAttr serialAttribute;
     int32_t ret = g_usbClient.SerialGetAttribute(portIdValue, serialAttribute);
+    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, (ret == 0), ErrorCodeConversion(ret), "Failed to get attribute.")) {
         return nullptr;
     }
@@ -176,6 +181,7 @@ static bool ParseSetAttributeInterfaceParams(napi_env env, napi_callback_info in
 
 static napi_value SerialSetAttributeNapi(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.SetAttribute");
     USB_HILOGI(MODULE_USB_NAPI, "SerialSetAttributeNapi start");
     UsbSerialAttr serialAttribute;
     int32_t portIdValue = -1;
@@ -184,6 +190,7 @@ static napi_value SerialSetAttributeNapi(napi_env env, napi_callback_info info)
     }
     USB_HILOGI(MODULE_USB_NAPI, "SetAttributeNapi portIdValue: %{public}d", portIdValue);
     int ret = g_usbClient.SerialSetAttribute(portIdValue, serialAttribute);
+    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, (ret == 0), ErrorCodeConversion(ret), "Failed to set attribute.")) {
         return nullptr;
     }
@@ -231,6 +238,7 @@ static bool ParseWriteInterfaceParams(napi_env env, napi_callback_info info,
 
 static napi_value SerialWriteSyncNapi(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.WriteSync");
     USB_HILOGI(MODULE_USB_NAPI, "SerialWriteSyncNapi start");
     int32_t portIdValue = -1;
     napi_value buffer;
@@ -251,6 +259,7 @@ static napi_value SerialWriteSyncNapi(napi_env env, napi_callback_info info)
 
     uint32_t actualSize = 0;
     int32_t ret = g_usbClient.SerialWrite(portIdValue, bufferVector, bufferLength, actualSize, timeoutValue);
+    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, (ret == 0), ErrorCodeConversion(ret), "SerialWrite Failed.")) {
         return nullptr;
     }
@@ -261,6 +270,7 @@ static napi_value SerialWriteSyncNapi(napi_env env, napi_callback_info info)
 }
 
 static auto g_serialWriteExecute = [](napi_env env, void* data) {
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Write");
     SerialWriteAsyncContext *context = static_cast<SerialWriteAsyncContext *>(data);
     if (context->contextErrno) {
         USB_HILOGE(MODULE_USB_NAPI, "ExecuteCallback failed, reason: napi_get_reference_value");
@@ -278,6 +288,7 @@ static auto g_serialWriteExecute = [](napi_env env, void* data) {
 
     uint32_t actualSize = 0;
     int32_t ret = g_usbClient.SerialWrite(context->portId, bufferVector, context->size, actualSize, context->timeout);
+    metrics.MetricsEnumAndTime(ret);
     if (ret != 0) {
         context->contextErrno = ErrorCodeConversion(ret);
     }
@@ -394,6 +405,7 @@ static bool ParseReadInterfaceParams(napi_env env, napi_callback_info info, int3
 
 static napi_value SerialReadSyncNapi(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.ReadSync");
     USB_HILOGI(MODULE_USB_NAPI, "SerialReadSyncNapi start");
     int32_t portIdValue = -1;
     napi_value buffer;
@@ -428,11 +440,13 @@ static napi_value SerialReadSyncNapi(napi_env env, napi_callback_info info)
 }
 
 static auto g_serialReadExecute = [](napi_env env, void* data) {
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Read");
     SerialReadAsyncContext *context = static_cast<SerialReadAsyncContext *>(data);
     uint32_t actualSize = 0;
     std::vector<uint8_t> bufferData;
     int32_t ret = g_usbClient.SerialRead(context->portId, bufferData,
         context->size, actualSize, context->timeout);
+    metrics.MetricsEnumAndTime(ret);
     if (ret != 0) {
         context->contextErrno = ErrorCodeConversion(ret);
     }
@@ -501,6 +515,7 @@ static napi_value SerialReadNapi(napi_env env, napi_callback_info info)
 
 static napi_value SerialOpenNapi(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Open");
     USB_HILOGI(MODULE_USB_NAPI, "serialOpenNapi start");
     size_t argc = ARGC_1;
     napi_value argv[ARGC_1] = {nullptr};
@@ -526,6 +541,7 @@ static napi_value SerialOpenNapi(napi_env env, napi_callback_info info)
     }
     USB_HILOGE(MODULE_USB_NAPI, "portIdValue: %{public}d", portIdValue);
     int ret = g_usbClient.SerialOpen(portIdValue);
+    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, ret == 0, ErrorCodeConversion(ret), "SerialOpen failed.")) {
         return nullptr;
     }
@@ -535,6 +551,7 @@ static napi_value SerialOpenNapi(napi_env env, napi_callback_info info)
 
 static napi_value SerialCloseNapi(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Close");
     USB_HILOGI(MODULE_USB_NAPI, "SerialCloseNapi start");
     size_t argc = ARGC_1;
     napi_value argv[ARGC_1] = {nullptr};
@@ -560,6 +577,7 @@ static napi_value SerialCloseNapi(napi_env env, napi_callback_info info)
     }
     
     int ret = g_usbClient.SerialClose(portIdValue);
+    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, ret == 0, ErrorCodeConversion(ret), "SerialClose failed.")) {
         return nullptr;
     }
@@ -568,6 +586,7 @@ static napi_value SerialCloseNapi(napi_env env, napi_callback_info info)
 
 static napi_value SerialHasRightNapi(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.HasSerialRight");
     USB_HILOGI(MODULE_USB_NAPI, "SerialHasRightNapi start");
     size_t argc = ARGC_1;
     napi_value argv[ARGC_1] = {nullptr};
@@ -594,6 +613,7 @@ static napi_value SerialHasRightNapi(napi_env env, napi_callback_info info)
     napi_value result = nullptr;
     bool hasRight = false;
     int32_t ret = g_usbClient.HasSerialRight(portIdValue, hasRight);
+    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, (ret == 0), ErrorCodeConversion(ret), "SerialHasRight failed.")) {
         return nullptr;
     }
@@ -603,6 +623,7 @@ static napi_value SerialHasRightNapi(napi_env env, napi_callback_info info)
 
 static napi_value CancelSerialRightNapi(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.CancelSerialRight");
     USB_HILOGI(MODULE_USB_NAPI, "CancelSerialRightNapi start");
     size_t argc = ARGC_1;
     napi_value argv[ARGC_1] = {nullptr};
@@ -627,6 +648,7 @@ static napi_value CancelSerialRightNapi(napi_env env, napi_callback_info info)
         return nullptr;
     }
     int32_t ret = g_usbClient.CancelSerialRight(portIdValue);
+    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, ret == 0, ErrorCodeConversion(ret), "SerialRemoveRight failed.")) {
         return nullptr;
     }
@@ -635,6 +657,7 @@ static napi_value CancelSerialRightNapi(napi_env env, napi_callback_info info)
 
 static napi_value SerialAddRightNapi(napi_env env, napi_callback_info info)
 {
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.AddSerialRight");
     USB_HILOGI(MODULE_USB_NAPI, "SerialAddRightNapi start");
     size_t argc = ARGC_2;
     napi_value argv[ARGC_2] = {nullptr};
@@ -670,6 +693,7 @@ static napi_value SerialAddRightNapi(napi_env env, napi_callback_info info)
         return nullptr;
     }
     int32_t ret = g_usbClient.AddSerialRight(tokenIdValue, portIdValue);
+    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, ret == 0, ErrorCodeConversion(ret), "SerialAddRight failed.")) {
         return nullptr;
     }
@@ -677,9 +701,11 @@ static napi_value SerialAddRightNapi(napi_env env, napi_callback_info info)
 }
 
 static auto g_serialRequestRightExecute = [](napi_env env, void* data) {
+    UsbApiMetrics metrics("BasicServicesKit.SerialManager.RequestSerialRight");
     SerialRequestRightAsyncContext *asyncContext = static_cast<SerialRequestRightAsyncContext *>(data);
     int32_t ret = g_usbClient.RequestSerialRight(asyncContext->portIdValue, asyncContext->hasRight);
     asyncContext->contextErrno = 0;
+    metrics.MetricsEnumAndTime(ret);
     if (ret != 0) {
         USB_HILOGE(MODULE_USB_NAPI, "request right has error");
         asyncContext->contextErrno = ErrorCodeConversion(ret);
