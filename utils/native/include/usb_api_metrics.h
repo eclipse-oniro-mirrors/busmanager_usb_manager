@@ -12,6 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#ifndef USB_API_METRICS_H
+#define USB_API_METRICS_H
 
 #ifdef USB_MANAGER_METRICS_ENABLE
 #include "histogram_plugin_macros.h"
@@ -33,3 +35,5 @@ private:
 }
 }
 }
+
+#endif

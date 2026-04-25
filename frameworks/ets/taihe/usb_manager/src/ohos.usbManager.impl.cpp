@@ -341,7 +341,7 @@ static ohos::usbManager::USBPort ConvertUSBPort(OHOS::USB::UsbPort const &usbDev
 
 USBDevicePipe connectDevice(USBDevice const &device)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.ConnectDevice");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.ConnectDevice");
     OHOS::USB::USBDevicePipe pipe;
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
@@ -378,7 +378,7 @@ static void ParseEndpointObj(const ohos::usbManager::USBEndpoint endpoint, OHOS:
 
 array<ohos::usbManager::USBDevice> getDevices()
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetDevices");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetDevices");
     std::vector<ohos::usbManager::USBDevice> res;
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
@@ -399,7 +399,7 @@ array<ohos::usbManager::USBDevice> getDevices()
 
 bool hasRight(string_view deviceName)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.HasRight");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.HasRight");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return false;
@@ -411,7 +411,7 @@ bool hasRight(string_view deviceName)
 
 bool requestRightSync(string_view deviceName)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.RequestRight");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.RequestRightSync");
     bool bRet = false;
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
@@ -427,7 +427,7 @@ bool requestRightSync(string_view deviceName)
 
 bool removeRight(string_view deviceName)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.RemoveRight");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.RemoveRight");
     bool bResult = false;
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
@@ -443,7 +443,7 @@ bool removeRight(string_view deviceName)
 
 bool addDeviceAccessRight(string_view tokenId, string_view deviceName)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.AddAccessRight");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.AddAccessRight");
     bool bResult = false;
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
@@ -467,7 +467,7 @@ bool addDeviceAccessRight(string_view tokenId, string_view deviceName)
 
 int32_t getFunctionsFromString(string_view funcs)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetFunctionsFromString");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetFunctionsFromString");
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return CAPABILITY_NOT_SUPPORT;
@@ -488,7 +488,7 @@ int32_t getFunctionsFromString(string_view funcs)
 
 string getStringFromFunctions(int32_t funcs)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetStringFromFunctions");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetStringFromFunctions");
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return "";
@@ -509,7 +509,7 @@ string getStringFromFunctions(int32_t funcs)
 
 void setDeviceFunctionsSync(int32_t funcs)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.SetDeviceFunctionsSync");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.SetDeviceFunctionsSync");
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return;
@@ -536,7 +536,7 @@ void setDeviceFunctionsSync(int32_t funcs)
 
 int32_t getDeviceFunctions()
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetDeviceFunctions");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetDeviceFunctions");
     int32_t cfuncs = 0;
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
@@ -561,7 +561,7 @@ int32_t getDeviceFunctions()
 
 array<USBPort> getPortList()
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetPortList");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetPortList");
     if (!HasFeature(FEATURE_PORT)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return {};
@@ -597,7 +597,7 @@ array<USBPort> getPortList()
 
 PortModeType getPortSupportModes(int32_t portId)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetPortSupportModes");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetPortSupportModes");
     int32_t result = 0;
     if (!HasFeature(FEATURE_PORT)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
@@ -625,7 +625,7 @@ PortModeType getPortSupportModes(int32_t portId)
 
 void setPortRoleTypesSync(int32_t portId, PowerRoleType powerRole, DataRoleType dataRole)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.SetPortRoleTypesSync");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.SetPortRoleTypesSync");
     if (!HasFeature(FEATURE_PORT)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return;
@@ -653,7 +653,7 @@ void setPortRoleTypesSync(int32_t portId, PowerRoleType powerRole, DataRoleType 
 
 void addAccessoryRight(int32_t tokenId, ohos::usbManager::USBAccessory const &accessory)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.AddAccessoryRight");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.AddAccessoryRight");
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return;
@@ -687,7 +687,7 @@ void addAccessoryRight(int32_t tokenId, ohos::usbManager::USBAccessory const &ac
 
 int32_t claimInterface(USBDevicePipe const &pipe, USBInterface const &iface, optional_view<bool> force)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.ClaimInterface");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.ClaimInterface");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
@@ -702,7 +702,7 @@ int32_t claimInterface(USBDevicePipe const &pipe, USBInterface const &iface, opt
 
 int32_t releaseInterface(USBDevicePipe const &pipe, USBInterface const &iface)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.ReleaseInterface");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.ReleaseInterface");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
@@ -716,7 +716,7 @@ int32_t releaseInterface(USBDevicePipe const &pipe, USBInterface const &iface)
 
 int32_t setConfiguration(USBDevicePipe const &pipe, USBConfiguration const &config)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.SetConfiguration");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.SetConfiguration");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
@@ -729,7 +729,7 @@ int32_t setConfiguration(USBDevicePipe const &pipe, USBConfiguration const &conf
 
 int32_t setInterface(USBDevicePipe const &pipe, USBInterface const &iface)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.SetInterface");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.SetInterface");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
@@ -742,7 +742,7 @@ int32_t setInterface(USBDevicePipe const &pipe, USBInterface const &iface)
 
 array<uint8_t> getRawDescriptor(USBDevicePipe const &pipe)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetRawDescriptor");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetRawDescriptor");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return {};
@@ -766,7 +766,7 @@ array<uint8_t> getRawDescriptor(USBDevicePipe const &pipe)
 
 int32_t getFileDescriptor(USBDevicePipe const &pipe)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetFileDescriptor");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetFileDescriptor");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
@@ -784,7 +784,7 @@ int32_t getFileDescriptor(USBDevicePipe const &pipe)
 int32_t usbControlTransferSync(
     USBDevicePipe const &pipe, USBDeviceRequestParams const &requestparam, optional_view<int32_t> timeout)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.UsbControlTransfer");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.UsbControlTransferSync");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
@@ -828,7 +828,7 @@ int32_t usbControlTransferSync(
 int32_t bulkTransferSync(::ohos::usbManager::USBDevicePipe const &pipe, ::ohos::usbManager::USBEndpoint const &endpoint,
     uintptr_t buffer, optional_view<int32_t> timeout)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.BulkTransfer");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.BulkTransferSync");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
@@ -874,7 +874,7 @@ int32_t bulkTransferSync(::ohos::usbManager::USBDevicePipe const &pipe, ::ohos::
 
 int32_t closePipe(USBDevicePipe const &pipe)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.ClosePipe");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.ClosePipe");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
@@ -903,7 +903,7 @@ static ohos::usbManager::USBAccessory native2Taihe(OHOS::USB::USBAccessory acces
 
 bool hasAccessoryRight(ohos::usbManager::USBAccessory const &accessory)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.HasAccessoryRight");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.HasAccessoryRight");
     bool result = false;
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
@@ -927,7 +927,7 @@ bool hasAccessoryRight(ohos::usbManager::USBAccessory const &accessory)
 
 bool requestAccessoryRightSync(ohos::usbManager::USBAccessory const &accessory)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.RequestAccessoryRight");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.RequestAccessoryRightSync");
     bool result = false;
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
@@ -951,7 +951,7 @@ bool requestAccessoryRightSync(ohos::usbManager::USBAccessory const &accessory)
 
 void cancelAccessoryRight(ohos::usbManager::USBAccessory const &accessory)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.CancelAccessoryRight");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.CancelAccessoryRight");
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return;
@@ -979,7 +979,7 @@ void cancelAccessoryRight(ohos::usbManager::USBAccessory const &accessory)
 
 array<ohos::usbManager::USBAccessory> getAccessoryList()
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetAccessoryList");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetAccessoryList");
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return {};
@@ -1001,7 +1001,7 @@ array<ohos::usbManager::USBAccessory> getAccessoryList()
 
 USBAccessoryHandle openAccessory(ohos::usbManager::USBAccessory const &accessory)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.OpenAccessory");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.OpenAccessory");
     USBAccessoryHandle handler;
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
@@ -1029,7 +1029,7 @@ USBAccessoryHandle openAccessory(ohos::usbManager::USBAccessory const &accessory
 
 void closeAccessory(USBAccessoryHandle const &accessoryHandle)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.CloseAccessory");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.CloseAccessory");
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return;
