@@ -43,6 +43,7 @@
 #include "hitrace_meter.h"
 #include "hdf_base.h"
 #include "struct_parcel.h"
+#include "usb_api_metrics.h"
 using namespace OHOS;
 using namespace OHOS::USB;
 using namespace OHOS::HDI::Usb::V1_0;
