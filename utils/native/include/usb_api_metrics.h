@@ -23,14 +23,14 @@
 
 namespace OHOS {
 namespace USB {
-using namespace std;
+
 class UsbApiMetrics {
 public:
-    UsbApiMetrics(string name);
+    UsbApiMetrics(std::string name);
     ~UsbApiMetrics();
     void MetricsEnumAndTime(int32_t error);
 private:
-    string metricsName;
+    std::string metricsName;
     struct timeval startTime;
     int32_t errorCode;
 };

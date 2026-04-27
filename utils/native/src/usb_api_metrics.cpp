@@ -20,9 +20,8 @@
 
 namespace OHOS {
 namespace USB {
-using namespace std;
 
-UsbApiMetrics::UsbApiMetrics(string name)
+UsbApiMetrics::UsbApiMetrics(std::string name)
 : metricsName(name)
 {
     errorCode = 1;
@@ -32,7 +31,7 @@ UsbApiMetrics::UsbApiMetrics(string name)
 UsbApiMetrics::~UsbApiMetrics()
 {
 #ifdef USB_MANAGER_METRICS_ENABLE
-    string name = metricsName + ".Boolean";
+    std::string name = metricsName + ".Boolean";
     if (errorCode == UEC_OK) {
         HISTOGRAM_BOOLEAN(name.c_str(), 1);
     } else {
@@ -45,8 +44,8 @@ void UsbApiMetrics::MetricsEnumAndTime(int32_t error)
 {
 #ifdef USB_MANAGER_METRICS_ENABLE
     errorCode = error;
-    string enumMetricsName = metricsName + ".Enum";
-    string timeMetricsName = metricsName + ".Time";
+    std::string enumMetricsName = metricsName + ".Enum";
+    std::string timeMetricsName = metricsName + ".Time";
     struct timeval endTime;
     gettimeofday(&endTime, nullptr);
     int32_t runTime = (int32_t)((endTime.tv_sec - startTime.tv_sec) * TIME_1000 +
