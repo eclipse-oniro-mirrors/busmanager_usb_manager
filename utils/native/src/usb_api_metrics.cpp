@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "usb_api_metrics"
+#include "usb_api_metrics.h"
 #include "usb_errors.h"
 
 #define TIME_1000 1000

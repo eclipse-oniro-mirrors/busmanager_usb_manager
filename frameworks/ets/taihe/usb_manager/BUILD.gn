@@ -85,6 +85,7 @@ taihe_shared_library("usb_manager_taihe_native") {
     defines += [ "USB_MANAGER_METRICS_ENABLE" ]
     external_deps += [ "api_metrics:histogrammanager" ]
   }
+  configs = [ "${utils_path}:utils_config" ]
 }
 
 generate_static_abc("usb_manager_abc") {

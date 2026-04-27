@@ -32,7 +32,7 @@ private:
     string metricsName;
     struct timeval startTime;
     int32_t errorCode;
-}
+};
 }
 }
 
