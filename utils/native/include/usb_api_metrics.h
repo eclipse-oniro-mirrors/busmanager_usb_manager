@@ -18,6 +18,7 @@
 #ifdef USB_MANAGER_METRICS_ENABLE
 #include "histogram_plugin_macros.h"
 #endif
+#include <string>
 #include <sys/time.h>
 
 namespace OHOS {
