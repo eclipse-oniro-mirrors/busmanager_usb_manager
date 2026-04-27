@@ -85,7 +85,7 @@ ohos_shared_library("usbmanager") {
     "napi:ace_napi",
   ]
 
-  if (usb_manager_metrics_enable) {
+  if (usb_manager_feature_metrics_enable) {
     defines += [ "USB_MANAGER_METRICS_ENABLE" ]
     external_deps += [ "api_metrics:histogrammanager" ]
   }
@@ -127,7 +127,7 @@ ohos_shared_library("serial") {
     "samgr:samgr_proxy",
   ]
 
-  if (usb_manager_metrics_enable) {
+  if (usb_manager_feature_metrics_enable) {
     defines += [ "USB_MANAGER_METRICS_ENABLE" ]
     external_deps += [ "api_metrics:histogrammanager" ]
   }

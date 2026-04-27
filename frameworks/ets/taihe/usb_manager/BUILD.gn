@@ -81,7 +81,7 @@ taihe_shared_library("usb_manager_taihe_native") {
     "eventhandler:libeventhandler",
   ]
 
-  if (usb_manager_metrics_enable) {
+  if (usb_manager_feature_metrics_enable) {
     defines += [ "USB_MANAGER_METRICS_ENABLE" ]
     external_deps += [ "api_metrics:histogrammanager" ]
   }

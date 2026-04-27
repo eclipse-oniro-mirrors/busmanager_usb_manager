@@ -19,7 +19,7 @@
             "usb_manager_feature_host",
             "usb_manager_feature_device",
             "usb_manager_feature_port",
-            "usb_manager_metrics_enable"
+            "usb_manager_feature_metrics_enable"
         ],
         "syscap": [
             "SystemCapability.USB.USBManager.Serial",
