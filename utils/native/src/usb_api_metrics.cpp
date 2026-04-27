@@ -23,8 +23,9 @@ namespace USB {
 using namespace std;
 
 UsbApiMetrics::UsbApiMetrics(string name)
-: metricsName(name), errorCode(1)
+: metricsName(name)
 {
+    errorCode = 1;
     gettimeofday(&startTime, nullptr);
 }
 

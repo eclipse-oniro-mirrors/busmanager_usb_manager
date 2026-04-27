@@ -774,7 +774,7 @@ static napi_value DeviceAddAccessoryRight(napi_env env, napi_callback_info info)
 
 static napi_value DeviceAddAccessRight(napi_env env, napi_callback_info info)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.AddAccessRight");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.AddDeviceAccessRight");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -1095,7 +1095,7 @@ static napi_value DeviceRequestAccessoryRight(napi_env env, napi_callback_info i
     return result;
 }
 
-static napi_value UsbFunctionsFromString(napi_env env, napi_callback_info info, string metricsName)
+static napi_value UsbFunctionsFromString(napi_env env, napi_callback_info info, std::string metricsName)
 {
     UsbApiMetrics metrics(metricsName);
     if (!HasFeature(FEATURE_DEVICE)) {
@@ -1140,7 +1140,7 @@ static napi_value CoreGetFunctionsFromString(napi_env env, napi_callback_info in
     return UsbFunctionsFromString(env, info, "BasicServicesKit.UsbManager.GetFunctionsFromString");
 }
 
-static napi_value UsbFunctionsToString(napi_env env, napi_callback_info info, string metricsName)
+static napi_value UsbFunctionsToString(napi_env env, napi_callback_info info, std::string metricsName)
 {
     UsbApiMetrics metrics(metricsName);
     if (!HasFeature(FEATURE_DEVICE)) {
@@ -1218,7 +1218,7 @@ static auto g_setCurrentFunctionComplete = [](napi_env env, napi_status status, 
     delete asyncContext;
 };
 
-static napi_value SetCurrentFunctions(napi_env env, napi_callback_info info, string metricsName)
+static napi_value SetCurrentFunctions(napi_env env, napi_callback_info info, std::string metricsName)
 {
     if (!HasFeature(FEATURE_DEVICE)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
@@ -1269,7 +1269,7 @@ static napi_value CoreSetDeviceFunctions(napi_env env, napi_callback_info info)
     return SetCurrentFunctions(env, info, "BasicServicesKit.UsbManager.SetDeviceFunctions");
 }
 
-static napi_value GetCurrentFunctions(napi_env env, napi_callback_info info, string metricsName)
+static napi_value GetCurrentFunctions(napi_env env, napi_callback_info info, std::string metricsName)
 {
     UsbApiMetrics metrics(metricsName);
     if (!HasFeature(FEATURE_DEVICE)) {
@@ -1309,7 +1309,7 @@ static napi_value CoreGetDeviceFunctions(napi_env env, napi_callback_info info)
     return GetCurrentFunctions(env, info, "BasicServicesKit.UsbManager.GetDeviceFunctions");
 }
 
-static napi_value GetPorts(napi_env env, napi_callback_info info, string metricsName)
+static napi_value GetPorts(napi_env env, napi_callback_info info, std::string metricsName)
 {
     UsbApiMetrics metrics(metricsName);
     if (!HasFeature(FEATURE_PORT)) {
@@ -1364,7 +1364,7 @@ static napi_value CoreGetPortList(napi_env env, napi_callback_info info)
 
 /* ============================================= Usb Port ============================================= */
 
-static napi_value GetSupportedModes(napi_env env, napi_callback_info info, string metricsName)
+static napi_value GetSupportedModes(napi_env env, napi_callback_info info, std::string metricsName)
 {
     UsbApiMetrics metrics(metricsName);
     if (!HasFeature(FEATURE_PORT)) {
@@ -1406,7 +1406,7 @@ static napi_value PortGetSupportedModes(napi_env env, napi_callback_info info)
 
 static napi_value PortGetPortSupportedModes(napi_env env, napi_callback_info info)
 {
-    return GetSupportedModes(env, info, "BasicServicesKit.UsbManager.GetPortSupportedModes");
+    return GetSupportedModes(env, info, "BasicServicesKit.UsbManager.GetPortSupportModes");
 }
 
 static auto g_setPortRoleExecute = [](napi_env env, void *data) {
@@ -1442,7 +1442,7 @@ static auto g_setPortRoleComplete = [](napi_env env, napi_status status, void *d
     delete asyncContext;
 };
 
-static napi_value SetPortRoles(napi_env env, napi_callback_info info, string metricsName)
+static napi_value SetPortRoles(napi_env env, napi_callback_info info, std::string metricsName)
 {
     if (!HasFeature(FEATURE_PORT)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
@@ -1656,7 +1656,7 @@ static napi_value PipeSetConfiguration(napi_env env, napi_callback_info info)
 
 static napi_value PipeGetRawDescriptors(napi_env env, napi_callback_info info)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetRawDescriptors");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.GetRawDescriptor");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -2487,7 +2487,7 @@ static int32_t UsbSubmitTransferErrorCode(int32_t &error)
 
 static napi_value UsbSubmitTransfer(napi_env env, napi_callback_info info)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.SubmitTransfer");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.UsbSubmitTransfer");
     HITRACE_METER_NAME(HITRACE_TAG_USB, "NAPI:UsbSubmitTransfer");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
@@ -2614,7 +2614,7 @@ static napi_value UsbCancelTransfer(napi_env env, napi_callback_info info)
 
 static napi_value PipeResetDevice(napi_env env, napi_callback_info info)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.ResetDevice");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.ResetUsbDevice");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
@@ -2730,7 +2730,7 @@ static napi_value NapiCreateStatusEnum(napi_env env)
 
 static napi_value PipeClose(napi_env env, napi_callback_info info)
 {
-    UsbApiMetrics metrics("BasicServicesKit.UsbManager.Close");
+    UsbApiMetrics metrics("BasicServicesKit.UsbManager.ClosePipe");
     if (!HasFeature(FEATURE_HOST)) {
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
