@@ -78,6 +78,10 @@
             }
         },
         {
+            "name":"serial_right_title",
+            "value":"Serial access authorization"
+        },
+        {
             "name":"USB_func_mtp",
             "value":"Transfer files",
             "attr":{
