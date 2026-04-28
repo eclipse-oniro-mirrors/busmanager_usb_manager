@@ -50,6 +50,10 @@
             }
         },
         {
+            "name":"serial_right_title",
+            "value":"串口访问授权"
+        },
+        {
             "name":"USB_func_mtp",
             "value":"传输文件",
             "attr":{
