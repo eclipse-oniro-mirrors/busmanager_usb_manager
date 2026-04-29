@@ -502,7 +502,7 @@ int32_t UsbSrvClient::AddAccessRight(const std::string &tokenId, const std::stri
 
 int32_t UsbSrvClient::ManageGlobalInterface(bool disable)
 {
-    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
+    RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->ManageGlobalInterface(disable);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "failed width ret = %{public}d !", ret);
@@ -512,7 +512,7 @@ int32_t UsbSrvClient::ManageGlobalInterface(bool disable)
 
 int32_t UsbSrvClient::ManageDevice(int32_t vendorId, int32_t productId, bool disable)
 {
-    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
+    RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->ManageDevice(vendorId, productId, disable);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "failed width ret = %{public}d !", ret);
@@ -534,7 +534,7 @@ void UsbSrvClient::UsbDeviceIdChange(const std::vector<UsbDeviceId> &deviceIdLis
 
 int32_t UsbSrvClient::ManageDevicePolicy(std::vector<UsbDeviceId> &trustList)
 {
-    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
+    RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
     std::vector<UsbDeviceIdInfo> deviceIdInfoList{};
     UsbDeviceIdChange(trustList, deviceIdInfoList);
     int32_t ret = proxy_->ManageDevicePolicy(deviceIdInfoList);
@@ -560,7 +560,7 @@ void UsbSrvClient::UsbDeviceTypeChange(const std::vector<UsbDeviceType> &disable
 
 int32_t UsbSrvClient::ManageInterfaceType(const std::vector<UsbDeviceType> &disableType, bool disable)
 {
-    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
+    RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
     std::vector<UsbDeviceTypeInfo> disableDevType;
     UsbDeviceTypeChange(disableType, disableDevType);
     int32_t ret = proxy_->ManageInterfaceType(disableDevType, disable);
