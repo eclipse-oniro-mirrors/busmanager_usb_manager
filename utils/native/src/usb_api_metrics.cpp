@@ -17,7 +17,7 @@
 #include "usb_errors.h"
 
 #define TIME_1000 1000
-#define UEX_MAX 99999999
+#define UEC_MAX 31400007
 
 namespace OHOS {
 namespace USB {
@@ -45,7 +45,7 @@ UsbApiMetrics::~UsbApiMetrics()
     int32_t runTime = (int32_t)((endTime.tv_sec - startTime.tv_sec) * TIME_1000 +
         (endTime.tv_usec - startTime.tv_usec) / TIME_1000);
     HISTOGRAM_TIMES(timeMetricsName.c_str(), runTime);
-    HISTOGRAM_ENUMERATION(enumMetricsName.c_str(), errorCode, UEX_MAX);
+    HISTOGRAM_ENUMERATION(enumMetricsName.c_str(), errorCode, UEC_MAX);
 #endif
 }
 

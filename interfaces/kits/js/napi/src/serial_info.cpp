@@ -77,13 +77,10 @@ static napi_value SerialGetPortListNapi(napi_env env, napi_callback_info info)
     USB_HILOGI(MODULE_USB_NAPI, "SerialGetPortListNapi start");
     std::vector<OHOS::USB::UsbSerialPort> portIds;
     int32_t ret = g_usbClient.SerialGetPortList(portIds);
-    if (ret < 0) {
-        metrics.SetErrorCode(ret);
-        USB_HILOGE(MODULE_USB_NAPI, "SerialGetPortList failed");
-    }
     napi_value result = nullptr;
     napi_create_array(env, &result);
     if (ret < 0) {
+        USB_HILOGE(MODULE_USB_NAPI, "SerialGetPortList failed");
         return result;
     }
     for (uint32_t i = 0; i < portIds.size(); ++i) {
@@ -108,8 +105,8 @@ static napi_value SerialGetAttributeNapi(napi_env env, napi_callback_info info)
     napi_value argv[ARGC_1] = {nullptr};
     if (!CheckNapiResult(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr),
         "Get call back info failed")) {
-        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         CheckAndThrowOnError(env, false, SYSPARAM_INVALID_INPUT, "get arguments failed.");
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     if (!CheckAndThrowOnError(env, (argc == ARGC_1), SYSPARAM_INVALID_INPUT, "The function takes 1 arguments.")) {
@@ -192,6 +189,7 @@ static napi_value SerialSetAttributeNapi(napi_env env, napi_callback_info info)
     UsbSerialAttr serialAttribute;
     int32_t portIdValue = -1;
     if (!ParseSetAttributeInterfaceParams(env, info, portIdValue, serialAttribute)) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     USB_HILOGI(MODULE_USB_NAPI, "SetAttributeNapi portIdValue: %{public}d", portIdValue);
@@ -250,6 +248,7 @@ static napi_value SerialWriteSyncNapi(napi_env env, napi_callback_info info)
     napi_value buffer;
     uint32_t timeoutValue = 0;
     if (!ParseWriteInterfaceParams(env, info, portIdValue, &buffer, timeoutValue)) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     napi_typedarray_type arrayType;
@@ -297,7 +296,6 @@ static auto g_serialWriteExecute = [](napi_env env, void* data) {
     int32_t ret = g_usbClient.SerialWrite(context->portId, bufferVector, context->size, actualSize, context->timeout);
     if (ret != 0) {
         context->contextErrno = ErrorCodeConversion(ret);
-        context->metrics->SetErrorCode(ret);
     }
 
     context->ret = actualSize;
@@ -308,16 +306,22 @@ static auto g_serialWriteComplete = [](napi_env env, napi_status status, void *d
     napi_value result = nullptr;
     if (context->contextErrno) {
         napi_create_int32(env, context->contextErrno, &result);
+        if (context->metric != nullptr) {
+            context->metric->SetErrorCode(context->contextErrno);
+        }
         napi_reject_deferred(env, context->deferred, result);
     } else {
         napi_create_int32(env, context->ret, &result);
         napi_resolve_deferred(env, context->deferred, result);
     }
+    if (context->metric != nullptr) {
+        delete context->metrics;
+        context->metrics = nullptr;
+    }
     napi_delete_async_work(env, context->work);
     if (context->bufferRef) {
         napi_delete_reference(env, context->bufferRef);
     }
-    delete context->metrics;
     delete context;
 };
 
@@ -419,6 +423,7 @@ static napi_value SerialReadSyncNapi(napi_env env, napi_callback_info info)
     napi_value buffer;
     uint32_t timeoutValue = 0;
     if (!ParseReadInterfaceParams(env, info, portIdValue, &buffer, timeoutValue)) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     napi_typedarray_type arrayType;
@@ -427,6 +432,7 @@ static napi_value SerialReadSyncNapi(napi_env env, napi_callback_info info)
     napi_get_typedarray_info(env, buffer, &arrayType, &bufferLength, &bufferValue, nullptr, nullptr);
     if (!CheckAndThrowOnError(env, arrayType == napi_uint8_array, SYSPARAM_INVALID_INPUT,
         "The type of buffer must be an array of uint8_t.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
 
@@ -435,6 +441,7 @@ static napi_value SerialReadSyncNapi(napi_env env, napi_callback_info info)
     int32_t ret = g_usbClient.SerialRead(portIdValue, bufferData, bufferLength,
         actualSize, timeoutValue);
     if (!CheckAndThrowOnError(env, (ret == 0), ErrorCodeConversion(ret), "SerialReadSync Failed.")) {
+        metrics.SetErrorCode(ErrorCodeConversion(ret));
         return nullptr;
     }
     ret = memcpy_s(bufferValue, bufferLength, bufferData.data(), bufferData.size());
@@ -456,7 +463,6 @@ static auto g_serialReadExecute = [](napi_env env, void* data) {
         context->size, actualSize, context->timeout);
     if (ret != 0) {
         context->contextErrno = ErrorCodeConversion(ret);
-        context->metrics->SetErrorCode(ret);
     }
     ret = memcpy_s(context->pData, context->size, bufferData.data(), bufferData.size());
     if (ret != UEC_OK) {
@@ -469,14 +475,20 @@ static auto g_serialReadComplete = [](napi_env env, napi_status status, void* da
     SerialReadAsyncContext *context = static_cast<SerialReadAsyncContext *>(data);
     napi_value result = nullptr;
     if (context->contextErrno) {
+        if (context->metric != nullptr) {
+            context->metric->SetErrorCode(context->contextErrno);
+        }
         napi_create_int32(env, context->contextErrno, &result);
         napi_reject_deferred(env, context->deferred, result);
     } else {
         napi_create_int32(env, context->ret, &result);
         napi_resolve_deferred(env, context->deferred, result);
     }
+    if (context->metric != nullptr) {
+        delete context->metrics;
+        context->metrics = nullptr;
+    }
     napi_delete_async_work(env, context->work);
-    delete context->metrics;
     delete context;
 };
 
@@ -530,8 +542,8 @@ static napi_value SerialOpenNapi(napi_env env, napi_callback_info info)
     napi_value argv[ARGC_1] = {nullptr};
     if (!CheckNapiResult(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr),
         "Get call back info failed")) {
-        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         CheckAndThrowOnError(env, false, SYSPARAM_INVALID_INPUT, "get arguments failed.");
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     if (!CheckAndThrowOnError(env, (argc == ARGC_1), SYSPARAM_INVALID_INPUT, "The function takes 1 arguments.")) {
@@ -570,8 +582,8 @@ static napi_value SerialCloseNapi(napi_env env, napi_callback_info info)
     napi_value argv[ARGC_1] = {nullptr};
     if (!CheckNapiResult(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr),
         "Get call back info failed")) {
-        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         CheckAndThrowOnError(env, false, SYSPARAM_INVALID_INPUT, "get arguments failed.");
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     if (!CheckAndThrowOnError(env, (argc == ARGC_1), SYSPARAM_INVALID_INPUT, "The function takes 1 arguments.")) {
@@ -609,8 +621,8 @@ static napi_value SerialHasRightNapi(napi_env env, napi_callback_info info)
     napi_value argv[ARGC_1] = {nullptr};
     if (!CheckNapiResult(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr),
         "Get call back info failed")) {
-        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         CheckAndThrowOnError(env, false, SYSPARAM_INVALID_INPUT, "get arguments failed.");
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     if (!CheckAndThrowOnError(env, (argc == ARGC_1), SYSPARAM_INVALID_INPUT, "The function takes 1 arguments.")) {
@@ -650,8 +662,8 @@ static napi_value CancelSerialRightNapi(napi_env env, napi_callback_info info)
     napi_value argv[ARGC_1] = {nullptr};
     if (!CheckNapiResult(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr),
         "Get call back info failed")) {
-        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         CheckAndThrowOnError(env, false, SYSPARAM_INVALID_INPUT, "get arguments failed.");
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     if (!CheckAndThrowOnError(env, (argc == ARGC_1), SYSPARAM_INVALID_INPUT, "The function takes 1 arguments.")) {
@@ -688,8 +700,8 @@ static napi_value SerialAddRightNapi(napi_env env, napi_callback_info info)
     napi_value argv[ARGC_2] = {nullptr};
     if (!CheckNapiResult(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr),
         "Get call back info failed")) {
-        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         CheckAndThrowOnError(env, false, SYSPARAM_INVALID_INPUT, "can not get arguments.");
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     if (!CheckAndThrowOnError(env, (argc == ARGC_2), SYSPARAM_INVALID_INPUT, "The function takes 2 arguments.")) {
@@ -739,7 +751,6 @@ static auto g_serialRequestRightExecute = [](napi_env env, void* data) {
     if (ret != 0) {
         USB_HILOGE(MODULE_USB_NAPI, "request right has error");
         asyncContext->contextErrno = ErrorCodeConversion(ret);
-        asyncContext->metrics->SetErrorCode(ret);
     }
 };
 
@@ -748,14 +759,20 @@ static auto g_serialRequestRightComplete = [](napi_env env, napi_status status, 
     napi_value result = nullptr;
     if (asyncContext->contextErrno) {
         USB_HILOGE(MODULE_USB_NAPI, "Failed to request serial right");
+        if (context->metric != nullptr) {
+            context->metric->SetErrorCode(context->contextErrno);
+        }
         napi_create_int32(env, asyncContext->contextErrno, &result);
         napi_reject_deferred(env, asyncContext->deferred, result);
     } else {
         napi_get_boolean(env, asyncContext->hasRight, &result);
         napi_resolve_deferred(env, asyncContext->deferred, result);
     }
+    if (context->metric != nullptr) {
+        delete asyncContext->metrics;
+        asyncContext->metrics = nullptr;
+    }
     napi_delete_async_work(env, asyncContext->work);
-    delete asyncContext->metrics;
     delete asyncContext;
 };
 
