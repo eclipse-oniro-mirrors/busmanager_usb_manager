@@ -17,6 +17,7 @@
 #include "usb_errors.h"
 
 #define TIME_1000 1000
+#define UEX_MAX 99999999
 
 namespace OHOS {
 namespace USB {
@@ -24,35 +25,33 @@ namespace USB {
 UsbApiMetrics::UsbApiMetrics(std::string name)
 : metricsName(name)
 {
-    errorCode = 1;
+    errorCode = 0;
     gettimeofday(&startTime, nullptr);
 }
 
 UsbApiMetrics::~UsbApiMetrics()
 {
 #ifdef USB_MANAGER_METRICS_ENABLE
-    std::string name = metricsName + ".Boolean";
-    if (errorCode == UEC_OK) {
-        HISTOGRAM_BOOLEAN(name.c_str(), 1);
-    } else {
-        HISTOGRAM_BOOLEAN(name.c_str(), 0);
-    }
-#endif
-}
-
-void UsbApiMetrics::MetricsEnumAndTime(int32_t error)
-{
-#ifdef USB_MANAGER_METRICS_ENABLE
-    errorCode = error;
+    std::string boolMetricsName = metricsName + ".Boolean";
     std::string enumMetricsName = metricsName + ".Enum";
     std::string timeMetricsName = metricsName + ".Time";
+    if (errorCode == UEC_OK) {
+        HISTOGRAM_BOOLEAN(boolMetricsName.c_str(), 1);
+    } else {
+        HISTOGRAM_BOOLEAN(boolMetricsName.c_str(), 0);
+    }
     struct timeval endTime;
     gettimeofday(&endTime, nullptr);
     int32_t runTime = (int32_t)((endTime.tv_sec - startTime.tv_sec) * TIME_1000 +
         (endTime.tv_usec - startTime.tv_usec) / TIME_1000);
-    HISTOGRAM_ENUMERATION(enumMetricsName.c_str(), errorCode, UEC_SERIAL_DATEBASE_ERROR);
     HISTOGRAM_TIMES(timeMetricsName.c_str(), runTime);
+    HISTOGRAM_ENUMERATION(enumMetricsName.c_str(), errorCode, UEX_MAX);
 #endif
+}
+
+void UsbApiMetrics::SetErrorCode(int32_t error)
+{
+    errorCode = error;
 }
 }
 }

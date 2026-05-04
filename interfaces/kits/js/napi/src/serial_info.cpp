@@ -77,11 +77,13 @@ static napi_value SerialGetPortListNapi(napi_env env, napi_callback_info info)
     USB_HILOGI(MODULE_USB_NAPI, "SerialGetPortListNapi start");
     std::vector<OHOS::USB::UsbSerialPort> portIds;
     int32_t ret = g_usbClient.SerialGetPortList(portIds);
-    metrics.MetricsEnumAndTime(ret);
+    if (ret < 0) {
+        metrics.SetErrorCode(ret);
+        USB_HILOGE(MODULE_USB_NAPI, "SerialGetPortList failed");
+    }
     napi_value result = nullptr;
     napi_create_array(env, &result);
     if (ret < 0) {
-        USB_HILOGE(MODULE_USB_NAPI, "SerialGetPortList failed");
         return result;
     }
     for (uint32_t i = 0; i < portIds.size(); ++i) {
@@ -106,27 +108,31 @@ static napi_value SerialGetAttributeNapi(napi_env env, napi_callback_info info)
     napi_value argv[ARGC_1] = {nullptr};
     if (!CheckNapiResult(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr),
         "Get call back info failed")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         CheckAndThrowOnError(env, false, SYSPARAM_INVALID_INPUT, "get arguments failed.");
         return nullptr;
     }
     if (!CheckAndThrowOnError(env, (argc == ARGC_1), SYSPARAM_INVALID_INPUT, "The function takes 1 arguments.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     napi_value portId = argv[0];
     napi_valuetype type;
     napi_typeof(env, portId, &type);
     if (!CheckAndThrowOnError(env, type == napi_number, SYSPARAM_INVALID_INPUT, "The type of arg0 must be int32_t.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     int32_t portIdValue = -1;
     napi_get_value_int32(env, portId, &portIdValue);
     if (!CheckAndThrowOnError(env, (portIdValue != -1), SYSPARAM_INVALID_INPUT, "Failed to get portId.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     UsbSerialAttr serialAttribute;
     int32_t ret = g_usbClient.SerialGetAttribute(portIdValue, serialAttribute);
-    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, (ret == 0), ErrorCodeConversion(ret), "Failed to get attribute.")) {
+        metrics.SetErrorCode(ErrorCodeConversion(ret));
         return nullptr;
     }
     napi_value result = nullptr;
@@ -190,8 +196,8 @@ static napi_value SerialSetAttributeNapi(napi_env env, napi_callback_info info)
     }
     USB_HILOGI(MODULE_USB_NAPI, "SetAttributeNapi portIdValue: %{public}d", portIdValue);
     int ret = g_usbClient.SerialSetAttribute(portIdValue, serialAttribute);
-    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, (ret == 0), ErrorCodeConversion(ret), "Failed to set attribute.")) {
+        metrics.SetErrorCode(ErrorCodeConversion(ret));
         return nullptr;
     }
     return nullptr;
@@ -252,6 +258,7 @@ static napi_value SerialWriteSyncNapi(napi_env env, napi_callback_info info)
     napi_get_typedarray_info(env, buffer, &arrayType, &bufferLength, &bufferValue, nullptr, nullptr);
     if (!CheckAndThrowOnError(env, arrayType == napi_uint8_array, SYSPARAM_INVALID_INPUT,
         "The type of buffer must be an array of uint8_t.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     std::vector<uint8_t> bufferVector(static_cast<uint8_t*>(bufferValue),
@@ -259,19 +266,19 @@ static napi_value SerialWriteSyncNapi(napi_env env, napi_callback_info info)
 
     uint32_t actualSize = 0;
     int32_t ret = g_usbClient.SerialWrite(portIdValue, bufferVector, bufferLength, actualSize, timeoutValue);
-    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, (ret == 0), ErrorCodeConversion(ret), "SerialWrite Failed.")) {
+        metrics.SetErrorCode(ErrorCodeConversion(ret));
         return nullptr;
     }
-    
+
     napi_value result = nullptr;
     napi_create_int32(env, actualSize, &result);
     return result;
 }
 
 static auto g_serialWriteExecute = [](napi_env env, void* data) {
-    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Write");
     SerialWriteAsyncContext *context = static_cast<SerialWriteAsyncContext *>(data);
+    context->metrics = new UsbApiMetrics("BasicServicesKit.SerialManager.Write");
     if (context->contextErrno) {
         USB_HILOGE(MODULE_USB_NAPI, "ExecuteCallback failed, reason: napi_get_reference_value");
         return;
@@ -288,9 +295,9 @@ static auto g_serialWriteExecute = [](napi_env env, void* data) {
 
     uint32_t actualSize = 0;
     int32_t ret = g_usbClient.SerialWrite(context->portId, bufferVector, context->size, actualSize, context->timeout);
-    metrics.MetricsEnumAndTime(ret);
     if (ret != 0) {
         context->contextErrno = ErrorCodeConversion(ret);
+        context->metrics->SetErrorCode(ret);
     }
 
     context->ret = actualSize;
@@ -310,6 +317,7 @@ static auto g_serialWriteComplete = [](napi_env env, napi_status status, void *d
     if (context->bufferRef) {
         napi_delete_reference(env, context->bufferRef);
     }
+    delete context->metrics;
     delete context;
 };
 
@@ -440,15 +448,15 @@ static napi_value SerialReadSyncNapi(napi_env env, napi_callback_info info)
 }
 
 static auto g_serialReadExecute = [](napi_env env, void* data) {
-    UsbApiMetrics metrics("BasicServicesKit.SerialManager.Read");
     SerialReadAsyncContext *context = static_cast<SerialReadAsyncContext *>(data);
+    context->metrics = new UsbApiMetrics("BasicServicesKit.SerialManager.Read");
     uint32_t actualSize = 0;
     std::vector<uint8_t> bufferData;
     int32_t ret = g_usbClient.SerialRead(context->portId, bufferData,
         context->size, actualSize, context->timeout);
-    metrics.MetricsEnumAndTime(ret);
     if (ret != 0) {
         context->contextErrno = ErrorCodeConversion(ret);
+        context->metrics->SetErrorCode(ret);
     }
     ret = memcpy_s(context->pData, context->size, bufferData.data(), bufferData.size());
     if (ret != UEC_OK) {
@@ -468,6 +476,7 @@ static auto g_serialReadComplete = [](napi_env env, napi_status status, void* da
         napi_resolve_deferred(env, context->deferred, result);
     }
     napi_delete_async_work(env, context->work);
+    delete context->metrics;
     delete context;
 };
 
@@ -521,10 +530,12 @@ static napi_value SerialOpenNapi(napi_env env, napi_callback_info info)
     napi_value argv[ARGC_1] = {nullptr};
     if (!CheckNapiResult(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr),
         "Get call back info failed")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         CheckAndThrowOnError(env, false, SYSPARAM_INVALID_INPUT, "get arguments failed.");
         return nullptr;
     }
     if (!CheckAndThrowOnError(env, (argc == ARGC_1), SYSPARAM_INVALID_INPUT, "The function takes 1 arguments.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     napi_value portId = argv[0];
@@ -532,17 +543,19 @@ static napi_value SerialOpenNapi(napi_env env, napi_callback_info info)
     napi_typeof(env, portId, &type);
     if (!CheckAndThrowOnError(env, type == napi_number, SYSPARAM_INVALID_INPUT,
         "The type of portId must be int32_t.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     int32_t portIdValue = -1;
     napi_get_value_int32(env, portId, &portIdValue);
     if (!CheckAndThrowOnError(env, (portIdValue != -1), SYSPARAM_INVALID_INPUT, "Failed to get portId.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     USB_HILOGE(MODULE_USB_NAPI, "portIdValue: %{public}d", portIdValue);
     int ret = g_usbClient.SerialOpen(portIdValue);
-    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, ret == 0, ErrorCodeConversion(ret), "SerialOpen failed.")) {
+        metrics.SetErrorCode(ErrorCodeConversion(ret));
         return nullptr;
     }
 
@@ -557,10 +570,12 @@ static napi_value SerialCloseNapi(napi_env env, napi_callback_info info)
     napi_value argv[ARGC_1] = {nullptr};
     if (!CheckNapiResult(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr),
         "Get call back info failed")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         CheckAndThrowOnError(env, false, SYSPARAM_INVALID_INPUT, "get arguments failed.");
         return nullptr;
     }
     if (!CheckAndThrowOnError(env, (argc == ARGC_1), SYSPARAM_INVALID_INPUT, "The function takes 1 arguments.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     napi_value portId = argv[0];
@@ -568,17 +583,19 @@ static napi_value SerialCloseNapi(napi_env env, napi_callback_info info)
     napi_typeof(env, portId, &type);
     if (!CheckAndThrowOnError(env, type == napi_number, SYSPARAM_INVALID_INPUT,
         "The type of portId must be int32_t.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     int32_t portIdValue = -1;
     napi_get_value_int32(env, portId, &portIdValue);
     if (!CheckAndThrowOnError(env, (portIdValue != -1), SYSPARAM_INVALID_INPUT, "Failed to get portId.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     
     int ret = g_usbClient.SerialClose(portIdValue);
-    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, ret == 0, ErrorCodeConversion(ret), "SerialClose failed.")) {
+        metrics.SetErrorCode(ErrorCodeConversion(ret));
         return nullptr;
     }
     return nullptr;
@@ -592,10 +609,12 @@ static napi_value SerialHasRightNapi(napi_env env, napi_callback_info info)
     napi_value argv[ARGC_1] = {nullptr};
     if (!CheckNapiResult(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr),
         "Get call back info failed")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         CheckAndThrowOnError(env, false, SYSPARAM_INVALID_INPUT, "get arguments failed.");
         return nullptr;
     }
     if (!CheckAndThrowOnError(env, (argc == ARGC_1), SYSPARAM_INVALID_INPUT, "The function takes 1 arguments.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     napi_value portId = argv[0];
@@ -603,18 +622,20 @@ static napi_value SerialHasRightNapi(napi_env env, napi_callback_info info)
     napi_typeof(env, portId, &type);
     if (!CheckAndThrowOnError(env, type == napi_number, SYSPARAM_INVALID_INPUT,
         "The type of portId must be int32_t.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     int32_t portIdValue = -1;
     napi_get_value_int32(env, portId, &portIdValue);
     if (!CheckAndThrowOnError(env, (portIdValue != -1), SYSPARAM_INVALID_INPUT, "Failed to get portId.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     napi_value result = nullptr;
     bool hasRight = false;
     int32_t ret = g_usbClient.HasSerialRight(portIdValue, hasRight);
-    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, (ret == 0), ErrorCodeConversion(ret), "SerialHasRight failed.")) {
+        metrics.SetErrorCode(ErrorCodeConversion(ret));
         return nullptr;
     }
     napi_get_boolean(env, hasRight, &result);
@@ -629,10 +650,12 @@ static napi_value CancelSerialRightNapi(napi_env env, napi_callback_info info)
     napi_value argv[ARGC_1] = {nullptr};
     if (!CheckNapiResult(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr),
         "Get call back info failed")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         CheckAndThrowOnError(env, false, SYSPARAM_INVALID_INPUT, "get arguments failed.");
         return nullptr;
     }
     if (!CheckAndThrowOnError(env, (argc == ARGC_1), SYSPARAM_INVALID_INPUT, "The function takes 1 arguments.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     napi_value portId = argv[0];
@@ -640,16 +663,18 @@ static napi_value CancelSerialRightNapi(napi_env env, napi_callback_info info)
     napi_typeof(env, portId, &type);
     if (!CheckAndThrowOnError(env, type == napi_number, SYSPARAM_INVALID_INPUT,
         "The type of portId must be int32_t.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     int32_t portIdValue = -1;
     napi_get_value_int32(env, portId, &portIdValue);
     if (!CheckAndThrowOnError(env, (portIdValue != -1), SYSPARAM_INVALID_INPUT, "Failed to get portId.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     int32_t ret = g_usbClient.CancelSerialRight(portIdValue);
-    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, ret == 0, ErrorCodeConversion(ret), "SerialRemoveRight failed.")) {
+        metrics.SetErrorCode(ErrorCodeConversion(ret));
         return nullptr;
     }
     return nullptr;
@@ -663,10 +688,12 @@ static napi_value SerialAddRightNapi(napi_env env, napi_callback_info info)
     napi_value argv[ARGC_2] = {nullptr};
     if (!CheckNapiResult(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr),
         "Get call back info failed")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         CheckAndThrowOnError(env, false, SYSPARAM_INVALID_INPUT, "can not get arguments.");
         return nullptr;
     }
     if (!CheckAndThrowOnError(env, (argc == ARGC_2), SYSPARAM_INVALID_INPUT, "The function takes 2 arguments.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     napi_value tokenId = argv[0];
@@ -674,41 +701,45 @@ static napi_value SerialAddRightNapi(napi_env env, napi_callback_info info)
     napi_typeof(env, tokenId, &type);
     if (!CheckAndThrowOnError(env, type == napi_number, SYSPARAM_INVALID_INPUT,
         "The type of tokenId must be int32_t.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     int32_t tokenIdValue = 0;
     napi_get_value_int32(env, tokenId, &tokenIdValue);
     if (!CheckAndThrowOnError(env, (tokenIdValue != 0), SYSPARAM_INVALID_INPUT, "Failed to get tokenId.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     napi_value portId = argv[1];
     napi_typeof(env, portId, &type);
     if (!CheckAndThrowOnError(env, type == napi_number, SYSPARAM_INVALID_INPUT,
         "The type of portId must be int32_t.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     int32_t portIdValue = -1;
     napi_get_value_int32(env, portId, &portIdValue);
     if (!CheckAndThrowOnError(env, (portIdValue != -1), SYSPARAM_INVALID_INPUT, "Failed to get portId.")) {
+        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         return nullptr;
     }
     int32_t ret = g_usbClient.AddSerialRight(tokenIdValue, portIdValue);
-    metrics.MetricsEnumAndTime(ret);
     if (!CheckAndThrowOnError(env, ret == 0, ErrorCodeConversion(ret), "SerialAddRight failed.")) {
+        metrics.SetErrorCode(ErrorCodeConversion(ret));
         return nullptr;
     }
     return nullptr;
 }
 
 static auto g_serialRequestRightExecute = [](napi_env env, void* data) {
-    UsbApiMetrics metrics("BasicServicesKit.SerialManager.RequestSerialRight");
     SerialRequestRightAsyncContext *asyncContext = static_cast<SerialRequestRightAsyncContext *>(data);
+    asyncContext->metrics = new UsbApiMetrics("BasicServicesKit.SerialManager.RequestSerialRight");
     int32_t ret = g_usbClient.RequestSerialRight(asyncContext->portIdValue, asyncContext->hasRight);
     asyncContext->contextErrno = 0;
-    metrics.MetricsEnumAndTime(ret);
     if (ret != 0) {
         USB_HILOGE(MODULE_USB_NAPI, "request right has error");
         asyncContext->contextErrno = ErrorCodeConversion(ret);
+        asyncContext->metrics->SetErrorCode(ret);
     }
 };
 
@@ -724,6 +755,7 @@ static auto g_serialRequestRightComplete = [](napi_env env, napi_status status, 
         napi_resolve_deferred(env, asyncContext->deferred, result);
     }
     napi_delete_async_work(env, asyncContext->work);
+    delete asyncContext->metrics;
     delete asyncContext;
 };
 

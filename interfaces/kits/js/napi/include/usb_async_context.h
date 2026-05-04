@@ -22,6 +22,7 @@
 #include "usb_endpoint.h"
 #include "usb_request.h"
 #include "usb_accessory.h"
+#include "usb_api_metrics.h"
 
 namespace OHOS {
 namespace USB {
@@ -66,6 +67,7 @@ struct USBAsyncContext {
 
     napi_deferred deferred;
     napi_status status;
+    UsbApiMetrics* metrics = nullptr;
 };
 
 struct USBRightAsyncContext : USBAsyncContext {

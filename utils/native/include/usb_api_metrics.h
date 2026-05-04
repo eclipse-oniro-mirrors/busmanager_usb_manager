@@ -28,7 +28,7 @@ class UsbApiMetrics {
 public:
     UsbApiMetrics(std::string name);
     ~UsbApiMetrics();
-    void MetricsEnumAndTime(int32_t error);
+    void SetErrorCode(int32_t error);
 private:
     std::string metricsName;
     struct timeval startTime;
