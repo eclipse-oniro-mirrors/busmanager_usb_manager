@@ -1084,9 +1084,6 @@ static auto g_requestAccessoryRightComplete = [](napi_env env, napi_status statu
     }
     if (asyncContext->metrics != nullptr) {
         delete asyncContext->metrics;
-        if (asyncContext->metrics != nullptr) {
-            asyncContext->metrics->SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
-        }
         asyncContext->metrics = nullptr;
     }
     ProcessPromise(env, *asyncContext, queryResult);
@@ -1270,7 +1267,6 @@ static auto g_setCurrentFunctionComplete = [](napi_env env, napi_status status, 
     }
     ProcessPromise(env, *asyncContext, queryResult);
     napi_delete_async_work(env, asyncContext->work);
-    delete asyncContext->metrics;
     delete asyncContext;
 };
 
@@ -2011,7 +2007,7 @@ static auto g_usbControlTransferExecute = [](napi_env env, void *data) {
 static auto g_usbControlTransferComplete = [](napi_env env, napi_status status, void *data) {
     USBDeviceControlTransferAsyncContext *asyncContext = reinterpret_cast<USBDeviceControlTransferAsyncContext *>(data);
     napi_value queryResult = nullptr;
- 
+
     if (asyncContext->status == napi_ok) {
         napi_create_int32(env, asyncContext->dataSize, &queryResult);
     } else {
@@ -2021,12 +2017,12 @@ static auto g_usbControlTransferComplete = [](napi_env env, napi_status status, 
         }
         napi_create_int32(env, -1, &queryResult);
     }
-    if (asyncContext->deferred) {
-        napi_resolve_deferred(env, asyncContext->deferred, queryResult);
-    }
     if (asyncContext->metrics != nullptr) {
         delete asyncContext->metrics;
         asyncContext->metrics = nullptr;
+    }
+    if (asyncContext->deferred) {
+        napi_resolve_deferred(env, asyncContext->deferred, queryResult);
     }
     napi_delete_async_work(env, asyncContext->work);
     delete asyncContext;
@@ -2198,7 +2194,7 @@ static auto g_bulkTransferComplete = [](napi_env env, napi_status status, void *
     } else {
         USB_HILOGE(MODULE_USB_NAPI, "BulkTransfer failed");
         if (asyncContext->metrics != nullptr) {
-            asyncContext->metrics->SerErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
+            asyncContext->metrics->SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
         }
         napi_create_int32(env, -1, &queryResult);
     }
@@ -2696,7 +2692,6 @@ static napi_value UsbCancelTransfer(napi_env env, napi_callback_info info)
     StartTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB, "NAPI:pipe.UsbCancelTransfer");
     int32_t ret = asyncContext->pipe.UsbCancelTransfer(asyncContext->endpoint);
     FinishTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB);
-    metrics.MetricsEnumAndTime(ret);
     if (ret != napi_ok) {
         ret = UsbSubmitTransferErrorCode(ret);
         metrics.SetErrorCode(ret);
