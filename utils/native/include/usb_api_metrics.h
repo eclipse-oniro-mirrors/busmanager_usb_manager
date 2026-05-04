@@ -30,9 +30,9 @@ public:
     ~UsbApiMetrics();
     void SetErrorCode(int32_t error);
 private:
-    std::string metricsName;
-    struct timeval startTime;
-    int32_t errorCode;
+    std::string metricsName_;
+    struct timeval startTime_;
+    int32_t errorCode_;
 };
 }
 }

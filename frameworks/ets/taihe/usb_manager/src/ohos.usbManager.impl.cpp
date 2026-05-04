@@ -344,23 +344,26 @@ USBDevicePipe connectDevice(USBDevice const &device)
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.ConnectDevice");
     OHOS::USB::USBDevicePipe pipe;
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return {};
     }
     OHOS::USB::UsbDevice usbDev = ConvertToUsbDevice(device);
     int32_t ret = g_usbClient.OpenDevice(usbDev, pipe);
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED || ret == OHOS::USB::UEC_INTERFACE_PERMISSION_DENIED) {
+        metrics.SetErrorCode(UEC_COMMON_HAS_NO_RIGHT);
         ThrowBusinessError(UEC_COMMON_HAS_NO_RIGHT, "need call requestRight to get the permission");
         USB_HILOGE(MODULE_USB_NAPI, "Connect Device failed, return code:%{public}d", ret);
         return {};
     }
     if (ret == HDF_DEV_ERR_NO_DEVICE) {
+        metrics.SetErrorCode(USB_SUBMIT_TRANSFER_IO_ERROR);
         ThrowBusinessError(USB_SUBMIT_TRANSFER_IO_ERROR, "");
         return {};
     }
     if (ret != OHOS::USB::UEC_OK) {
         USB_HILOGE(MODULE_USB_NAPI, "Connect Device failed, return code:%{public}d", ret);
+        metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
         ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION, "");
         return {};
     }
@@ -381,12 +384,12 @@ array<ohos::usbManager::USBDevice> getDevices()
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetDevices");
     std::vector<ohos::usbManager::USBDevice> res;
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return array<ohos::usbManager::USBDevice>(res);
     }
     std::vector<OHOS::USB::UsbDevice> deviceList;
     auto ret = g_usbClient.GetDevices(deviceList);
-    metrics.MetricsEnumAndTime(ret);
     if (ret != 0) {
         USB_HILOGE(MODULE_USB_NAPI, "GetDevices failed, return code:%{public}d", ret);
         return array<ohos::usbManager::USBDevice>(res);
@@ -401,11 +404,11 @@ bool hasRight(string_view deviceName)
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.HasRight");
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return false;
     }
     bool result = g_usbClient.HasRight(std::string(deviceName));
-    metrics.MetricsEnumAndTime(result ? OHOS::USB::UEC_OK : OHOS::USB::UEC_INTERFACE_INNER_ERR);
     return result;
 }
 
@@ -414,11 +417,11 @@ bool requestRightSync(string_view deviceName)
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.RequestRightSync");
     bool bRet = false;
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return bRet;
     }
     int32_t ret = g_usbClient.RequestRight(std::string(deviceName));
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_OK) {
         bRet = true;
     }
@@ -430,11 +433,11 @@ bool removeRight(string_view deviceName)
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.RemoveRight");
     bool bResult = false;
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return bResult;
     }
     int32_t ret = g_usbClient.RemoveRight(std::string(deviceName));
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_OK) {
         bResult = true;
     }
@@ -446,17 +449,19 @@ bool addDeviceAccessRight(string_view tokenId, string_view deviceName)
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.AddAccessRight");
     bool bResult = false;
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return bResult;
     }
     int32_t ret = g_usbClient.AddAccessRight(std::string(tokenId), std::string(deviceName));
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_OK) {
         bResult = true;
     } else if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI) {
+        metrics.SetErrorCode(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "Normal app not allowed");
         return bResult;
     } else if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED) {
+        metrics.SetErrorCode(OHEC_COMMON_PERMISSION_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_PERMISSION_NOT_ALLOWED, "Permission not allowed");
         return bResult;
     } else {
@@ -469,17 +474,19 @@ int32_t getFunctionsFromString(string_view funcs)
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetFunctionsFromString");
     if (!HasFeature(FEATURE_DEVICE)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return CAPABILITY_NOT_SUPPORT;
     }
     int32_t numFuncs = g_usbClient.UsbFunctionsFromString(std::string(funcs));
     int32_t ret = (numFuncs < 0) ? OHOS::USB::UEC_INTERFACE_INNER_ERR : OHOS::USB::UEC_OK;
-    metrics.MetricsEnumAndTime(ret);
     if (numFuncs == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI) {
+        metrics.SetErrorCode(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
         return OHEC_COMMON_NORMAL_APP_NOT_ALLOWED;
     }
     if (numFuncs == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED) {
+        metrics.SetErrorCode(OHEC_COMMON_PERMISSION_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_PERMISSION_NOT_ALLOWED, "");
         return OHEC_COMMON_PERMISSION_NOT_ALLOWED;
     }
@@ -490,6 +497,7 @@ string getStringFromFunctions(int32_t funcs)
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetStringFromFunctions");
     if (!HasFeature(FEATURE_DEVICE)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return "";
     }
@@ -497,12 +505,13 @@ string getStringFromFunctions(int32_t funcs)
     int32_t ret = (strFuncs == OHOS::USB::PERMISSION_DENIED_SYSAPI ||
         strFuncs == OHOS::USB::SYS_APP_PERMISSION_DENIED_SYSAPI) ?
         OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI : OHOS::USB::UEC_OK;
-    metrics.MetricsEnumAndTime(ret);
     if (strFuncs == OHOS::USB::PERMISSION_DENIED_SYSAPI) {
+        metrics.SetErrorCode(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
         return "";
     }
     if (strFuncs == OHOS::USB::SYS_APP_PERMISSION_DENIED_SYSAPI) {
+        metrics.SetErrorCode(OHEC_COMMON_PERMISSION_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_PERMISSION_NOT_ALLOWED, "");
         return "";
     }
@@ -513,24 +522,28 @@ void setDeviceFunctionsSync(int32_t funcs)
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.SetDeviceFunctionsSync");
     if (!HasFeature(FEATURE_DEVICE)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return;
     }
     int32_t ret = g_usbClient.SetCurrentFunctions(funcs);
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_OK) {
         return;
     } else if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI) {
+        metrics.SetErrorCode(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
         return;
     } else if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED) {
+        metrics.SetErrorCode(OHEC_COMMON_PERMISSION_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_PERMISSION_NOT_ALLOWED, "");
         return;
     } else if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_CHECK_HDC) {
+        metrics.SetErrorCode(UEC_COMMON_HDC_NOT_ALLOWED);
         ThrowBusinessError(UEC_COMMON_HDC_NOT_ALLOWED, "");
         return;
     } else {
         USB_HILOGE(MODULE_USB_NAPI, "setDeviceFunctionsSync failed, return code:%{public}d", ret);
+        metrics.SetErrorCode(UEC_COMMON_FUNCTION_NOT_SUPPORT);
         ThrowBusinessError(UEC_COMMON_FUNCTION_NOT_SUPPORT, "");
         return;
     }
@@ -541,21 +554,24 @@ int32_t getDeviceFunctions()
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetDeviceFunctions");
     int32_t cfuncs = 0;
     if (!HasFeature(FEATURE_DEVICE)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return cfuncs;
     }
     int32_t ret = g_usbClient.GetCurrentFunctions(cfuncs);
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI) {
+        metrics.SetErrorCode(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "Normal app not allowed");
         return cfuncs;
     }
     if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED) {
+        metrics.SetErrorCode(OHEC_COMMON_PERMISSION_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_PERMISSION_NOT_ALLOWED, "Permission not allowed");
         return cfuncs;
     }
     if (ret != OHOS::USB::UEC_OK) {
         USB_HILOGE(MODULE_USB_NAPI, "GetCurrentFunctions ret = %{public}d", ret);
+        metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
         ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION, "");
     }
     return cfuncs;
@@ -565,22 +581,25 @@ array<USBPort> getPortList()
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetPortList");
     if (!HasFeature(FEATURE_PORT)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return {};
     }
     std::vector<OHOS::USB::UsbPort> ports;
     int32_t ret = g_usbClient.GetPorts(ports);
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI) {
+        metrics.SetErrorCode(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
         return {};
     }
     if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED) {
+        metrics.SetErrorCode(OHEC_COMMON_PERMISSION_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_PERMISSION_NOT_ALLOWED, "");
         return {};
     }
     if (ret != OHOS::USB::UEC_OK) {
         USB_HILOGE(MODULE_USB_NAPI, "GetPorts ret = %{public}d", ret);
+        metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
         ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION, "");
         return {};
     }
@@ -602,20 +621,23 @@ PortModeType getPortSupportModes(int32_t portId)
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetPortSupportModes");
     int32_t result = 0;
     if (!HasFeature(FEATURE_PORT)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return {PortModeType::key_t(result)};
     }
     if (portId < 0) {
+        metrics.SetErrorCode(OHEC_COMMON_PARAM_ERROR);
         ThrowBusinessError(OHEC_COMMON_PARAM_ERROR, "");
         return {PortModeType::key_t(result)};
     }
     int32_t ret = g_usbClient.GetSupportedModes(portId, result);
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI) {
+        metrics.SetErrorCode(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
         return {PortModeType::key_t(result)};
     }
     if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED) {
+        metrics.SetErrorCode(OHEC_COMMON_PERMISSION_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_PERMISSION_NOT_ALLOWED, "");
         return {PortModeType::key_t(result)};
     }
@@ -629,25 +651,29 @@ void setPortRoleTypesSync(int32_t portId, PowerRoleType powerRole, DataRoleType 
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.SetPortRoleTypesSync");
     if (!HasFeature(FEATURE_PORT)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return;
     }
     if (portId < 0 || powerRole < 0 || dataRole < 0) {
+        metrics.SetErrorCode(OHEC_COMMON_PARAM_ERROR);
         ThrowBusinessError(OHEC_COMMON_PARAM_ERROR, "");
         return;
     }
     int ret = g_usbClient.SetPortRole(portId, powerRole, dataRole);
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI) {
+        metrics.SetErrorCode(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
         return;
     }
     if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED) {
+        metrics.SetErrorCode(OHEC_COMMON_PERMISSION_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_PERMISSION_NOT_ALLOWED, "");
         return;
     }
     if (ret != OHOS::USB::UEC_OK) {
         USB_HILOGD(MODULE_USB_NAPI, "SetPortRole ret: %{public}d", ret);
+        metrics.SetErrorCode(UEC_COMMON_PORTROLE_SWITCH_NOT_ALLOWED);
         ThrowBusinessError(UEC_COMMON_PORTROLE_SWITCH_NOT_ALLOWED, "");
         return;
     }
@@ -657,30 +683,36 @@ void addAccessoryRight(int32_t tokenId, ohos::usbManager::USBAccessory const &ac
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.AddAccessoryRight");
     if (!HasFeature(FEATURE_DEVICE)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return;
     }
     int32_t ret = g_usbClient.AddAccessoryRight(tokenId, ConvertUsbDevice(accessory));
-    metrics.MetricsEnumAndTime(ret);
     switch (ret) {
         case OHOS::USB::UEC_OK:
             return;
         case OHOS::USB::UEC_SERVICE_GET_TOKEN_INFO_FAILED:
+            metrics.SetErrorCode(OHEC_COMMON_PARAM_ERROR);
             ThrowBusinessError(OHEC_COMMON_PARAM_ERROR, "");
             break;
         case OHOS::USB::UEC_SERVICE_ACCESSORY_NOT_MATCH:
+            metrics.SetErrorCode(OHEC_COMMON_PARAM_ERROR);
             ThrowBusinessError(OHEC_COMMON_PARAM_ERROR, "Get accessory through getAccessoryList");
             break;
         case OHOS::USB::UEC_SERVICE_DATABASE_OPERATION_FAILED:
+            metrics.SetErrorCode(UEC_COMMON_RIGHT_DATABASE_ERROR);
             ThrowBusinessError(UEC_COMMON_RIGHT_DATABASE_ERROR, "Database request operation exception");
             break;
         case OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI:
+            metrics.SetErrorCode(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED);
             ThrowBusinessError(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
             break;
         case OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED:
+            metrics.SetErrorCode(OHEC_COMMON_PERMISSION_NOT_ALLOWED);
             ThrowBusinessError(OHEC_COMMON_PERMISSION_NOT_ALLOWED, "");
             break;
         default:
+            metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
             ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION, "Service exception");
             break;
     }
@@ -691,13 +723,13 @@ int32_t claimInterface(USBDevicePipe const &pipe, USBInterface const &iface, opt
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.ClaimInterface");
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
     }
     OHOS::USB::USBDevicePipe internalPipe = ConvertUSBDevicePipe(pipe);
     bool forceClaim = force.has_value() ? *force : false;
     int ret = internalPipe.ClaimInterface(ConvertToUsbInterface(iface), forceClaim);
-    metrics.MetricsEnumAndTime(ret);
     USB_HILOGD(MODULE_USB_NAPI, "pipe call claimInterface ret: %{public}d", ret);
     return ret;
 }
@@ -706,12 +738,12 @@ int32_t releaseInterface(USBDevicePipe const &pipe, USBInterface const &iface)
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.ReleaseInterface");
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
     }
     OHOS::USB::USBDevicePipe internalPipe = ConvertUSBDevicePipe(pipe);
     int ret = internalPipe.ReleaseInterface(ConvertToUsbInterface(iface));
-    metrics.MetricsEnumAndTime(ret);
     USB_HILOGD(MODULE_USB_NAPI, "pipe call releaseInterface ret: %{public}d", ret);
     return ret;
 }
@@ -720,12 +752,12 @@ int32_t setConfiguration(USBDevicePipe const &pipe, USBConfiguration const &conf
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.SetConfiguration");
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
     }
     OHOS::USB::USBDevicePipe internalPipe = ConvertUSBDevicePipe(pipe);
     int ret = g_usbClient.SetConfiguration(internalPipe, ConvertToUSBConfig(config));
-    metrics.MetricsEnumAndTime(ret);
     return ret;
 }
 
@@ -733,12 +765,12 @@ int32_t setInterface(USBDevicePipe const &pipe, USBInterface const &iface)
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.SetInterface");
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
     }
     OHOS::USB::USBDevicePipe internalPipe = ConvertUSBDevicePipe(pipe);
     int ret = g_usbClient.SetInterface(internalPipe, ConvertToUsbInterface(iface));
-    metrics.MetricsEnumAndTime(ret);
     return ret;
 }
 
@@ -746,20 +778,22 @@ array<uint8_t> getRawDescriptor(USBDevicePipe const &pipe)
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetRawDescriptor");
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return {};
     }
     std::vector<uint8_t> bufferData;
     OHOS::USB::USBDevicePipe internalPipe = ConvertUSBDevicePipe(pipe);
     int ret = g_usbClient.GetRawDescriptors(internalPipe, bufferData);
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED) {
+        metrics.SetErrorCode(UEC_COMMON_HAS_NO_RIGHT);
         ThrowBusinessError(UEC_COMMON_HAS_NO_RIGHT, "need call requestRight to get the permission");
         USB_HILOGE(MODULE_USB_NAPI, "Connect Device failed, return code:%{public}d", ret);
         return {};
     }
     if (ret != OHOS::USB::UEC_OK) {
         USB_HILOGE(MODULE_USB_NAPI, "getRawDescriptor failed:%{public}d", ret);
+        metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
         ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION, "");
         return {};
     }
@@ -770,13 +804,13 @@ int32_t getFileDescriptor(USBDevicePipe const &pipe)
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetFileDescriptor");
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
     }
     int32_t fd = ERROR;
     OHOS::USB::USBDevicePipe internalPipe = ConvertUSBDevicePipe(pipe);
     int32_t ret = g_usbClient.GetFileDescriptor(internalPipe, fd);
-    metrics.MetricsEnumAndTime((fd >= 0) ? OHOS::USB::UEC_OK : OHOS::USB::UEC_INTERFACE_INNER_ERR);
     if (ret != OHOS::USB::UEC_OK) {
         USB_HILOGE(MODULE_USB_NAPI, "getFileDescriptor failed:%{public}d", ret);
     }
@@ -788,6 +822,7 @@ int32_t usbControlTransferSync(
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.UsbControlTransferSync");
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
     }
@@ -817,7 +852,6 @@ int32_t usbControlTransferSync(
     int32_t ret;
     std::vector<uint8_t> bufferData(static_cast<uint8_t *>(data), static_cast<uint8_t *>(data) + size);
     ret = nativePipe.UsbControlTransfer(tctrl, bufferData);
-    metrics.MetricsEnumAndTime(ret);
     if ((uint32_t(requestparam.bmRequestType) & OHOS::USB::USB_ENDPOINT_DIR_MASK) == OHOS::USB::USB_ENDPOINT_DIR_IN) {
         ret = memcpy_s(data, size, bufferData.data(), bufferData.size());
     }
@@ -832,6 +866,7 @@ int32_t bulkTransferSync(::ohos::usbManager::USBDevicePipe const &pipe, ::ohos::
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.BulkTransferSync");
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
     }
@@ -859,7 +894,6 @@ int32_t bulkTransferSync(::ohos::usbManager::USBDevicePipe const &pipe, ::ohos::
         timeOut = timeout.value();
     }
     int32_t ret = nativePipe.BulkTransfer(ep, bufferData, timeOut);
-    metrics.MetricsEnumAndTime(ret);
     if (ep.GetDirection() == OHOS::USB::USB_ENDPOINT_DIR_IN) {
         if (bufferData.size() > size) {
             USB_HILOGE(MODULE_USB_NAPI, "src buffer size larger than dst.");
@@ -878,6 +912,7 @@ int32_t closePipe(USBDevicePipe const &pipe)
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.ClosePipe");
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return ERROR;
     }
@@ -885,7 +920,6 @@ int32_t closePipe(USBDevicePipe const &pipe)
     nativePipe.SetBusNum(static_cast<uint8_t>(pipe.busNum));
     nativePipe.SetDevAddr(static_cast<uint8_t>(pipe.devAddress));
     int ret = nativePipe.Close();
-    metrics.MetricsEnumAndTime(ret);
     return ret;
 }
 
@@ -908,20 +942,23 @@ bool hasAccessoryRight(ohos::usbManager::USBAccessory const &accessory)
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.HasAccessoryRight");
     bool result = false;
     if (!HasFeature(FEATURE_DEVICE)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return result;
     }
     int32_t ret = g_usbClient.HasAccessoryRight(taihe2Native(accessory), result);
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_OK) {
         return result;
     } else if (ret == OHOS::USB::UEC_SERVICE_ACCESSORY_NOT_MATCH) {
+        metrics.SetErrorCode(UEC_ACCESSORY_NOT_MATCH);
         ThrowBusinessError(UEC_ACCESSORY_NOT_MATCH, "Get accessory through getAccessoryList");
         return result;
     } else if (ret == OHOS::USB::UEC_SERVICE_DATABASE_OPERATION_FAILED) {
+        metrics.SetErrorCode(UEC_COMMON_RIGHT_DATABASE_ERROR);
         ThrowBusinessError(UEC_COMMON_RIGHT_DATABASE_ERROR, "Database request operation exception");
         return result;
     } else {
+        metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
         ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION, "Service exception");
     }
     return result;
@@ -932,20 +969,23 @@ bool requestAccessoryRightSync(ohos::usbManager::USBAccessory const &accessory)
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.RequestAccessoryRightSync");
     bool result = false;
     if (!HasFeature(FEATURE_DEVICE)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return result;
     }
     int32_t ret = g_usbClient.RequestAccessoryRight(taihe2Native(accessory), result);
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_OK) {
         return result;
     } else if (ret == OHOS::USB::UEC_SERVICE_ACCESSORY_NOT_MATCH) {
+        metrics.SetErrorCode(UEC_ACCESSORY_NOT_MATCH);
         ThrowBusinessError(UEC_ACCESSORY_NOT_MATCH, "");
         return result;
     } else if (ret == OHOS::USB::UEC_SERVICE_DATABASE_OPERATION_FAILED) {
+        metrics.SetErrorCode(UEC_COMMON_RIGHT_DATABASE_ERROR);
         ThrowBusinessError(UEC_COMMON_RIGHT_DATABASE_ERROR, "");
         return result;
     } else {
+        metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
         ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION, "");
     }
     return result;
@@ -955,6 +995,7 @@ void cancelAccessoryRight(ohos::usbManager::USBAccessory const &accessory)
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.CancelAccessoryRight");
     if (!HasFeature(FEATURE_DEVICE)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return;
     }
@@ -964,16 +1005,18 @@ void cancelAccessoryRight(ohos::usbManager::USBAccessory const &accessory)
         g_accFd = 0;
     }
     int32_t ret = g_usbClient.CancelAccessoryRight(taihe2Native(accessory));
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_OK) {
         return;
     } else if (ret == OHOS::USB::UEC_SERVICE_ACCESSORY_NOT_MATCH) {
+        metrics.SetErrorCode(UEC_ACCESSORY_NOT_MATCH);
         ThrowBusinessError(UEC_ACCESSORY_NOT_MATCH, "Get accessory through getAccessoryList");
         return;
     } else if (ret == OHOS::USB::UEC_SERVICE_DATABASE_OPERATION_FAILED) {
+        metrics.SetErrorCode(UEC_COMMON_RIGHT_DATABASE_ERROR);
         ThrowBusinessError(UEC_COMMON_RIGHT_DATABASE_ERROR, "Database request operation exception");
         return;
     } else {
+        metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
         ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION, "Service exception");
         return;
     }
@@ -983,19 +1026,20 @@ array<ohos::usbManager::USBAccessory> getAccessoryList()
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.GetAccessoryList");
     if (!HasFeature(FEATURE_DEVICE)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return {};
     }
     std::vector<OHOS::USB::USBAccessory> accessoryList;
     std::vector<ohos::usbManager::USBAccessory> results;
     int32_t ret = g_usbClient.GetAccessoryList(accessoryList);
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_OK) {
         for (const auto &item : accessoryList) {
             results.push_back(native2Taihe(item));
         }
     } else {
         results.clear();
+        metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
         ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION, "Service exception");
     }
     return array<ohos::usbManager::USBAccessory>(results);
@@ -1006,24 +1050,29 @@ USBAccessoryHandle openAccessory(ohos::usbManager::USBAccessory const &accessory
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.OpenAccessory");
     USBAccessoryHandle handler;
     if (!HasFeature(FEATURE_DEVICE)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return handler;
     }
     int32_t fd = -1;
     int32_t ret = g_usbClient.OpenAccessory(taihe2Native(accessory), fd);
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_OK) {
         g_accFd = fd;
         handler.accessoryFd = fd;
     } else if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED || ret == OHOS::USB::UEC_INTERFACE_PERMISSION_DENIED) {
+        metrics.SetErrorCode(UEC_COMMON_HAS_NO_RIGHT);
         ThrowBusinessError(UEC_COMMON_HAS_NO_RIGHT, "");
     } else if (ret == OHOS::USB::UEC_SERVICE_ACCESSORY_NOT_MATCH) {
+        metrics.SetErrorCode(UEC_ACCESSORY_NOT_MATCH);
         ThrowBusinessError(UEC_ACCESSORY_NOT_MATCH, "");
     } else if (ret == OHOS::USB::UEC_SERVICE_ACCESSORY_OPEN_NATIVE_NODE_FAILED) {
+        metrics.SetErrorCode(UEC_ACCESSORY_OPEN_FAILED);
         ThrowBusinessError(UEC_ACCESSORY_OPEN_FAILED, "");
     } else if (ret == OHOS::USB::UEC_SERVICE_ACCESSORY_REOPEN) {
+        metrics.SetErrorCode(UEC_ACCESSORY_CAN_NOT_REOPEN);
         ThrowBusinessError(UEC_ACCESSORY_CAN_NOT_REOPEN, "");
     } else {
+        metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
         ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION, "");
     }
     return handler;
@@ -1033,20 +1082,22 @@ void closeAccessory(USBAccessoryHandle const &accessoryHandle)
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.CloseAccessory");
     if (!HasFeature(FEATURE_DEVICE)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return;
     }
     auto accessoryFd = accessoryHandle.accessoryFd;
     if (accessoryFd != g_accFd && g_accFd != 0) {
+        metrics.SetErrorCode(OHEC_COMMON_PARAM_ERROR);
         ThrowBusinessError(OHEC_COMMON_PARAM_ERROR, "Parameter accessoryHandle error, need openAccessory first.");
         return;
     }
     close(accessoryFd);
     accessoryFd = 0;
     int32_t ret = g_usbClient.CloseAccessory(g_accFd);
-    metrics.MetricsEnumAndTime(ret);
     g_accFd = 0;
     if (ret != OHOS::USB::UEC_OK) {
+        metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
         ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION, "Service exception");
     }
     return;
@@ -1338,6 +1389,7 @@ void usbSubmitTransfer(UsbDataTransferParams const &transfer)
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.SubmitTransfer");
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return;
     }
@@ -1358,11 +1410,11 @@ void usbSubmitTransfer(UsbDataTransferParams const &transfer)
     }
     USB_HILOGD(MODULE_USB_NAPI, "CreateAndWriteAshmem OK.");
     int32_t ret = context->pipe.UsbSubmitTransfer(transferInfo, TransferCompleteCallback, context->ashmem);
-    metrics.MetricsEnumAndTime(ret);
     USB_HILOGD(MODULE_USB_NAPI, "usbSubmitTransfer ret: %{public}d", ret);
     if (ret != OHOS::USB::UEC_OK) {
         context->ashmem->CloseAshmem();
         DeleteCallback(context);
+        metrics.SetErrorCode(UsbSubmitTransferErrorCode(ret));
         ThrowBusinessError(UsbSubmitTransferErrorCode(ret), "");
     }
     USB_HILOGD(MODULE_USB_NAPI, "usbSubmitTransfer fin.");
@@ -1372,6 +1424,7 @@ void usbCancelTransfer(UsbDataTransferParams const &transfer)
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.UsbCancelTransfer");
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
         return;
     }
@@ -1380,8 +1433,8 @@ void usbCancelTransfer(UsbDataTransferParams const &transfer)
     nativePipe.SetDevAddr(static_cast<uint8_t>(transfer.devPipe.devAddress));
     int32_t endpoint = transfer.endpoint;
     int32_t ret = nativePipe.UsbCancelTransfer(endpoint);
-    metrics.MetricsEnumAndTime(ret);
     if (ret != OHOS::USB::UEC_OK) {
+        metrics.SetErrorCode(UsbSubmitTransferErrorCode(ret));
         ThrowBusinessError(UsbSubmitTransferErrorCode(ret), "");
     }
 }
@@ -1391,29 +1444,34 @@ bool resetUsbDevice(::ohos::usbManager::USBDevicePipe const& pipe)
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.ResetUsbDevice");
     bool result = false;
     if (!HasFeature(FEATURE_HOST)) {
+        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "Capability not supported.");
         return result;
     }
     OHOS::USB::USBDevicePipe pipe_tmp = ConvertUSBDevicePipe(pipe);
     int32_t ret = g_usbClient.ResetDevice(pipe_tmp);
-    metrics.MetricsEnumAndTime(ret);
     if (ret == OHOS::USB::UEC_OK) {
         result = true;
     } else if (ret == HDF_DEV_ERR_NO_DEVICE || ret == OHOS::USB::UEC_INTERFACE_NAME_NOT_FOUND) {
+        metrics.SetErrorCode(USB_SUBMIT_TRANSFER_NO_DEVICE_ERROR);
         ThrowBusinessError(USB_SUBMIT_TRANSFER_NO_DEVICE_ERROR,
             "BusinessError 14400008:No such device (it may have been disconnected).");
         return result;
     } else if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED) {
+        metrics.SetErrorCode(UEC_COMMON_HAS_NO_RIGHT);
         ThrowBusinessError(UEC_COMMON_HAS_NO_RIGHT, "No permission.");
         return result;
     } else if (ret == OHOS::USB::USB_RIGHT_FAILURE) {
+        metrics.SetErrorCode(USB_DEVICE_PIPE_CHECK_ERROR);
         ThrowBusinessError(USB_DEVICE_PIPE_CHECK_ERROR, "Check devicePipe failed.");
         return result;
     } else if (ret == OHOS::USB::UEC_SERVICE_INVALID_VALUE) {
+        metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
         ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION,
             "BusinessError 14400004:Service exception. Possible causes:No accessory is plugged in.");
         return result;
     } else {
+        metrics.SetErrorCode(USB_SUBMIT_TRANSFER_OTHER_ERROR);
         ThrowBusinessError(USB_SUBMIT_TRANSFER_OTHER_ERROR, "BusinessError 14400010:Other USB error.");
     }
     return result;
