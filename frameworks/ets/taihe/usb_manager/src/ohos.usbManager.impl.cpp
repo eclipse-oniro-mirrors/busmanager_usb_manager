@@ -465,6 +465,7 @@ bool addDeviceAccessRight(string_view tokenId, string_view deviceName)
         ThrowBusinessError(OHEC_COMMON_PERMISSION_NOT_ALLOWED, "Permission not allowed");
         return bResult;
     } else {
+        metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
         USB_HILOGE(MODULE_USB_NAPI, "AddAccessRight ret = %{public}d", ret);
     }
     return bResult;
@@ -479,7 +480,6 @@ int32_t getFunctionsFromString(string_view funcs)
         return CAPABILITY_NOT_SUPPORT;
     }
     int32_t numFuncs = g_usbClient.UsbFunctionsFromString(std::string(funcs));
-    int32_t ret = (numFuncs < 0) ? OHOS::USB::UEC_INTERFACE_INNER_ERR : OHOS::USB::UEC_OK;
     if (numFuncs == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI) {
         metrics.SetErrorCode(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
@@ -502,9 +502,6 @@ string getStringFromFunctions(int32_t funcs)
         return "";
     }
     std::string strFuncs = g_usbClient.UsbFunctionsToString(funcs);
-    int32_t ret = (strFuncs == OHOS::USB::PERMISSION_DENIED_SYSAPI ||
-        strFuncs == OHOS::USB::SYS_APP_PERMISSION_DENIED_SYSAPI) ?
-        OHOS::USB::UEC_SERVICE_PERMISSION_DENIED_SYSAPI : OHOS::USB::UEC_OK;
     if (strFuncs == OHOS::USB::PERMISSION_DENIED_SYSAPI) {
         metrics.SetErrorCode(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED);
         ThrowBusinessError(OHEC_COMMON_NORMAL_APP_NOT_ALLOWED, "");
@@ -570,8 +567,8 @@ int32_t getDeviceFunctions()
         return cfuncs;
     }
     if (ret != OHOS::USB::UEC_OK) {
-        USB_HILOGE(MODULE_USB_NAPI, "GetCurrentFunctions ret = %{public}d", ret);
         metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
+        USB_HILOGE(MODULE_USB_NAPI, "GetCurrentFunctions ret = %{public}d", ret);
         ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION, "");
     }
     return cfuncs;
@@ -598,8 +595,8 @@ array<USBPort> getPortList()
         return {};
     }
     if (ret != OHOS::USB::UEC_OK) {
-        USB_HILOGE(MODULE_USB_NAPI, "GetPorts ret = %{public}d", ret);
         metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
+        USB_HILOGE(MODULE_USB_NAPI, "GetPorts ret = %{public}d", ret);
         ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION, "");
         return {};
     }
@@ -642,6 +639,7 @@ PortModeType getPortSupportModes(int32_t portId)
         return {PortModeType::key_t(result)};
     }
     if (ret != OHOS::USB::UEC_OK) {
+        metrics.SetErrorCode(UEC_COMMON_SERVICE_EXCEPTION);
         USB_HILOGE(MODULE_USB_NAPI, "GetSupportedModes ret = %{public}d", ret);
     }
     return {PortModeType::key_t(result)};
@@ -757,8 +755,7 @@ int32_t setConfiguration(USBDevicePipe const &pipe, USBConfiguration const &conf
         return ERROR;
     }
     OHOS::USB::USBDevicePipe internalPipe = ConvertUSBDevicePipe(pipe);
-    int ret = g_usbClient.SetConfiguration(internalPipe, ConvertToUSBConfig(config));
-    return ret;
+    return g_usbClient.SetConfiguration(internalPipe, ConvertToUSBConfig(config));
 }
 
 int32_t setInterface(USBDevicePipe const &pipe, USBInterface const &iface)
@@ -770,8 +767,7 @@ int32_t setInterface(USBDevicePipe const &pipe, USBInterface const &iface)
         return ERROR;
     }
     OHOS::USB::USBDevicePipe internalPipe = ConvertUSBDevicePipe(pipe);
-    int ret = g_usbClient.SetInterface(internalPipe, ConvertToUsbInterface(iface));
-    return ret;
+    return g_usbClient.SetInterface(internalPipe, ConvertToUsbInterface(iface));
 }
 
 array<uint8_t> getRawDescriptor(USBDevicePipe const &pipe)
@@ -919,8 +915,7 @@ int32_t closePipe(USBDevicePipe const &pipe)
     OHOS::USB::USBDevicePipe nativePipe;
     nativePipe.SetBusNum(static_cast<uint8_t>(pipe.busNum));
     nativePipe.SetDevAddr(static_cast<uint8_t>(pipe.devAddress));
-    int ret = nativePipe.Close();
-    return ret;
+    return nativePipe.Close();
 }
 
 static OHOS::USB::USBAccessory taihe2Native(ohos::usbManager::USBAccessory accessory)

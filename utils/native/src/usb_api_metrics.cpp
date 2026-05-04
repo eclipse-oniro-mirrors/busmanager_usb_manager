@@ -84,7 +84,7 @@ std::vector<int32_t> g_errorVector = {
     METRICS_SERIAL_PORT_NOT_OPEN,
     METRICS_SERIAL_TIMED_OUT,
     METRICS_SERIAL_IO_EXCEPTION,
-    METRICS_OTHER_ERROR,
+    METRICS_OTHER_ERROR
 };
 
 UsbApiMetrics::UsbApiMetrics(std::string name)
@@ -123,7 +123,6 @@ void UsbApiMetrics::SetErrorCode(int32_t error)
         }
     }
     errorCode_ = ERROR_CODE_BOUNDARY;
-    return;
 }
 }
 }

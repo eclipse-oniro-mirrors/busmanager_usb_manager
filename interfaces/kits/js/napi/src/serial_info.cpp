@@ -305,8 +305,8 @@ static auto g_serialWriteComplete = [](napi_env env, napi_status status, void *d
     SerialWriteAsyncContext *context = static_cast<SerialWriteAsyncContext *>(data);
     napi_value result = nullptr;
     if (context->contextErrno) {
-        if (context->metric != nullptr) {
-            context->metric->SetErrorCode(context->contextErrno);
+        if (context->metrics != nullptr) {
+            context->metrics->SetErrorCode(context->contextErrno);
         }
         napi_create_int32(env, context->contextErrno, &result);
         napi_reject_deferred(env, context->deferred, result);
@@ -759,8 +759,8 @@ static auto g_serialRequestRightComplete = [](napi_env env, napi_status status, 
     napi_value result = nullptr;
     if (asyncContext->contextErrno) {
         USB_HILOGE(MODULE_USB_NAPI, "Failed to request serial right");
-        if (asyncContext->metric != nullptr) {
-            asyncContext->metric->SetErrorCode(context->contextErrno);
+        if (asyncContext->metrics != nullptr) {
+            asyncContext->metrics->SetErrorCode(asyncContext->contextErrno);
         }
         napi_create_int32(env, asyncContext->contextErrno, &result);
         napi_reject_deferred(env, asyncContext->deferred, result);
@@ -768,7 +768,7 @@ static auto g_serialRequestRightComplete = [](napi_env env, napi_status status, 
         napi_get_boolean(env, asyncContext->hasRight, &result);
         napi_resolve_deferred(env, asyncContext->deferred, result);
     }
-    if (asyncContext->metric != nullptr) {
+    if (asyncContext->metrics != nullptr) {
         delete asyncContext->metrics;
         asyncContext->metrics = nullptr;
     }
