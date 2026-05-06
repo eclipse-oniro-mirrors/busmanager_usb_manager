@@ -2197,7 +2197,7 @@ void UsbHostManager::ReportManageDeviceInfo(const std::string &operationType, Us
         "PROTOCOL", protocol);
 }
 
-int32_t UsbHostManager::ExecuteManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable, bool isDev)
+void UsbHostManager::ExecuteManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable, bool isDev)
 {
     for (const auto &type : disableType) {
         if (!type.isDeviceTypeAllMatch && type.isDeviceType != isDev) {
@@ -2211,7 +2211,7 @@ int32_t UsbHostManager::ExecuteManageUsbType(const std::vector<UsbDeviceType> &d
     }
 }
 
-int32_t UsbHostManager::ManageUsbTypeDeviceImpl(const UsbDeviceType &type, bool disable)
+void UsbHostManager::ManageUsbTypeDeviceImpl(const UsbDeviceType &type, bool disable)
 {
     USB_HILOGI(MODULE_USB_HOST, "ManageUsbTypeDeviceImpl baseClass=%{public}d, subClass=%{public}d, "
         "protocol=%{public}d, disable=%{public}d", type.baseClass, type.subClass, type.protocol, disable);
@@ -2229,7 +2229,7 @@ int32_t UsbHostManager::ManageUsbTypeDeviceImpl(const UsbDeviceType &type, bool 
     return UEC_OK;
 }
 
-int32_t UsbHostManager::ManageUsbTypeInterfaceImpl(const UsbDeviceType &type, bool disable)
+void UsbHostManager::ManageUsbTypeInterfaceImpl(const UsbDeviceType &type, bool disable)
 {
     USB_HILOGI(MODULE_USB_HOST, "ManageUsbTypeInterfaceImpl baseClass=%{public}d, subClass=%{public}d, "
         "protocol=%{public}d, disable=%{public}d", type.baseClass, type.subClass, type.protocol, disable);
