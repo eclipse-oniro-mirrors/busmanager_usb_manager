@@ -100,24 +100,30 @@ struct UsbDeviceType {
     int32_t subClass;
     int32_t protocol;
     bool isDeviceType;
+    bool isDeviceTypeAllMatch = false;
     bool operator<(const UsbDeviceType &other) const
     {
         if (baseClass != other.baseClass) {
             return baseClass < other.baseClass;
         } else if (subClass != other.subClass) {
             return subClass < other.subClass;
-        } else {
+        } else if (protocol != other.protocol) {
             return protocol < other.protocol;
+        } else if (isDeviceType != other.isDeviceType) {
+            return isDeviceType < other.isDeviceType;
+        } else {
+            return isDeviceTypeAllMatch < other.isDeviceTypeAllMatch;
         }
     }
     bool operator == (const UsbDeviceType &other) const
     {
         return (baseClass == other.baseClass) && (subClass == other.subClass) && (protocol == other.protocol) &&
-            (isDeviceType == other.isDeviceType);
+            (isDeviceType == other.isDeviceType) && (isDeviceTypeAllMatch == other.isDeviceTypeAllMatch);
     }
     UsbDeviceType (int32_t deviceBaseClass, int32_t sub, int32_t prot, bool deviceType)
-        : baseClass(deviceBaseClass), subClass(sub), protocol(prot), isDeviceType(deviceType) {};
-    UsbDeviceType (): baseClass(0), subClass(0), protocol(0), isDeviceType(0) {};
+        : baseClass(deviceBaseClass), subClass(sub), protocol(prot), isDeviceType(deviceType),
+          isDeviceTypeAllMatch(false) {};
+    UsbDeviceType (): baseClass(0), subClass(0), protocol(0), isDeviceType(0), isDeviceTypeAllMatch(false) {};
     bool Marshalling(MessageParcel &parcel) const;
     static bool Unmarshalling(MessageParcel &parcel, UsbDeviceType &usbDeviceType);
     bool ReadFromParcel(MessageParcel &parcel);

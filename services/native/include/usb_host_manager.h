@@ -80,6 +80,7 @@ public:
     int32_t ManageDevice(int32_t vendorId, int32_t productId, bool disable);
     int32_t ManageDevicePolicy(std::vector<UsbDeviceId> &trustList);
     int32_t ManageInterfaceType(const std::vector<UsbDeviceType> &disableType, bool disable);
+    int32_t ManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable);
     int32_t ManageUsbSerialDevice(bool disable);
     int32_t UsbAttachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid);
     int32_t UsbDetachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid);
@@ -138,6 +139,10 @@ private:
     bool IsEdmEnabled();
     int32_t ExecuteManageDevicePolicy(std::vector<UsbDeviceId> &trustList);
     int32_t ExecuteManageInterfaceType(const std::vector<UsbDeviceType> &disableType, bool disable);
+    int32_t ExecuteManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable);
+    void ExecuteManageUsbDeviceType(const std::vector<UsbDeviceType> &disableType, bool disable, bool isDev);
+    int32_t ManageUsbTypeDeviceImpl(const UsbDeviceType &type, bool disable);
+    int32_t ManageUsbTypeInterfaceImpl(const UsbDeviceType &type, bool disable);
     int32_t GetEdmPolicy(bool &IsGlobalDisabled, std::vector<UsbDeviceType> &disableType,
         std::vector<UsbDeviceId> &trustUsbDeviceIds);
     int32_t GetUsbPolicy(bool &IsGlobalDisabled, std::vector<UsbDeviceType> &disableType,

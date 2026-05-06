@@ -701,6 +701,21 @@ int32_t UsbService::ManageInterfaceType(const std::vector<UsbDeviceTypeInfo> &de
     return usbHostManager_->ManageInterfaceType(disableType, disable);
 }
 
+int32_t UsbService::ManageUsbType(const std::vector<UsbDeviceTypeInfo> &devTypeInfo, bool disable)
+{
+    if (!IsCallerValid()) {
+        USB_HILOGE(MODULE_USB_HOST, "not root or edm process.");
+        return UEC_SERVICE_INVALID_OPERATION;
+    }
+    if (PreCallFunction() != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "PreCallFunction failed");
+        return UEC_SERVICE_PRE_MANAGE_INTERFACE_FAILED;
+    }
+    std::vector<UsbDeviceType> disableType;
+    UsbDeviceTypeChange(disableType, devTypeInfo);
+    return usbHostManager_->ManageUsbType(disableType, disable);
+}
+
 int32_t UsbService::ManageUsbSerialDevice(bool disable)
 {
     if (usbSerialManager_ == nullptr || usbHostManager_ == nullptr) {
@@ -1611,6 +1626,7 @@ void UsbService::UsbDeviceTypeChange(std::vector<UsbDeviceType> &disableType,
         info.subClass = deviceTypes[i].subClass;
         info.protocol = deviceTypes[i].protocol;
         info.isDeviceType = deviceTypes[i].isDeviceType;
+        info.isDeviceTypeAllMatch = deviceTypes[i].isDeviceTypeAllMatch;
         disableType.push_back(info);
     }
     return;

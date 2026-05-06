@@ -23,6 +23,7 @@ bool UsbDeviceType::Marshalling(MessageParcel &parcel) const
     WRITE_PARCEL_AND_RETURN_FALSE_WHEN_FAIL(Int32, parcel, subClass);
     WRITE_PARCEL_AND_RETURN_FALSE_WHEN_FAIL(Int32, parcel, protocol);
     WRITE_PARCEL_AND_RETURN_FALSE_WHEN_FAIL(Bool, parcel, isDeviceType);
+    WRITE_PARCEL_AND_RETURN_FALSE_WHEN_FAIL(Bool, parcel, isDeviceTypeAllMatch);
     return true;
 }
 
@@ -37,6 +38,7 @@ bool UsbDeviceType::ReadFromParcel(MessageParcel &parcel)
     subClass = parcel.ReadInt32();
     protocol = parcel.ReadInt32();
     isDeviceType = parcel.ReadBool();
+    isDeviceTypeAllMatch = parcel.ReadBool();
     return true;
 }
 } // namespace USB
