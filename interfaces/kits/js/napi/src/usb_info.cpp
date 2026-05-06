@@ -2575,7 +2575,6 @@ static napi_value UsbSubmitTransfer(napi_env env, napi_callback_info info)
     UsbApiMetrics metrics("BasicServicesKit.UsbManager.UsbSubmitTransfer");
     HITRACE_METER_NAME(HITRACE_TAG_USB, "NAPI:UsbSubmitTransfer");
     if (!HasFeature(FEATURE_HOST)) {
-        metrics.SetErrorCode(CAPABILITY_NOT_SUPPORT);
         ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
         return nullptr;
     }
@@ -2613,9 +2612,8 @@ static napi_value UsbSubmitTransfer(napi_env env, napi_callback_info info)
         asyncContext->ashmem->CloseAshmem();
         delete asyncContext;
         asyncContext = nullptr;
-        ret = UsbSubmitTransferErrorCode(ret);
-        metrics.SetErrorCode(ret);
-        ThrowBusinessError(env, ret, "");
+        metrics.SetErrorCode(UsbSubmitTransferErrorCode(ret));
+        ThrowBusinessError(env, UsbSubmitTransferErrorCode(ret), "");
         return nullptr;
     }
     timesUse->endTime = std::chrono::steady_clock::now();

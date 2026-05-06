@@ -88,7 +88,7 @@ std::vector<int32_t> g_errorVector = {
 };
 
 UsbApiMetrics::UsbApiMetrics(std::string name)
-: metricsName_(name)
+    : metricsName_(name)
 {
     errorCode_ = 0;
     gettimeofday(&startTime_, nullptr);
