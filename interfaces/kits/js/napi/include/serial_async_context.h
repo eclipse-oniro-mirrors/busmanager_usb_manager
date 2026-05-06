@@ -17,6 +17,7 @@
 
 #include "napi/native_api.h"
 #include "napi/native_node_api.h"
+#include "usb_api_metrics.h"
 
 namespace OHOS {
 namespace USB {
@@ -75,6 +76,7 @@ typedef struct SerialWriteAsyncContext {
     uint32_t timeout;
     void* pData;
     napi_ref bufferRef;
+    UsbApiMetrics* metrics = nullptr;
 } SerialWriteAsyncContext;
 
 typedef struct SerialReadAsyncContext {
@@ -86,6 +88,7 @@ typedef struct SerialReadAsyncContext {
     uint32_t size;
     uint32_t timeout;
     void* pData;
+    UsbApiMetrics* metrics = nullptr;
 } SerialReadAsyncContext;
 
 typedef struct SerialRequestRightAsyncContext {
@@ -94,6 +97,7 @@ typedef struct SerialRequestRightAsyncContext {
     napi_async_work work;
     napi_deferred deferred;
     int32_t portIdValue;
+    UsbApiMetrics* metrics = nullptr;
 } SerialRequestRightAsyncContext;
 } // namespace USB
 } // namespace OHOS

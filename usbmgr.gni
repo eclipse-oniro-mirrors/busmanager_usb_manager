@@ -24,8 +24,13 @@ declare_args() {
   usb_manager_feature_port = true
   usb_manager_pass_through = true
   usb_manager_peripheral_fault_notifier = false
+  usb_manager_feature_metrics_enable = false
 }
 
 if (defined(global_parts_info) && defined(global_parts_info.hdf_external_device_manager)) {
   usb_manager_peripheral_fault_notifier = true
+}
+
+if (defined(global_parts_info) && defined(global_parts_info.hiviewdfx_api_metrics)) {
+  usb_manager_feature_metrics_enable = true
 }

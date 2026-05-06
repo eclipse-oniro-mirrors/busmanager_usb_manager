@@ -51,6 +51,7 @@ ohos_shared_library("usbmanager") {
 
   sources = [
     "${utils_path}/native/src/struct_parcel.cpp",
+    "${utils_path}/native/src/usb_api_metrics.cpp",
     "${utils_path}/native/src/usb_napi_errors.cpp",
     "src/napi_util.cpp",
     "src/usb_info.cpp",
@@ -84,6 +85,11 @@ ohos_shared_library("usbmanager") {
     "napi:ace_napi",
   ]
 
+  if (usb_manager_feature_metrics_enable) {
+    defines += [ "USB_MANAGER_METRICS_ENABLE" ]
+    external_deps += [ "api_metrics:histogrammanager" ]
+  }
+
   relative_install_dir = "module"
   version_script = "usbmanager.versionscript"
 
@@ -103,6 +109,7 @@ ohos_shared_library("serial") {
   defines = [ "SERIAL_NAPI" ]
 
   sources = [
+    "${utils_path}/native/src/usb_api_metrics.cpp",
     "${utils_path}/native/src/usb_napi_errors.cpp",
     "src/napi_util.cpp",
     "src/serial_info.cpp",
@@ -119,6 +126,11 @@ ohos_shared_library("serial") {
     "napi:ace_napi",
     "samgr:samgr_proxy",
   ]
+
+  if (usb_manager_feature_metrics_enable) {
+    defines += [ "USB_MANAGER_METRICS_ENABLE" ]
+    external_deps += [ "api_metrics:histogrammanager" ]
+  }
 
   configs = [
     "${utils_path}:utils_config",

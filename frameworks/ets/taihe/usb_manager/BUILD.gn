@@ -50,6 +50,7 @@ taihe_shared_library("usb_manager_taihe_native") {
   sources = get_target_outputs(":run_taihe")
 
   sources += [
+    "${utils_path}/native/src/usb_api_metrics.cpp",
     "src/ani_constructor.cpp",
     "src/ohos.usbManager.impl.cpp",
     "src/ohos.usbManager.serial.impl.cpp"
@@ -80,6 +81,10 @@ taihe_shared_library("usb_manager_taihe_native") {
     "eventhandler:libeventhandler",
   ]
 
+  if (usb_manager_feature_metrics_enable) {
+    defines += [ "USB_MANAGER_METRICS_ENABLE" ]
+    external_deps += [ "api_metrics:histogrammanager" ]
+  }
 }
 
 generate_static_abc("usb_manager_abc") {
