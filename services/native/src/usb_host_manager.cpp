@@ -420,7 +420,24 @@ int32_t UsbHostManager::ManageInterfaceType(const std::vector<UsbDeviceType> &di
 
 int32_t UsbHostManager::ManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable)
 {
-    return ExecuteManageUsbType(disableType, disable);
+    std::shared_lock lock(devicesMutex_);
+    for (auto it = devices_.begin(); it != devices_.end(); ++it) {
+        UsbDev dev = {it->second->GetBusNum(), it->second->GetDevAddr()};
+        int32_t ret = OpenDevice(dev.busNum, dev.devAddr);
+        if (ret != UEC_OK) {
+            USB_HILOGW(MODULE_USB_HOST, "ManageUsbType open fail ret = %{public}d", ret);
+        }
+    }
+    ExecuteManageUsbType(disableType, disable, true);
+    ExecuteManageUsbType(disableType, disable, false);
+    for (auto it = devices_.begin(); it != devices_.end(); ++it) {
+        UsbDev dev = {it->second->GetBusNum(), it->second->GetDevAddr()};
+        int32_t ret = Close(dev.busNum, dev.devAddr);
+        if (ret != UEC_OK) {
+            USB_HILOGW(MODULE_USB_HOST, "ManageUsbType close fail ret = %{public}d", ret);
+        }
+    }
+    return UEC_OK;
 }
 
 int32_t UsbHostManager::UsbAttachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid)
@@ -2180,33 +2197,10 @@ void UsbHostManager::ReportManageDeviceInfo(const std::string &operationType, Us
         "PROTOCOL", protocol);
 }
 
-int32_t UsbHostManager::ExecuteManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable)
-{
-    std::shared_lock lock(devicesMutex_);
-    for (auto it = devices_.begin(); it != devices_.end(); ++it) {
-        UsbDev dev = {it->second->GetBusNum(), it->second->GetDevAddr()};
-        int32_t ret = OpenDevice(dev.busNum, dev.devAddr);
-        if (ret != UEC_OK) {
-            USB_HILOGW(MODULE_USB_HOST, "ExecuteManageUsbType open fail ret = %{public}d", ret);
-        }
-    }
-    ExecuteManageUsbDeviceType(disableType, disable, true);
-    ExecuteManageUsbDeviceType(disableType, disable, false);
-    for (auto it = devices_.begin(); it != devices_.end(); ++it) {
-        UsbDev dev = {it->second->GetBusNum(), it->second->GetDevAddr()};
-        int32_t ret = Close(dev.busNum, dev.devAddr);
-        if (ret != UEC_OK) {
-            USB_HILOGW(MODULE_USB_HOST, "ExecuteManageUsbType close fail ret = %{public}d", ret);
-        }
-    }
-    return UEC_OK;
-}
-
-void UsbHostManager::ExecuteManageUsbDeviceType(
-    const std::vector<UsbDeviceType> &disableType, bool disable, bool isDev)
+int32_t UsbHostManager::ExecuteManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable, bool isDev)
 {
     for (const auto &type : disableType) {
-        if (!type.isDeviceTypeAllMatch && type.isDeviceType != isDev) {
+        if (!type.isDeviceType AllMatch && type.isDeviceType != isDev) {
             continue;
         }
         if (isDev) {
@@ -2228,16 +2222,8 @@ int32_t UsbHostManager::ManageUsbTypeDeviceImpl(const UsbDeviceType &type, bool 
         if ((type.baseClass == it->second->GetClass()) &&
             (type.subClass == RANDOM_VALUE_INDICATE || type.subClass == it->second->GetSubclass()) &&
             (type.protocol == RANDOM_VALUE_INDICATE || type.protocol == it->second->GetProtocol())) {
-            int32_t ret = OpenDevice(it->second->GetBusNum(), it->second->GetDevAddr());
-            if (ret != UEC_OK) {
-                USB_HILOGW(MODULE_USB_HOST, "ManageUsbTypeDeviceImpl open fail ret = %{public}d", ret);
-                continue;
-            }
             ret = UsbDeviceAuthorize(it->second->GetBusNum(), it->second->GetDevAddr(), !disable, "UsbType");
             USB_HILOGI(MODULE_USB_HOST, "UsbDeviceAuthorize ret = %{public}d", ret);
-            if (Close(it->second->GetBusNum(), it->second->GetDevAddr()) != UEC_OK) {
-                USB_HILOGW(MODULE_USB_HOST, "ManageUsbTypeDeviceImpl CloseDevice fail");
-            }
         }
     }
     return UEC_OK;

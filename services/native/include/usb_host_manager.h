@@ -139,8 +139,7 @@ private:
     bool IsEdmEnabled();
     int32_t ExecuteManageDevicePolicy(std::vector<UsbDeviceId> &trustList);
     int32_t ExecuteManageInterfaceType(const std::vector<UsbDeviceType> &disableType, bool disable);
-    int32_t ExecuteManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable);
-    void ExecuteManageUsbDeviceType(const std::vector<UsbDeviceType> &disableType, bool disable, bool isDev);
+    int32_t ExecuteManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable, bool isDev);
     int32_t ManageUsbTypeDeviceImpl(const UsbDeviceType &type, bool disable);
     int32_t ManageUsbTypeInterfaceImpl(const UsbDeviceType &type, bool disable);
     int32_t GetEdmPolicy(bool &IsGlobalDisabled, std::vector<UsbDeviceType> &disableType,
