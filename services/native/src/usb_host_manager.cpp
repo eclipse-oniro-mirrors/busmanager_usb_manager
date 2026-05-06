@@ -2233,6 +2233,7 @@ int32_t UsbHostManager::ManageUsbTypeInterfaceImpl(const UsbDeviceType &type, bo
 {
     USB_HILOGI(MODULE_USB_HOST, "ManageUsbTypeInterfaceImpl baseClass=%{public}d, subClass=%{public}d, "
         "protocol=%{public}d, disable=%{public}d", type.baseClass, type.subClass, type.protocol, disable);
+    int32_t ret = UEC_OK;
     for (auto it = devices_.begin(); it != devices_.end(); ++it) {
         if (it->second->GetClass() == BASE_CLASS_HUB || it->second->GetAuthorizeStatus() == DISABLED) {
             continue;
@@ -2252,13 +2253,14 @@ int32_t UsbHostManager::ManageUsbTypeInterfaceImpl(const UsbDeviceType &type, bo
             if ((type.baseClass == interface.GetClass()) &&
                 (type.subClass == RANDOM_VALUE_INDICATE || type.subClass == interface.GetSubClass()) &&
                 (type.protocol == RANDOM_VALUE_INDICATE || type.protocol == interface.GetProtocol())) {
-                int32_t ret = UsbInterfaceAuthorize(
-                    dev, it->second->GetConfigs()[index].GetId(), interface.GetId(), !disable);
+                ret = UsbInterfaceAuthorize(dev, it->second->GetConfigs()[index].GetId(), interface.GetId(), !disable);
                 interface.SetAuthorizeStatus(disable ? DISABLED : ENABLED);
                 USB_HILOGI(MODULE_USB_HOST, "UsbInterfaceAuthorize ret = %{public}d", ret);
-                if (disable && ret == UEC_OK) {
-                    ReportManageDeviceInfo("UsbType", it->second, &interface, true);
-                }
+            } else {
+                continue;
+            }
+            if (disable && ret == UEC_OK) {
+                ReportManageDeviceInfo("UsbType", it->second, &interface, true);
             }
         }
     }
