@@ -2200,7 +2200,7 @@ void UsbHostManager::ReportManageDeviceInfo(const std::string &operationType, Us
 int32_t UsbHostManager::ExecuteManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable, bool isDev)
 {
     for (const auto &type : disableType) {
-        if (!type.isDeviceType AllMatch && type.isDeviceType != isDev) {
+        if (!type.isDeviceTypeAllMatch && type.isDeviceType != isDev) {
             continue;
         }
         if (isDev) {
@@ -2222,7 +2222,7 @@ int32_t UsbHostManager::ManageUsbTypeDeviceImpl(const UsbDeviceType &type, bool 
         if ((type.baseClass == it->second->GetClass()) &&
             (type.subClass == RANDOM_VALUE_INDICATE || type.subClass == it->second->GetSubclass()) &&
             (type.protocol == RANDOM_VALUE_INDICATE || type.protocol == it->second->GetProtocol())) {
-            ret = UsbDeviceAuthorize(it->second->GetBusNum(), it->second->GetDevAddr(), !disable, "UsbType");
+            auto ret = UsbDeviceAuthorize(it->second->GetBusNum(), it->second->GetDevAddr(), !disable, "UsbType");
             USB_HILOGI(MODULE_USB_HOST, "UsbDeviceAuthorize ret = %{public}d", ret);
         }
     }
