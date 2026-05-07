@@ -37,7 +37,8 @@ export default class UsbDialogAbility extends UIExtensionAbility {
 
     try {
       AppStorage.setOrCreate('session', session);
-      (session as UIExtensionContentSession)?.loadContent('pages/UsbDialog');
+      let page = want?.parameters?.['portName'] !== undefined ? 'pages/SerialDialog' : 'pages/UsbDialog';
+      (session as UIExtensionContentSession)?.loadContent(page);
       (session as UIExtensionContentSession)?.setWindowBackgroundColor(BG_COLOR);
       this.context?.getApplicationContext()?.setColorMode(COLOR_MODE_NOT_SET);
     } catch (error) {
