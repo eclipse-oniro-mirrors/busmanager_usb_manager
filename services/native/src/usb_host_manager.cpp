@@ -2226,7 +2226,6 @@ void UsbHostManager::ManageUsbTypeDeviceImpl(const UsbDeviceType &type, bool dis
             USB_HILOGI(MODULE_USB_HOST, "UsbDeviceAuthorize ret = %{public}d", ret);
         }
     }
-    return UEC_OK;
 }
 
 void UsbHostManager::ManageUsbTypeInterfaceImpl(const UsbDeviceType &type, bool disable)
@@ -2264,7 +2263,6 @@ void UsbHostManager::ManageUsbTypeInterfaceImpl(const UsbDeviceType &type, bool 
             }
         }
     }
-    return UEC_OK;
 }
 } // namespace USB
 } // namespace OHOS
