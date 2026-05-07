@@ -1804,7 +1804,7 @@ void UsbService::UpdateDeviceState(int32_t status)
     }
 
     usbDeviceManager_->HandleEvent(status);
-
+    usbDeviceManager_->ProcessCustomControlRequestUevent(status);
     if (usbAccessoryManager_ == nullptr) {
         USB_HILOGE(MODULE_USB_DEVICE, "invalid usbAccessoryManager_");
         return;
@@ -2559,7 +2559,8 @@ int32_t UsbService::DeviceEvent(const HDI::Usb::V1_0::USBDeviceInfo &info)
     int32_t status = info.status;
 #ifdef USB_MANAGER_FEATURE_DEVICE
     if (status == ACT_UPDEVICE || status == ACT_DOWNDEVICE ||
-        status == ACT_ACCESSORYUP || status == ACT_ACCESSORYDOWN || status == ACT_ACCESSORYSEND) {
+        status == ACT_ACCESSORYUP || status == ACT_ACCESSORYDOWN || status == ACT_ACCESSORYSEND ||
+        status == ACT_CUSTOMCONTROLREQUEST) {
         USB_HILOGI(MODULE_USB_SERVICE, "device: usb, deviceAction is %{public}d", status);
         g_serviceInstance->UpdateDeviceState(status);
         g_serviceInstance->UnLoadSelf(UsbService::UnLoadSaType::UNLOAD_SA_DELAY);

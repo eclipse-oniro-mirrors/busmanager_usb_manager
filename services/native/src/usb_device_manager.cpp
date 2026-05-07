@@ -117,6 +117,54 @@ int32_t UsbDeviceManager::UnbindUsbdSubscriber(const sptr<HDI::Usb::V2_0::IUsbdS
     }
     return usbDeviceInterface_->UnbindUsbdDeviceSubscriber(subscriber);
 }
+
+void UsbDeviceManager::ProcessCustomControlRequestUevent(int32_t status)
+{
+    USB_HILOGD(MODULE_USB_DEVICE, "%{public}s, recv status: %{public}d", __func__, status);
+    if (status != ACT_CUSTOMCONTROLREQUEST) {
+        return;
+    }
+    std::vector<uint8_t> ueventData;
+    int32_t ret = GetCustomControlRequestData(status, ueventData);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_SERVICE, "get uevent dqata failed, ret: %{public}d", ret);
+        return;
+    }
+    cJSON *root = cJSON_CreateArray();
+    for (uint8_t value : ueventData) {
+        cJSON_AddItemToArray(root, cJSON_CreateNumber(value));
+    }
+    char *pUeventDataStr = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    if (!pUeventDataStr) {
+        USB_HILOGE(MODULE_USB_SERVICE, "print json error.");
+        return;
+    }
+
+    Want want;
+    want.SetAction(CommonEventSupport::COMMON_EVENT_USB_CONTROL_DATA);
+    CommonEventData data(want);
+    data.SetData(pUeventDataStr);
+    CommonEventPublishInfo publishInfo;
+    USB_HILOGI(MODULE_USB_SERVICE, "send COMMON_EVENT_USB_CONTROL_DATA broadcast.");
+    CommonEventManager::PublishCommonEvent(data, publishInfo);
+    USB_HILOGD(MODULE_USB_SERVICE, "send COMMON_EVENT_USB_CONTROL_DATA broadcast device:%{public}s",
+        pUeventDataStr);
+    cJSON_free(pUeventDataStr);
+    pUeventDataStr = nullptr;
+}
+
+int32_t UsbDeviceManager::GetCustomControlRequestData(int32_t id, std::vector<uint8_t> &data)
+{
+    if (usbDeviceInterfaceV2_1_ == nullptr) {
+        usbDeviceInterfaceV2_1_ = HDI::Usb::V2_1::IUsbDeviceInterface::CastFrom(usbDeviceInterface_);
+    }
+
+    if (usbDeviceInterfaceV2_1_ != nullptr) {
+        return usbDeviceInterfaceV2_1_->GetControlTransferData(id, data);
+    }
+    return UEC_SERVICE_INVALID_OPERATION;
+}
 #endif
 
 int32_t UsbDeviceManager::GetCurrentFunctions(int32_t& funcs)
@@ -328,7 +376,8 @@ void UsbDeviceManager::ProcessStatus(int32_t status, bool &curConnect)
             break;
         case ACT_ACCESSORYUP:
         case ACT_ACCESSORYDOWN:
-        case ACT_ACCESSORYSEND: {
+        case ACT_ACCESSORYSEND:
+        case ACT_CUSTOMCONTROLREQUEST: {
             isDisableDialog_ = true;
             USB_HILOGI(MODULE_USB_DEVICE, "disable dialog success");
             ProcessFunctionSwitchWindow(false);

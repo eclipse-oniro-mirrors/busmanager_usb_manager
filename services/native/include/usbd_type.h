@@ -25,7 +25,8 @@ enum UsbdDeviceAction {
     ACT_DOWNDEVICE,
     ACT_ACCESSORYUP,
     ACT_ACCESSORYDOWN,
-    ACT_ACCESSORYSEND
+    ACT_ACCESSORYSEND,
+    ACT_CUSTOMCONTROLREQUEST
 };
 
 struct UsbdDescriptorHeader {
