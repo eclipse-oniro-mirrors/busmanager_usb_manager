@@ -99,6 +99,7 @@ constexpr uint32_t DISABLE_USB = 1043;
 constexpr uint32_t ALLOWED_USB_DEVICES = 1044;
 constexpr uint32_t USB_STORAGE_DEVICE_ACCESS_POLICY = 1026;
 constexpr uint32_t USB_DEVICE_ACCESS_POLICY = 1059;
+constexpr uint32_t USB_TYPE_DISALLOW_POLICY = 1165;
 constexpr int32_t TRUSTLIST_POLICY_MAX_DEVICES = 1000;
 constexpr uint32_t EDM_SA_TIME_OUT_CODE = 9200007;
 constexpr int32_t BASECLASS_INDEX = 0;
@@ -246,7 +247,7 @@ void UsbHostManager::ExecuteStrategy()
     }
 
     if (!disableType.empty()) {
-        ret = ExecuteManageInterfaceType(disableType, true);
+        ret = isPermissiveTypePolicy? ManageUsbType(disableType, true) : ExecuteManageInterfaceType(disableType, true);
         if (ret != UEC_OK) {
             USB_HILOGE(MODULE_USB_HOST, "ExecuteManageInterfaceType failed");
         }
@@ -1751,7 +1752,7 @@ int32_t UsbHostManager::GetUsbPolicy(bool &IsGlobalDisabled, std::vector<UsbDevi
 int32_t UsbHostManager::GetEdmTypePolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceType> &disableType)
 {
     if (remote == nullptr) {
-        USB_HILOGE(MODULE_USB_HOST, "Remote is nullpter.");
+        USB_HILOGE(MODULE_USB_HOST, "Remote is nullptr.");
         return UEC_SERVICE_INVALID_VALUE;
     }
     MessageParcel data;
@@ -1761,37 +1762,61 @@ int32_t UsbHostManager::GetEdmTypePolicy(sptr<IRemoteObject> remote, std::vector
     data.WriteInt32(WITHOUT_USERID);
     data.WriteString("");
     data.WriteInt32(WITHOUT_ADMIN);
-    uint32_t funcCode = (1 << EMD_MASK_CODE) | USB_DEVICE_ACCESS_POLICY;
+
+    // query permissive type policy
+    uint32_t funcCode = (1 << EMD_MASK_CODE) | USB_TYPE_DISALLOW_POLICY;
     int32_t sendRet = remote->SendRequest(funcCode, data, reply, option);
     int32_t ret = ERR_INVALID_VALUE;
     bool isSuccess = reply.ReadInt32(ret) && (ret == ERR_OK);
     if (!isSuccess || (sendRet != UEC_OK)) {
-        USB_HILOGE(MODULE_USB_HOST, "GetEdmTypePolicy failed. sendRet =  %{public}d, ret = %{public}d",
-            sendRet, ret);
+        USB_HILOGE(MODULE_USB_HOST, "%{public}s failed. sendRet =  %{public}d, ret = %{public}d",
+            __func__, sendRet, ret);
         return UEC_SERVICE_EDM_SEND_REQUEST_FAILED;
     }
-
     int32_t size = reply.ReadInt32();
+
+    if (size <= 0) {
+        // query no-permissive type policy
+        funcCode = (1 << EMD_MASK_CODE) | USB_DEVICE_ACCESS_POLICY;
+        sendRet = remote->SendRequest(funcCode, data, reply, option);
+        isSuccess = reply.ReadInt32(ret) && (ret == ERR_OK);
+        if (!isSuccess || (sendRet != UEC_OK)) {
+            USB_HILOGE(MODULE_USB_HOST, "GetEdmTypePolicy failed. sendRet =  %{public}d, ret = %{public}d",
+                sendRet, ret);
+            return UEC_SERVICE_EDM_SEND_REQUEST_FAILED;
+        }
+        size = reply.ReadInt32();
+        isPermissiveTypePolicy = false;
+    } else {
+        isPermissiveTypePolicy = true;
+    }
+
     if (size < 0 || static_cast<uint32_t>(size) > TRUSTLIST_POLICY_MAX_DEVICES) {
         USB_HILOGE(MODULE_USB_HOST, "EdmTypeList size=[%{public}d] is invalid", size);
         return UEC_SERVICE_EDM_DEVICE_SIZE_EXCEED;
     }
-    USB_HILOGI(MODULE_USB_HOST, "GetEdmTypePolicy return size:%{public}d", size);
+    USB_HILOGI(MODULE_USB_HOST, "%{public}s return size:%{public}d", __func__, size);
+    ReadTypePolicyFromParcel(reply, size, disableType);
+    return UEC_OK;
+}
+
+void UsbHostManager::ReadTypePolicyFromParcel(MessageParcel &reply, int size, std::vector<UsbDeviceType> &disableType)
+{
     for (int32_t i = 0; i < size; i++) {
         UsbDeviceType usbDeviceType;
         usbDeviceType.baseClass = reply.ReadInt32();
         usbDeviceType.subClass = reply.ReadInt32();
         usbDeviceType.protocol = reply.ReadInt32();
         usbDeviceType.isDeviceType = reply.ReadBool();
+        usbDeviceType.isDeviceTypeAllMatch = reply.ReadBool();
         disableType.emplace_back(usbDeviceType);
     }
-    return UEC_OK;
 }
 
 int32_t UsbHostManager::GetEdmGlobalPolicy(sptr<IRemoteObject> remote, bool &IsGlobalDisabled)
 {
     if (remote == nullptr) {
-        USB_HILOGE(MODULE_USB_HOST, "Remote is nullpter.");
+        USB_HILOGE(MODULE_USB_HOST, "Remote is nullptr.");
         return UEC_SERVICE_INVALID_VALUE;
     }
     MessageParcel data;
@@ -1818,7 +1843,7 @@ int32_t UsbHostManager::GetEdmGlobalPolicy(sptr<IRemoteObject> remote, bool &IsG
 int32_t UsbHostManager::GetEdmStroageTypePolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceType> &disableType)
 {
     if (remote == nullptr) {
-        USB_HILOGE(MODULE_USB_HOST, "Remote is nullpter.");
+        USB_HILOGE(MODULE_USB_HOST, "Remote is nullptr.");
         return UEC_SERVICE_INVALID_VALUE;
     }
     int32_t stroageDisableType = 0;
@@ -1852,7 +1877,7 @@ int32_t UsbHostManager::GetEdmStroageTypePolicy(sptr<IRemoteObject> remote, std:
 int32_t UsbHostManager::GetEdmTrustListPolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceId> &trustUsbDeviceIds)
 {
     if (remote == nullptr) {
-        USB_HILOGE(MODULE_USB_HOST, "Remote is nullpter.");
+        USB_HILOGE(MODULE_USB_HOST, "Remote is nullptr.");
         return UEC_SERVICE_INVALID_VALUE;
     }
     MessageParcel data;
