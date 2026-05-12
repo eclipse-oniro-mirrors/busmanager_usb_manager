@@ -1759,7 +1759,6 @@ int32_t UsbHostManager::GetEdmTypePolicy(sptr<IRemoteObject> remote, std::vector
         return UEC_SERVICE_EDM_SEND_REQUEST_FAILED;
     }
     int32_t size = reply.ReadInt32();
-
     if (size <= 0) {
         // query no-permissive type policy
         funcCode = (1 << EMD_MASK_CODE) | USB_DEVICE_ACCESS_POLICY;
