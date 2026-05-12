@@ -421,7 +421,6 @@ int32_t UsbHostManager::ManageInterfaceType(const std::vector<UsbDeviceType> &di
 
 int32_t UsbHostManager::ManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable)
 {
-    std::shared_lock lock(devicesMutex_);
     ExecuteManageUsbType(disableType, disable, true);
     ExecuteManageUsbType(disableType, disable, false);
     return UEC_OK;
@@ -2210,6 +2209,7 @@ void UsbHostManager::ReportManageDeviceInfo(const std::string &operationType, Us
 
 void UsbHostManager::ExecuteManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable, bool isDev)
 {
+    std::shared_lock lock(devicesMutex_);
     for (const auto &type : disableType) {
         if (!type.isDeviceTypeAllMatch && type.isDeviceType != isDev) {
             continue;
