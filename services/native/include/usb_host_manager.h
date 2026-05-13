@@ -169,7 +169,7 @@ private:
     void LoadEdmService();
     MAP_STR_DEVICE devices_;
     SystemAbility *systemAbility_;
-    bool isPermissiveTypePolicy = false;
+    bool isPermTypePolicy_ = false;
     std::mutex mutex_;
     std::shared_mutex devicesMutex_;
     std::shared_ptr<UsbRightManager> usbRightManager_;

@@ -247,7 +247,7 @@ void UsbHostManager::ExecuteStrategy()
     }
 
     if (!disableType.empty()) {
-        ret = isPermissiveTypePolicy? ManageUsbType(disableType, true) : ExecuteManageInterfaceType(disableType, true);
+        ret = isPermTypePolicy_? ManageUsbType(disableType, true) : ExecuteManageInterfaceType(disableType, true);
         if (ret != UEC_OK) {
             USB_HILOGE(MODULE_USB_HOST, "ExecuteManageInterfaceType failed");
         }
@@ -1770,9 +1770,9 @@ int32_t UsbHostManager::GetEdmTypePolicy(sptr<IRemoteObject> remote, std::vector
             return UEC_SERVICE_EDM_SEND_REQUEST_FAILED;
         }
         size = reply.ReadInt32();
-        isPermissiveTypePolicy = false;
+        isPermTypePolicy_ = false;
     } else {
-        isPermissiveTypePolicy = true;
+        isPermTypePolicy_ = true;
     }
 
     if (size < 0 || static_cast<uint32_t>(size) > TRUSTLIST_POLICY_MAX_DEVICES) {
