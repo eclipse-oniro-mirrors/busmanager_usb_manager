@@ -38,6 +38,7 @@
    int subClass;
    int protocol;
    boolean isDeviceType;
+   boolean isDeviceTypeAllMatch;
  };
 
   struct UsbDeviceIdInfo {

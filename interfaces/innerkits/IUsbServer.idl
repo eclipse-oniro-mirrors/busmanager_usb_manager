@@ -36,6 +36,7 @@ interface OHOS.USB.IUsbServer {
     [macrodef USB_MANAGER_FEATURE_HOST] void ManageDevice([in]int vendorId, [in]int productId, [in]boolean disable);
     [macrodef USB_MANAGER_FEATURE_HOST] void ManageDevicePolicy([in]UsbDeviceIdInfo[] trustList);
     [macrodef USB_MANAGER_FEATURE_HOST] void ManageInterfaceType([in]UsbDeviceTypeInfo[] disableType, [in]boolean disable);
+    [macrodef USB_MANAGER_FEATURE_HOST] void ManageUsbType([in]UsbDeviceTypeInfo[] disableType, [in]boolean disable);
     [macrodef USB_MANAGER_FEATURE_HOST] void UsbAttachKernelDriver([in]unsigned char busNum, [in]unsigned char devAddr, [in]unsigned char interfaceid);
     [macrodef USB_MANAGER_FEATURE_HOST] void UsbDetachKernelDriver([in]unsigned char busNum, [in]unsigned char devAddr, [in]unsigned char interfaceid);
     [macrodef USB_MANAGER_FEATURE_HOST] void ClearHalt([in]unsigned char busNum, [in]unsigned char devAddr, [in]unsigned char interfaceid, [in]unsigned char endpointId);

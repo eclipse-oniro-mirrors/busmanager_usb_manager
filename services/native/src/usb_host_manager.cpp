@@ -99,6 +99,7 @@ constexpr uint32_t DISABLE_USB = 1043;
 constexpr uint32_t ALLOWED_USB_DEVICES = 1044;
 constexpr uint32_t USB_STORAGE_DEVICE_ACCESS_POLICY = 1026;
 constexpr uint32_t USB_DEVICE_ACCESS_POLICY = 1059;
+constexpr uint32_t USB_TYPE_DISALLOW_POLICY = 1165;
 constexpr int32_t TRUSTLIST_POLICY_MAX_DEVICES = 1000;
 constexpr uint32_t EDM_SA_TIME_OUT_CODE = 9200007;
 constexpr int32_t BASECLASS_INDEX = 0;
@@ -246,7 +247,7 @@ void UsbHostManager::ExecuteStrategy()
     }
 
     if (!disableType.empty()) {
-        ret = ExecuteManageInterfaceType(disableType, true);
+        ret = isPermTypePolicy_? ManageUsbType(disableType, true) : ExecuteManageInterfaceType(disableType, true);
         if (ret != UEC_OK) {
             USB_HILOGE(MODULE_USB_HOST, "ExecuteManageInterfaceType failed");
         }
@@ -416,6 +417,13 @@ int32_t UsbHostManager::ManageDevicePolicy(std::vector<UsbDeviceId> &trustList)
 int32_t UsbHostManager::ManageInterfaceType(const std::vector<UsbDeviceType> &disableType, bool disable)
 {
     return ExecuteManageInterfaceType(disableType, disable);
+}
+
+int32_t UsbHostManager::ManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable)
+{
+    ExecuteManageUsbType(disableType, disable, true);
+    ExecuteManageUsbType(disableType, disable, false);
+    return UEC_OK;
 }
 
 int32_t UsbHostManager::UsbAttachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid)
@@ -1729,7 +1737,7 @@ int32_t UsbHostManager::GetUsbPolicy(bool &IsGlobalDisabled, std::vector<UsbDevi
 int32_t UsbHostManager::GetEdmTypePolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceType> &disableType)
 {
     if (remote == nullptr) {
-        USB_HILOGE(MODULE_USB_HOST, "Remote is nullpter.");
+        USB_HILOGE(MODULE_USB_HOST, "Remote is nullptr.");
         return UEC_SERVICE_INVALID_VALUE;
     }
     MessageParcel data;
@@ -1739,37 +1747,60 @@ int32_t UsbHostManager::GetEdmTypePolicy(sptr<IRemoteObject> remote, std::vector
     data.WriteInt32(WITHOUT_USERID);
     data.WriteString("");
     data.WriteInt32(WITHOUT_ADMIN);
-    uint32_t funcCode = (1 << EMD_MASK_CODE) | USB_DEVICE_ACCESS_POLICY;
+
+    // query permissive type policy
+    uint32_t funcCode = (1 << EMD_MASK_CODE) | USB_TYPE_DISALLOW_POLICY;
     int32_t sendRet = remote->SendRequest(funcCode, data, reply, option);
     int32_t ret = ERR_INVALID_VALUE;
     bool isSuccess = reply.ReadInt32(ret) && (ret == ERR_OK);
     if (!isSuccess || (sendRet != UEC_OK)) {
-        USB_HILOGE(MODULE_USB_HOST, "GetEdmTypePolicy failed. sendRet =  %{public}d, ret = %{public}d",
-            sendRet, ret);
+        USB_HILOGE(MODULE_USB_HOST, "%{public}s failed. sendRet =  %{public}d, ret = %{public}d",
+            __func__, sendRet, ret);
         return UEC_SERVICE_EDM_SEND_REQUEST_FAILED;
     }
-
     int32_t size = reply.ReadInt32();
+    if (size <= 0) {
+        // query no-permissive type policy
+        funcCode = (1 << EMD_MASK_CODE) | USB_DEVICE_ACCESS_POLICY;
+        sendRet = remote->SendRequest(funcCode, data, reply, option);
+        isSuccess = reply.ReadInt32(ret) && (ret == ERR_OK);
+        if (!isSuccess || (sendRet != UEC_OK)) {
+            USB_HILOGE(MODULE_USB_HOST, "GetEdmTypePolicy failed. sendRet =  %{public}d, ret = %{public}d",
+                sendRet, ret);
+            return UEC_SERVICE_EDM_SEND_REQUEST_FAILED;
+        }
+        size = reply.ReadInt32();
+        isPermTypePolicy_ = false;
+    } else {
+        isPermTypePolicy_ = true;
+    }
+
     if (size < 0 || static_cast<uint32_t>(size) > TRUSTLIST_POLICY_MAX_DEVICES) {
         USB_HILOGE(MODULE_USB_HOST, "EdmTypeList size=[%{public}d] is invalid", size);
         return UEC_SERVICE_EDM_DEVICE_SIZE_EXCEED;
     }
-    USB_HILOGI(MODULE_USB_HOST, "GetEdmTypePolicy return size:%{public}d", size);
+    USB_HILOGI(MODULE_USB_HOST, "%{public}s return size:%{public}d", __func__, size);
+    ReadTypePolicyFromParcel(reply, size, disableType);
+    return UEC_OK;
+}
+
+void UsbHostManager::ReadTypePolicyFromParcel(MessageParcel &reply, int size, std::vector<UsbDeviceType> &disableType)
+{
     for (int32_t i = 0; i < size; i++) {
         UsbDeviceType usbDeviceType;
         usbDeviceType.baseClass = reply.ReadInt32();
         usbDeviceType.subClass = reply.ReadInt32();
         usbDeviceType.protocol = reply.ReadInt32();
         usbDeviceType.isDeviceType = reply.ReadBool();
+        usbDeviceType.isDeviceTypeAllMatch = reply.ReadBool();
         disableType.emplace_back(usbDeviceType);
     }
-    return UEC_OK;
 }
 
 int32_t UsbHostManager::GetEdmGlobalPolicy(sptr<IRemoteObject> remote, bool &IsGlobalDisabled)
 {
     if (remote == nullptr) {
-        USB_HILOGE(MODULE_USB_HOST, "Remote is nullpter.");
+        USB_HILOGE(MODULE_USB_HOST, "Remote is nullptr.");
         return UEC_SERVICE_INVALID_VALUE;
     }
     MessageParcel data;
@@ -1796,7 +1827,7 @@ int32_t UsbHostManager::GetEdmGlobalPolicy(sptr<IRemoteObject> remote, bool &IsG
 int32_t UsbHostManager::GetEdmStroageTypePolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceType> &disableType)
 {
     if (remote == nullptr) {
-        USB_HILOGE(MODULE_USB_HOST, "Remote is nullpter.");
+        USB_HILOGE(MODULE_USB_HOST, "Remote is nullptr.");
         return UEC_SERVICE_INVALID_VALUE;
     }
     int32_t stroageDisableType = 0;
@@ -1830,7 +1861,7 @@ int32_t UsbHostManager::GetEdmStroageTypePolicy(sptr<IRemoteObject> remote, std:
 int32_t UsbHostManager::GetEdmTrustListPolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceId> &trustUsbDeviceIds)
 {
     if (remote == nullptr) {
-        USB_HILOGE(MODULE_USB_HOST, "Remote is nullpter.");
+        USB_HILOGE(MODULE_USB_HOST, "Remote is nullptr.");
         return UEC_SERVICE_INVALID_VALUE;
     }
     MessageParcel data;
@@ -2173,6 +2204,85 @@ void UsbHostManager::ReportManageDeviceInfo(const std::string &operationType, Us
         "CLASS", baseClass,
         "SUBCLASS", subClass,
         "PROTOCOL", protocol);
+}
+
+void UsbHostManager::ExecuteManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable, bool isDev)
+{
+    std::shared_lock lock(devicesMutex_);
+    for (const auto &type : disableType) {
+        if (!type.isDeviceTypeAllMatch && type.isDeviceType != isDev) {
+            continue;
+        }
+        if (isDev) {
+            ManageUsbTypeDeviceImpl(type, disable);
+        } else {
+            ManageUsbTypeInterfaceImpl(type, disable);
+        }
+    }
+}
+
+void UsbHostManager::ManageUsbTypeDeviceImpl(const UsbDeviceType &type, bool disable)
+{
+    USB_HILOGI(MODULE_USB_HOST, "ManageUsbTypeDeviceImpl baseClass=%{public}d, subClass=%{public}d, "
+        "protocol=%{public}d, disable=%{public}d", type.baseClass, type.subClass, type.protocol, disable);
+    for (auto it = devices_.begin(); it != devices_.end(); ++it) {
+        if (IsUsbSerialDisable() && IsUsbSerialDevice(*it->second)) {
+            continue;
+        }
+        if ((type.baseClass == it->second->GetClass()) &&
+            (type.subClass == RANDOM_VALUE_INDICATE || type.subClass == it->second->GetSubclass()) &&
+            (type.protocol == RANDOM_VALUE_INDICATE || type.protocol == it->second->GetProtocol())) {
+            auto ret = UsbDeviceAuthorize(it->second->GetBusNum(), it->second->GetDevAddr(), !disable, "UsbType");
+            USB_HILOGI(MODULE_USB_HOST, "UsbDeviceAuthorize ret = %{public}d", ret);
+        }
+    }
+}
+
+void UsbHostManager::ManageUsbTypeInterfaceImpl(const UsbDeviceType &type, bool disable)
+{
+    USB_HILOGI(MODULE_USB_HOST, "ManageUsbTypeInterfaceImpl baseClass=%{public}d, subClass=%{public}d, "
+        "protocol=%{public}d, disable=%{public}d", type.baseClass, type.subClass, type.protocol, disable);
+    int32_t ret = UEC_OK;
+
+    for (auto it = devices_.begin(); it != devices_.end(); ++it) {
+        if (it->second->GetClass() == BASE_CLASS_HUB || it->second->GetAuthorizeStatus() == DISABLED) {
+            continue;
+        }
+
+        UsbDev dev = {it->second->GetBusNum(), it->second->GetDevAddr()};
+        ret = OpenDevice(dev.busNum, dev.devAddr);
+        if (ret != UEC_OK) {
+            USB_HILOGW(MODULE_USB_HOST, "ManageUsbType open fail ret = %{public}d", ret);
+        }
+
+        uint8_t configIndex = 0;
+        if (GetActiveConfig(dev.busNum, dev.devAddr, configIndex)) {
+            USB_HILOGW(MODULE_USB_HOST, "get device active config failed.");
+            continue;
+        }
+        uint8_t index = static_cast<uint8_t>(configIndex) - 1;
+        if (index >= it->second->GetConfigs().size()) {
+            USB_HILOGW(MODULE_USB_HOST, "get device config info failed.");
+            continue;
+        }
+
+        for (auto &interface : it->second->GetConfigs()[index].GetInterfaces()) {
+            if ((type.baseClass == interface.GetClass()) &&
+                (type.subClass == RANDOM_VALUE_INDICATE || type.subClass == interface.GetSubClass()) &&
+                (type.protocol == RANDOM_VALUE_INDICATE || type.protocol == interface.GetProtocol())) {
+                ret = UsbInterfaceAuthorize(dev, it->second->GetConfigs()[index].GetId(), interface.GetId(), !disable);
+                interface.SetAuthorizeStatus(disable ? DISABLED : ENABLED);
+                USB_HILOGI(MODULE_USB_HOST, "UsbInterfaceAuthorize ret = %{public}d", ret);
+            } else {
+                continue;
+            }
+            if (disable && ret == UEC_OK) {
+                ReportManageDeviceInfo("UsbType", it->second, &interface, true);
+            }
+        }
+
+        (void)Close(dev.busNum, dev.devAddr);
+    }
 }
 } // namespace USB
 } // namespace OHOS

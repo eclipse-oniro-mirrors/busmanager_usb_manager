@@ -553,6 +553,7 @@ void UsbSrvClient::UsbDeviceTypeChange(const std::vector<UsbDeviceType> &disable
         info.subClass = disableType[i].subClass;
         info.protocol = disableType[i].protocol;
         info.isDeviceType = disableType[i].isDeviceType;
+        info.isDeviceTypeAllMatch = disableType[i].isDeviceTypeAllMatch;
         deviceTypes.push_back(info);
     }
     return;
@@ -564,6 +565,18 @@ int32_t UsbSrvClient::ManageInterfaceType(const std::vector<UsbDeviceType> &disa
     std::vector<UsbDeviceTypeInfo> disableDevType;
     UsbDeviceTypeChange(disableType, disableDevType);
     int32_t ret = proxy_->ManageInterfaceType(disableDevType, disable);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_INNERKIT, "failed width ret = %{public}d !", ret);
+    }
+    return ret;
+}
+
+int32_t UsbSrvClient::ManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable)
+{
+    RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::vector<UsbDeviceTypeInfo> disableDevType;
+    UsbDeviceTypeChange(disableType, disableDevType);
+    int32_t ret = proxy_->ManageUsbType(disableDevType, disable);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "failed width ret = %{public}d !", ret);
     }
@@ -805,6 +818,12 @@ int32_t UsbSrvClient::ManageDevice(int32_t vendorId, int32_t productId, bool dis
 }
 
 int32_t UsbSrvClient::ManageInterfaceType(const std::vector<UsbDeviceType> &disableType, bool disable)
+{
+    USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
+    return CAPABILITY_NOT_SUPPORT;
+}
+
+int32_t UsbSrvClient::ManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable)
 {
     USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
     return CAPABILITY_NOT_SUPPORT;

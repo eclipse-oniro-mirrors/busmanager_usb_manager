@@ -80,6 +80,7 @@ public:
     int32_t ManageDevice(int32_t vendorId, int32_t productId, bool disable);
     int32_t ManageDevicePolicy(std::vector<UsbDeviceId> &trustList);
     int32_t ManageInterfaceType(const std::vector<UsbDeviceType> &disableType, bool disable);
+    int32_t ManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable);
     int32_t ManageUsbSerialDevice(bool disable);
     int32_t UsbAttachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid);
     int32_t UsbDetachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid);
@@ -138,11 +139,15 @@ private:
     bool IsEdmEnabled();
     int32_t ExecuteManageDevicePolicy(std::vector<UsbDeviceId> &trustList);
     int32_t ExecuteManageInterfaceType(const std::vector<UsbDeviceType> &disableType, bool disable);
+    void ExecuteManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable, bool isDev);
+    void ManageUsbTypeDeviceImpl(const UsbDeviceType &type, bool disable);
+    void ManageUsbTypeInterfaceImpl(const UsbDeviceType &type, bool disable);
     int32_t GetEdmPolicy(bool &IsGlobalDisabled, std::vector<UsbDeviceType> &disableType,
         std::vector<UsbDeviceId> &trustUsbDeviceIds);
     int32_t GetUsbPolicy(bool &IsGlobalDisabled, std::vector<UsbDeviceType> &disableType,
         std::vector<UsbDeviceId> &trustUsbDeviceIds);
     int32_t GetEdmTypePolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceType> &disableType);
+    void ReadTypePolicyFromParcel(MessageParcel &reply, int size, std::vector<UsbDeviceType> &disableType);
     int32_t GetEdmGlobalPolicy(sptr<IRemoteObject> remote, bool &IsGlobalDisabled);
     int32_t GetEdmStroageTypePolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceType> &disableType);
     int32_t GetEdmTrustListPolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceId> &trustUsbDeviceIds);
@@ -164,6 +169,7 @@ private:
     void LoadEdmService();
     MAP_STR_DEVICE devices_;
     SystemAbility *systemAbility_;
+    bool isPermTypePolicy_ = false;
     std::mutex mutex_;
     std::shared_mutex devicesMutex_;
     std::shared_ptr<UsbRightManager> usbRightManager_;

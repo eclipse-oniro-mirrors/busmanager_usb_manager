@@ -104,6 +104,7 @@ public:
     int32_t ManageDevice(int32_t vendorId, int32_t productId, bool disable) override;
     int32_t ManageDevicePolicy(const std::vector<UsbDeviceIdInfo> &whilteList) override;
     int32_t ManageInterfaceType(const std::vector<UsbDeviceTypeInfo> &devTypeInfo, bool disable) override;
+    int32_t ManageUsbType(const std::vector<UsbDeviceTypeInfo> &devTypeInfo, bool disable) override;
     int32_t ManageUsbSerialDevice(bool disable);
     int32_t UsbAttachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid) override;
     int32_t UsbDetachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid) override;

@@ -281,6 +281,365 @@ HWTEST_F(UsbManageInterfaceTest, ManageInterfaceType005, TestSize.Level1)
     UsbCommonTest::GrantPermissionSysNative();
     USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageInterfaceType005 : ManageDevice");
 }
+
+/**
+ * @tc.name: ManageUsbType001
+ * @tc.desc: Test functions to ManageUsbType – disable HID interface type
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbManageInterfaceTest, ManageUsbType001, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ManageUsbType001");
+    auto &client = UsbSrvClient::GetInstance();
+    vector<UsbDevice> devi;
+    auto ret = client.GetDevices(devi);
+    ASSERT_EQ(ret, 0);
+    vector<UsbDeviceType> disableType;
+    UsbDeviceType usbDeviceType;
+    usbDeviceType.baseClass = 3;
+    usbDeviceType.subClass = 1;
+    usbDeviceType.protocol = 2;
+    usbDeviceType.isDeviceType = false;
+    usbDeviceType.isDeviceTypeAllMatch = false;
+    disableType.emplace_back(usbDeviceType);
+    ret = client.ManageUsbType(disableType, true);
+    ASSERT_EQ(ret, 0);
+    USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageUsbType001");
+}
+
+/**
+ * @tc.name: ManageUsbType002
+ * @tc.desc: Test functions to ManageUsbType – disable Storage interface type
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbManageInterfaceTest, ManageUsbType002, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ManageUsbType002");
+    auto &client = UsbSrvClient::GetInstance();
+    vector<UsbDevice> devi;
+    auto ret = client.GetDevices(devi);
+    ASSERT_EQ(ret, 0);
+    vector<UsbDeviceType> disableType;
+    UsbDeviceType usbDeviceType;
+    usbDeviceType.baseClass = 8;
+    usbDeviceType.subClass = 6;
+    usbDeviceType.protocol = 80;
+    usbDeviceType.isDeviceType = false;
+    usbDeviceType.isDeviceTypeAllMatch = false;
+    disableType.emplace_back(usbDeviceType);
+    ret = client.ManageUsbType(disableType, true);
+    ASSERT_EQ(ret, 0);
+    USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageUsbType002");
+}
+
+/**
+ * @tc.name: ManageUsbType003
+ * @tc.desc: Test functions to ManageUsbType – enable HID interface type
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbManageInterfaceTest, ManageUsbType003, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ManageUsbType003");
+    auto &client = UsbSrvClient::GetInstance();
+    vector<UsbDevice> devi;
+    auto ret = client.GetDevices(devi);
+    ASSERT_EQ(ret, 0);
+    vector<UsbDeviceType> disableType;
+    UsbDeviceType usbDeviceType;
+    usbDeviceType.baseClass = 3;
+    usbDeviceType.subClass = 1;
+    usbDeviceType.protocol = 2;
+    usbDeviceType.isDeviceType = false;
+    usbDeviceType.isDeviceTypeAllMatch = false;
+    disableType.emplace_back(usbDeviceType);
+    ret = client.ManageUsbType(disableType, false);
+    ASSERT_EQ(ret, 0);
+    USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageUsbType003");
+}
+
+/**
+ * @tc.name: ManageUsbType004
+ * @tc.desc: Test functions to ManageUsbType – enable Storage interface type
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbManageInterfaceTest, ManageUsbType004, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ManageUsbType004");
+    auto &client = UsbSrvClient::GetInstance();
+    vector<UsbDevice> devi;
+    auto ret = client.GetDevices(devi);
+    ASSERT_EQ(ret, 0);
+    vector<UsbDeviceType> disableType;
+    UsbDeviceType usbDeviceType;
+    usbDeviceType.baseClass = 8;
+    usbDeviceType.subClass = 6;
+    usbDeviceType.protocol = 80;
+    usbDeviceType.isDeviceType = false;
+    usbDeviceType.isDeviceTypeAllMatch = false;
+    disableType.emplace_back(usbDeviceType);
+    ret = client.ManageUsbType(disableType, false);
+    ASSERT_EQ(ret, 0);
+    USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageUsbType004");
+}
+
+/**
+ * @tc.name: ManageUsbType005
+ * @tc.desc: Test functions to ManageUsbType – permission denied for normal app
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbManageInterfaceTest, ManageUsbType005, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ManageUsbType005");
+    UsbCommonTest::GrantPermissionNormalNative();
+    auto &client = UsbSrvClient::GetInstance();
+    vector<UsbDevice> devi;
+    auto ret = client.GetDevices(devi);
+    ASSERT_EQ(ret, 0);
+    vector<UsbDeviceType> disableType;
+    UsbDeviceType usbDeviceType;
+    usbDeviceType.baseClass = 8;
+    usbDeviceType.subClass = 6;
+    usbDeviceType.protocol = 80;
+    usbDeviceType.isDeviceType = false;
+    usbDeviceType.isDeviceTypeAllMatch = false;
+    disableType.emplace_back(usbDeviceType);
+    ret = client.ManageUsbType(disableType, true);
+    ASSERT_NE(ret, 0);
+    UsbCommonTest::GrantPermissionSysNative();
+    USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageUsbType005");
+}
+
+/**
+ * @tc.name: ManageUsbType006
+ * @tc.desc: Test functions to ManageUsbType – device level disable with isDeviceType=true
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbManageInterfaceTest, ManageUsbType006, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ManageUsbType006");
+    auto &client = UsbSrvClient::GetInstance();
+    vector<UsbDevice> devi;
+    auto ret = client.GetDevices(devi);
+    ASSERT_EQ(ret, 0);
+    vector<UsbDeviceType> disableType;
+    UsbDeviceType usbDeviceType;
+    usbDeviceType.baseClass = 0;
+    usbDeviceType.subClass = 0;
+    usbDeviceType.protocol = 0;
+    usbDeviceType.isDeviceType = true;
+    usbDeviceType.isDeviceTypeAllMatch = false;
+    disableType.emplace_back(usbDeviceType);
+    ret = client.ManageUsbType(disableType, true);
+    ASSERT_EQ(ret, 0);
+    USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageUsbType006");
+}
+
+/**
+ * @tc.name: ManageUsbType007
+ * @tc.desc: Test functions to ManageUsbType – all match mode with isDeviceTypeAllMatch=true
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbManageInterfaceTest, ManageUsbType007, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ManageUsbType007");
+    auto &client = UsbSrvClient::GetInstance();
+    vector<UsbDevice> devi;
+    auto ret = client.GetDevices(devi);
+    ASSERT_EQ(ret, 0);
+    vector<UsbDeviceType> disableType;
+    UsbDeviceType usbDeviceType;
+    usbDeviceType.baseClass = 3;
+    usbDeviceType.subClass = -1;
+    usbDeviceType.protocol = -1;
+    usbDeviceType.isDeviceType = false;
+    usbDeviceType.isDeviceTypeAllMatch = true;
+    disableType.emplace_back(usbDeviceType);
+    ret = client.ManageUsbType(disableType, true);
+    ASSERT_EQ(ret, 0);
+    USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageUsbType007");
+}
+
+/**
+ * @tc.name: ManageUsbType008
+ * @tc.desc: Test functions to ManageUsbType – wildcard subClass=-1
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbManageInterfaceTest, ManageUsbType008, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ManageUsbType008");
+    auto &client = UsbSrvClient::GetInstance();
+    vector<UsbDevice> devi;
+    auto ret = client.GetDevices(devi);
+    ASSERT_EQ(ret, 0);
+    vector<UsbDeviceType> disableType;
+    UsbDeviceType usbDeviceType;
+    usbDeviceType.baseClass = 3;
+    usbDeviceType.subClass = -1;
+    usbDeviceType.protocol = 2;
+    usbDeviceType.isDeviceType = false;
+    usbDeviceType.isDeviceTypeAllMatch = false;
+    disableType.emplace_back(usbDeviceType);
+    ret = client.ManageUsbType(disableType, true);
+    ASSERT_EQ(ret, 0);
+    USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageUsbType008");
+}
+
+/**
+ * @tc.name: ManageUsbType009
+ * @tc.desc: Test functions to ManageUsbType – wildcard protocol=-1
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbManageInterfaceTest, ManageUsbType009, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ManageUsbType009");
+    auto &client = UsbSrvClient::GetInstance();
+    vector<UsbDevice> devi;
+    auto ret = client.GetDevices(devi);
+    ASSERT_EQ(ret, 0);
+    vector<UsbDeviceType> disableType;
+    UsbDeviceType usbDeviceType;
+    usbDeviceType.baseClass = 8;
+    usbDeviceType.subClass = 6;
+    usbDeviceType.protocol = -1;
+    usbDeviceType.isDeviceType = false;
+    usbDeviceType.isDeviceTypeAllMatch = false;
+    disableType.emplace_back(usbDeviceType);
+    ret = client.ManageUsbType(disableType, true);
+    ASSERT_EQ(ret, 0);
+    USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageUsbType009");
+}
+
+/**
+ * @tc.name: ManageUsbType010
+ * @tc.desc: Test functions to ManageUsbType – batch disable multiple types
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbManageInterfaceTest, ManageUsbType010, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ManageUsbType010");
+    auto &client = UsbSrvClient::GetInstance();
+    vector<UsbDevice> devi;
+    auto ret = client.GetDevices(devi);
+    ASSERT_EQ(ret, 0);
+    vector<UsbDeviceType> disableType;
+    UsbDeviceType hidType;
+    hidType.baseClass = 3;
+    hidType.subClass = 1;
+    hidType.protocol = 2;
+    hidType.isDeviceType = false;
+    hidType.isDeviceTypeAllMatch = false;
+    disableType.emplace_back(hidType);
+    UsbDeviceType storageType;
+    storageType.baseClass = 8;
+    storageType.subClass = 6;
+    storageType.protocol = 80;
+    storageType.isDeviceType = false;
+    storageType.isDeviceTypeAllMatch = false;
+    disableType.emplace_back(storageType);
+    UsbDeviceType audioType;
+    audioType.baseClass = 1;
+    audioType.subClass = 1;
+    audioType.protocol = 0;
+    audioType.isDeviceType = false;
+    audioType.isDeviceTypeAllMatch = false;
+    disableType.emplace_back(audioType);
+    ret = client.ManageUsbType(disableType, true);
+    ASSERT_EQ(ret, 0);
+    USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageUsbType010");
+}
+
+/**
+ * @tc.name: ManageUsbType011
+ * @tc.desc: Test functions to ManageUsbType – empty vector
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbManageInterfaceTest, ManageUsbType011, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ManageUsbType011");
+    auto &client = UsbSrvClient::GetInstance();
+    vector<UsbDevice> devi;
+    auto ret = client.GetDevices(devi);
+    ASSERT_EQ(ret, 0);
+    vector<UsbDeviceType> disableType;
+    ret = client.ManageUsbType(disableType, true);
+    ASSERT_EQ(ret, 0);
+    USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageUsbType011");
+}
+
+/**
+ * @tc.name: ManageUsbType012
+ * @tc.desc: Test functions to ManageUsbType – all zero fields
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbManageInterfaceTest, ManageUsbType012, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ManageUsbType012");
+    auto &client = UsbSrvClient::GetInstance();
+    vector<UsbDevice> devi;
+    auto ret = client.GetDevices(devi);
+    ASSERT_EQ(ret, 0);
+    vector<UsbDeviceType> disableType;
+    UsbDeviceType usbDeviceType;
+    usbDeviceType.baseClass = 0;
+    usbDeviceType.subClass = 0;
+    usbDeviceType.protocol = 0;
+    usbDeviceType.isDeviceType = false;
+    usbDeviceType.isDeviceTypeAllMatch = false;
+    disableType.emplace_back(usbDeviceType);
+    ret = client.ManageUsbType(disableType, true);
+    ASSERT_EQ(ret, 0);
+    USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageUsbType012");
+}
+
+/**
+ * @tc.name: ManageUsbType013
+ * @tc.desc: Test functions to ManageUsbType – extreme large values
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbManageInterfaceTest, ManageUsbType013, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ManageUsbType013");
+    auto &client = UsbSrvClient::GetInstance();
+    vector<UsbDevice> devi;
+    auto ret = client.GetDevices(devi);
+    ASSERT_EQ(ret, 0);
+    vector<UsbDeviceType> disableType;
+    UsbDeviceType usbDeviceType;
+    usbDeviceType.baseClass = INT32_MAX;
+    usbDeviceType.subClass = INT32_MAX;
+    usbDeviceType.protocol = INT32_MAX;
+    usbDeviceType.isDeviceType = false;
+    usbDeviceType.isDeviceTypeAllMatch = false;
+    disableType.emplace_back(usbDeviceType);
+    ret = client.ManageUsbType(disableType, true);
+    ASSERT_EQ(ret, 0);
+    USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageUsbType013");
+}
+
+/**
+ * @tc.name: ManageUsbType014
+ * @tc.desc: Test functions to ManageUsbType – wildcard both subClass and protocol
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbManageInterfaceTest, ManageUsbType014, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "Case Start : ManageUsbType014");
+    auto &client = UsbSrvClient::GetInstance();
+    vector<UsbDevice> devi;
+    auto ret = client.GetDevices(devi);
+    ASSERT_EQ(ret, 0);
+    vector<UsbDeviceType> disableType;
+    UsbDeviceType usbDeviceType;
+    usbDeviceType.baseClass = 3;
+    usbDeviceType.subClass = -1;
+    usbDeviceType.protocol = -1;
+    usbDeviceType.isDeviceType = false;
+    usbDeviceType.isDeviceTypeAllMatch = false;
+    disableType.emplace_back(usbDeviceType);
+    ret = client.ManageUsbType(disableType, true);
+    ASSERT_EQ(ret, 0);
+    USB_HILOGI(MODULE_USB_SERVICE, "Case End : ManageUsbType014");
+}
 } // ManagerInterface
 } // USB
 } // OHOS
