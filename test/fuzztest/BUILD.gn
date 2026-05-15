@@ -208,6 +208,40 @@ ohos_fuzztest("UsbMgrRequestRightFuzzTest") {
   sources = [ "usbmgrrequestright_fuzzer/usbmgrrequestright_fuzzer.cpp" ]
 }
 
+ohos_fuzztest("UsbMgrParseConfigDescriptorsFuzzTest") {
+  module_out_path = module_output_path
+
+  fuzz_config_file = "${usb_manager_path}/test/fuzztest/usbmgr_parseconfigdescriptors_fuzzer"
+
+  configs = [ ":module_private_config" ]
+
+  deps = [
+    "${usb_manager_path}/interfaces/innerkits:usbsrv_client",
+    "${usb_manager_path}/services:usbservice",
+  ]
+
+  defines = [
+    "USB_MANAGER_FEATURE_HOST",
+  ]
+
+  external_deps = [
+    "ability_runtime:ability_manager",
+    "access_token:libaccesstoken_sdk",
+    "access_token:libnativetoken",
+    "access_token:libtoken_setproc",
+    "c_utils:utils",
+    "drivers_interface_usb:libusb_proxy_1.0",
+    "drivers_interface_usb:libusb_proxy_1.2",
+    "drivers_interface_usb:usb_idl_headers_1.2",
+    "hilog:libhilog",
+    "ipc:ipc_core",
+    "safwk:system_ability_fwk",
+    "selinux_adapter:librestorecon",
+  ]
+
+  sources = [ "usbmgrparseconfigdescriptors_fuzzer\usbmgrparseconfigdescriptors_fuzzer.cpp" ]
+}
+
 ohos_fuzztest("UsbMgrHasRightFuzzTest") {
   module_out_path = module_output_path
 
