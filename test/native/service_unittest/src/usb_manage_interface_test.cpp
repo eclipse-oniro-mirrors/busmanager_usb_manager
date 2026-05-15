@@ -39,7 +39,6 @@ using namespace OHOS::USB::Common;
 namespace OHOS {
 namespace USB {
 namespace ManageInterface {
-constexpr int32_t SLEEP_TIME = 3;
 
 void UsbManageInterfaceTest::SetUpTestCase(void)
 {
