@@ -26,6 +26,7 @@
 namespace OHOS {
 constexpr size_t THRESHOLD = 10;
 constexpr uint32_t CURSOR_INIT = 18;
+const uint32_t OFFSET_BYTE = 6;
 const std::u16string USB_INTERFACE_TOKEN = u"OHOS.USB.IUsbServer";
 
 namespace USB {
@@ -36,7 +37,7 @@ bool UsbMgrParseConfigDescriptorsFuzzTest(const uint8_t* rawData, size_t size)
     }
 
     std::vector<uint8_t> descriptor;
-    *(rawData + CURSOR_INIT + 1) %= 6;
+    *(rawData + CURSOR_INIT + 1) %= OFFSET_BYTE;
     descriptor = std::vector<uint8_t>(rawData, rawData + size);
     std::vector<USBConfig> configs;
     if (offset < descriptor.size()) {
