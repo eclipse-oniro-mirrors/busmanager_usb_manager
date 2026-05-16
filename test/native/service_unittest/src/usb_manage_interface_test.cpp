@@ -39,21 +39,10 @@ using namespace OHOS::USB::Common;
 namespace OHOS {
 namespace USB {
 namespace ManageInterface {
-constexpr int32_t SLEEP_TIME = 3;
 
 void UsbManageInterfaceTest::SetUpTestCase(void)
 {
     UsbCommonTest::GrantPermissionSysNative();
-    auto &srvClient = UsbSrvClient::GetInstance();
-    auto ret = srvClient.SetPortRole(1, 1, 1);
-    sleep(SLEEP_TIME);
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbManageInterfaceTest:: [Device] SetPortRole=%{public}d", ret);
-    ret = UsbCommonTest::SwitchErrCode(ret);
-    ASSERT_TRUE(ret == 0);
-    if (ret != 0) {
-        exit(0);
-    }
-
     std::cout << "please connect device, press enter to continue" << std::endl;
     int32_t c;
     while ((c = getchar()) != '\n' && c != EOF) {
