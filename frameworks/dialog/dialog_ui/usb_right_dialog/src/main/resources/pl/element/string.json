@@ -153,6 +153,13 @@
             "attr":{
                 "priority":"LT"
             }
+        },
+        {
+            "name":"serial_right_title",
+            "value":"Autoryzacja dostępu do portu szeregowego",
+            "attr":{
+                "priority":"translate"
+            }
         }
     ]
 }

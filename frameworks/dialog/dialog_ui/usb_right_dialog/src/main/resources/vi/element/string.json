@@ -153,6 +153,13 @@
             "attr":{
                 "priority":"translate"
             }
+        },
+        {
+            "name":"serial_right_title",
+            "value":"Cấp quyền truy cập cổng nối tiếp",
+            "attr":{
+                "priority":"translate"
+            }
         }
     ]
 }

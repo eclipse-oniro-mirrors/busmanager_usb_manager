@@ -153,6 +153,13 @@
             "attr":{
                 "priority":"translate"
             }
+        },
+        {
+            "name":"serial_right_title",
+            "value":"མཐུད་ཁའི་ལྟ་སྤྱོད་དབང་སྤྲོད།",
+            "attr":{
+                "priority":"translate"
+            }
         }
     ]
 }

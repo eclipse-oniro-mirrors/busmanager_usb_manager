@@ -79,7 +79,10 @@
         },
         {
             "name":"serial_right_title",
-            "value":"Serial access authorization"
+            "value":"Serial access authorization",
+            "attr":{
+                "priority":"translate"
+            }
         },
         {
             "name":"USB_func_mtp",
@@ -166,15 +169,15 @@
             }
         },
         {
-            "name":"USB_func_reverse_charge",
-            "value":"Reverse charge",
+            "name":"USB_charge_connected_device",
+            "value":"Supply power to a connected device.",
             "attr":{
                 "priority":"LT"
             }
         },
         {
-            "name":"USB_charge_connected_device",
-            "value":"Supply power to a connected device.",
+            "name":"USB_func_reverse_charge",
+            "value":"Reverse charge",
             "attr":{
                 "priority":"LT"
             }

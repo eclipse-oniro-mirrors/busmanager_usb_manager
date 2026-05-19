@@ -115,6 +115,10 @@
         {
             "name":"USB_func_charge_connected_notifier",
             "value":"[TS_1058467]_Supplying power to the connected device over USB"
+        },
+        {
+            "name":"serial_right_title",
+            "value":"[TS_1205175]_Serial access authorization"
         }
     ]
 }

@@ -153,6 +153,13 @@
             "attr":{
                 "priority":"translate"
             }
+        },
+        {
+            "name":"serial_right_title",
+            "value":"串口存取授權",
+            "attr":{
+                "priority":"translate"
+            }
         }
     ]
 }
