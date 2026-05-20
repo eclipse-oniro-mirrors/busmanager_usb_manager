@@ -153,6 +153,13 @@
             "attr":{
                 "priority":"LT"
             }
+        },
+        {
+            "name":"serial_right_title",
+            "value":"การอนุญาตการเข้าถึงแบบอนุกรม",
+            "attr":{
+                "priority":"translate"
+            }
         }
     ]
 }

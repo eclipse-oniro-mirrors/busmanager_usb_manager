@@ -153,6 +153,13 @@
             "attr":{
                 "priority":"translate"
             }
+        },
+        {
+            "name":"serial_right_title",
+            "value":"Autorización de acceso serial",
+            "attr":{
+                "priority":"translate"
+            }
         }
     ]
 }
