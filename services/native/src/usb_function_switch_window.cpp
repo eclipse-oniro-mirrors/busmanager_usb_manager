@@ -439,7 +439,7 @@ bool UsbFunctionSwitchWindow::ShouldRejectShowWindow()
     std::string device_provisioned {"0"};
     OHOS::Uri uri(
         "datashare:///com.ohos.settingsdata/entry/settingsdata/SETTINGSDATA?Proxy=true&key=device_provisioned");
-    bool resp = datashareHelper->Query(uri, "device_provisioned", device_provisioned);
+    bool resp = datashareHelper->OobeQuery(uri, "device_provisioned", device_provisioned);
     if (resp && device_provisioned != "1") {
         USB_HILOGE(MODULE_USB_DEVICE, "%{public}s: device_provisioned is = 0", __func__);
         return true;
@@ -456,7 +456,7 @@ bool UsbFunctionSwitchWindow::ShouldRejectShowWindow()
     OHOS::Uri uri_setup(
         "datashare:///com.ohos.settingsdata/entry/settingsdata/USER_SETTINGSDATA_SECURE_"
         + std::to_string(userId) + "?Proxy=true&key=user_setup_complete");
-    bool resp_userSetup = datashareHelper->Query(uri_setup, "user_setup_complete", user_setup_complete);
+    bool resp_userSetup = datashareHelper->OobeQuery(uri_setup, "user_setup_complete", user_setup_complete);
     if (resp_userSetup && user_setup_complete != "1") {
         USB_HILOGE(MODULE_USB_DEVICE, "%{public}s: user_setup_complete is = 0", __func__);
         return true;
@@ -466,7 +466,7 @@ bool UsbFunctionSwitchWindow::ShouldRejectShowWindow()
     OHOS::Uri uri_ota(
         "datashare:///com.ohos.settingsdata/entry/settingsdata/USER_SETTINGSDATA_SECURE_"
         + std::to_string(userId) + "?Proxy=true&key=is_ota_finished");
-    bool resp_ota = datashareHelper->Query(uri_ota, "is_ota_finished", is_ota_finished);
+    bool resp_ota = datashareHelper->OobeQuery(uri_ota, "is_ota_finished", is_ota_finished);
     if (resp_ota && is_ota_finished == "0") {
         USB_HILOGE(MODULE_USB_DEVICE, "%{public}s: is_ota_finished is = 0", __func__);
         return true;

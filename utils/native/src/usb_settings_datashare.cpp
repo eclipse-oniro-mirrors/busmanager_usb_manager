@@ -91,6 +91,37 @@ bool UsbSettingDataShare::Query(Uri &uri, const std::string &key, std::string &v
     if (result->GoToFirstRow() != DataShare::E_OK) {
         USB_HILOGE(MODULE_USB_UTILS, "query error, go to first row error");
         result->Close();
+        return false;
+    }
+ 
+    int columnIndex = 0;
+    result->GetColumnIndex(SETTINGS_DATA_COLUMN_VALUE, columnIndex);
+    result->GetString(columnIndex, value);
+    result->Close();
+    USB_HILOGI(MODULE_USB_UTILS, "SettingUtils: query success");
+    return true;
+}
+
+bool UsbSettingDataShare::OobeQuery(Uri &uri, const std::string &key, std::string &value)
+{
+    USB_HILOGI(MODULE_USB_UTILS, "start Query key = %{public}s", key.c_str());
+    if (datashareHelper_ == nullptr) {
+        USB_HILOGE(MODULE_USB_UTILS, "query error, datashareHelper_ is nullptr");
+        return false;
+    }
+ 
+    std::vector<std::string> columns;
+    DataShare::DataSharePredicates predicates;
+    predicates.EqualTo(SETTINGS_DATA_COLUMN_KEYWORD, key);
+    auto result = datashareHelper_->Query(uri, predicates, columns);
+    if (result == nullptr) {
+        USB_HILOGE(MODULE_USB_UTILS, "query error, result is nullptr");
+        return false;
+    }
+ 
+    if (result->GoToFirstRow() != DataShare::E_OK) {
+        USB_HILOGE(MODULE_USB_UTILS, "query error, go to first row error");
+        result->Close();
         return true;
     }
  

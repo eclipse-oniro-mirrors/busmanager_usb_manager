@@ -31,6 +31,7 @@ public:
     UsbSettingDataShare();
     ~UsbSettingDataShare();
     bool Query(Uri &uri, const std::string &key, std::string &values);
+    bool OobeQuery(Uri &uri, const std::string &key, std::string &values);
     bool Insert(Uri uri, const std::string &key, std::string &value);
     bool Update(Uri uri, const std::string &key, std::string &value);
     std::shared_ptr<DataShare::DataShareHelper> CreateDataShareHelper(int systemAbilityId);
