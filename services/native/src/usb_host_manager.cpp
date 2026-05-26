@@ -2222,7 +2222,7 @@ void UsbHostManager::ExecuteManageUsbType(const std::vector<UsbDeviceType> &disa
 
     std::shared_lock lock(devicesMutex_);
     ManageUsbTypeDeviceImpl(deviceTypes, disable);
-    ManageUsbTypeInterfaceImpl(deviceTypes, disable);
+    ManageUsbTypeInterfaceImpl(interfaceTypes, disable);
 }
 
 void UsbHostManager::ManageUsbTypeDeviceImpl(const std::vector<UsbDeviceType> &types, bool disable)
@@ -2284,6 +2284,7 @@ void UsbHostManager::ManageUsbTypeInterfaceImpl(const std::vector<UsbDeviceType>
             } else {
                 // not matched => authorized = !!disable
                 UsbInterfaceAuthorize(dev, it->second->GetConfigs()[index].GetId(), interface.GetId(), disable);
+                interface.SetAuthorizeStatus(disable ? ENABLED : DISABLED);
                 continue;
             }
             if (disable && ret == UEC_OK) {
