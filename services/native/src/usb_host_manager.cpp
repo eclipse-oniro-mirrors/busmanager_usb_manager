@@ -1766,9 +1766,10 @@ int32_t UsbHostManager::GetEdmTypePolicy(sptr<IRemoteObject> remote, std::vector
     if (size <= 0 || static_cast<uint32_t>(size) > TRUSTLIST_POLICY_MAX_DEVICES) {
         USB_HILOGE(MODULE_USB_HOST, "EdmTypeList size=[%{public}d] is invalid", size);
         return UEC_SERVICE_EDM_DEVICE_SIZE_EXCEED;
+    } else if (size > 0) {
+        isPermTypePolicy_ = false;
     }
 
-    isPermTypePolicy_ = false;
     USB_HILOGI(MODULE_USB_HOST, "%{public}s return size:%{public}d", __func__, size);
     ReadTypePolicyFromParcel(reply, size, disableType);
     return UEC_OK;
@@ -1799,12 +1800,13 @@ int32_t UsbHostManager::GetEdmPermTypePolicy(sptr<IRemoteObject> remote, std::ve
         return UEC_SERVICE_EDM_SEND_REQUEST_FAILED;
     }
     int32_t size = reply.ReadInt32();
-    if (size <= 0 || static_cast<uint32_t>(size) > TRUSTLIST_POLICY_MAX_DEVICES) {
+    if (size < 0 || static_cast<uint32_t>(size) > TRUSTLIST_POLICY_MAX_DEVICES) {
         USB_HILOGE(MODULE_USB_HOST, "EdmTypeList size=[%{public}d] is invalid", size);
         return UEC_SERVICE_EDM_DEVICE_SIZE_EXCEED;
+    } else if (size > 0) {
+        isPermTypePolicy_ = true;
     }
 
-    isPermTypePolicy_ = true;
     USB_HILOGI(MODULE_USB_HOST, "%{public}s return size:%{public}d", __func__, size);
     ReadTypePolicyFromParcel(reply, size, disableType);
     return UEC_OK;
