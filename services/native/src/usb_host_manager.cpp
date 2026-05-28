@@ -1683,7 +1683,7 @@ int32_t UsbHostManager::GetEdmPolicy(bool &IsGlobalDisabled, std::vector<UsbDevi
     }
     ret = GetEdmPermTypePolicy(remote, disableType);
     if (ret != UEC_OK) {
-        USB_HILOGE(MODULE_USB_HOST, "GetEdmTypePolicy failed.");
+        USB_HILOGE(MODULE_USB_HOST, "GetEdmPermTypePolicy failed.");
         return ret;
     }
     ret = GetEdmTrustListPolicy(remote, trustUsbDeviceIds);
