@@ -1752,7 +1752,7 @@ int32_t UsbHostManager::GetEdmTypePolicy(sptr<IRemoteObject> remote, std::vector
     data.WriteString("");
     data.WriteInt32(WITHOUT_ADMIN);
 
-    // query permissive type policy
+    // query no-permissive type policy
     uint32_t funcCode = (1 << EMD_MASK_CODE) | USB_DEVICE_ACCESS_POLICY;
     int32_t sendRet = remote->SendRequest(funcCode, data, reply, option);
     int32_t ret = ERR_INVALID_VALUE;
