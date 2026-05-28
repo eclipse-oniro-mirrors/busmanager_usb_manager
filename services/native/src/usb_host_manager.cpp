@@ -1763,7 +1763,7 @@ int32_t UsbHostManager::GetEdmTypePolicy(sptr<IRemoteObject> remote, std::vector
         return UEC_SERVICE_EDM_SEND_REQUEST_FAILED;
     }
     int32_t size = reply.ReadInt32();
-    if (size < 0 || static_cast<uint32_t>(size) > TRUSTLIST_POLICY_MAX_DEVICES) {
+    if (size <= 0 || static_cast<uint32_t>(size) > TRUSTLIST_POLICY_MAX_DEVICES) {
         USB_HILOGE(MODULE_USB_HOST, "EdmTypeList size=[%{public}d] is invalid", size);
         return UEC_SERVICE_EDM_DEVICE_SIZE_EXCEED;
     }
