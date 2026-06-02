@@ -22,8 +22,17 @@ namespace OHOS {
 const uint32_t OFFSET = 4;
 constexpr size_t THRESHOLD = 10;
 namespace USB {
-    bool UsbMgrResetDeivceFuzzTest(const uint8_t* data, size_t /* size */)
+    bool UsbMgrResetDeivceFuzzTest(const uint8_t* data, size_t size)
     {
+        unsigned seed = 0;
+        if (size >= sizeof(unsigned)) {
+            errno_t ret = memcpy_s(&seed, sizeof(unsigned), data, sizeof(unsigned));
+            if (ret != UEC_OK) {
+                return false;
+            }
+            srand(seed);
+        }
+        
         std::vector<UsbDevice> devList;
         auto &usbSrvClient = UsbSrvClient::GetInstance();
         auto ret = usbSrvClient.GetDevices(devList);
