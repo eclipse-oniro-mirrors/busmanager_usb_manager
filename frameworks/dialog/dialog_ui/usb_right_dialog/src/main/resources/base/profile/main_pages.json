@@ -2,7 +2,6 @@
   "src": [
     "pages/UsbDialog",
     "pages/Index",
-    "pages/SerialDialog",
     "pages/UsbSelect"
   ]
 }
