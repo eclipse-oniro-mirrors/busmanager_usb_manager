@@ -78,6 +78,8 @@ constexpr int32_t USB_RIGHT_USERID_INVALID = -1;
 #endif // USB_MANAGER_FEATURE_HOST || USB_MANAGER_FEATURE_DEVICE
 constexpr int32_t API_VERSION_ID_18 = 18;
 static const std::filesystem::path TTYUSB_PATH = "/sys/bus/usb-serial/devices";
+static const std::filesystem::path TTYACM_PATH = "/sys/class/tty";
+static const std::string TTYACM_PREFIX = "ttyACM";
 constexpr const pid_t ROOT_UID = 0;
 constexpr const pid_t EDM_UID = 3057;
 } // namespace
@@ -2556,16 +2558,21 @@ sptr<UsbService> UsbService::GetGlobalInstance()
 bool CheckForTtyUSB()
 {
     USB_HILOGI(MODULE_USB_SERVICE, "CheckForTtyUSB");
-    if (!exists(TTYUSB_PATH)) {
-        USB_HILOGE(MODULE_USB_SERVICE, "%{public}s: The path does not exist", __func__);
-        return false;
-    }
-    for (const auto& entry : std::filesystem::directory_iterator(TTYUSB_PATH)) {
-        if (entry.is_directory()) {
-            return true;
+    if (std::filesystem::exists(TTYUSB_PATH)) {
+        for (const auto& entry : std::filesystem::directory_iterator(TTYUSB_PATH)) {
+            if (entry.is_directory()) {
+                return true;
+            }
         }
     }
-    USB_HILOGI(MODULE_USB_SERVICE, "can't find ttyUSB");
+    if (std::filesystem::exists(TTYACM_PATH)) {
+        for (const auto& entry : std::filesystem::directory_iterator(TTYACM_PATH)) {
+            if (entry.is_directory() && entry.path().filename().string().find(TTYACM_PREFIX) == 0) {
+                return true;
+            }
+        }
+    }
+    USB_HILOGI(MODULE_USB_SERVICE, "can't find ttyUSB or ttyACM");
     return false;
 }
 
