@@ -1578,9 +1578,9 @@ int32_t UsbService::RemoveRight(const std::string &deviceName)
         return false;
     }
 
-    if (usbRightManager_->RemoveDeviceRight(deviceVidPidSerialNum, bundleName, tokenId, userId)) {
-        USB_HILOGI(MODULE_USB_HOST, "RemoveDeviceRight done");
-        return UEC_OK;
+    if (!usbRightManager_->RemoveDeviceRight(deviceVidPidSerialNum, bundleName, tokenId, userId)) {
+        USB_HILOGE(MODULE_USB_SERVICE, "RemoveDeviceRight failed");
+        return UEC_SERVICE_PERMISSION_DENIED;
     }
 
     USB_HILOGI(MODULE_USB_HOST, "RemoveRight done");
