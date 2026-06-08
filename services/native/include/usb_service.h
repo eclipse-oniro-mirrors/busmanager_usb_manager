@@ -249,7 +249,7 @@ private:
 #ifdef USB_MANAGER_FEATURE_HOST
     class DeviceDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
-        DeviceDeathRecipient(UsbService *service, uint8_t busNum, uint8_t devAddr, uint32_t tokenId)
+        DeviceDeathRecipient(UsbService *service, uint8_t busNum, uint8_t devAddr)
             : service_(service), busNum_(busNum), devAddr_(devAddr){};
         ~DeviceDeathRecipient() {};
         void OnRemoteDied(const wptr<IRemoteObject> &object) override;
@@ -262,7 +262,7 @@ private:
 
     class AccessoryDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
-        AccessoryDeathRecipient(UsbService *service, int32_t fd, uint32_t tokenId)
+        AccessoryDeathRecipient(UsbService *service, int32_t fd)
             : service_(service), fd_(fd){};
         ~AccessoryDeathRecipient() {};
         void OnRemoteDied(const wptr<IRemoteObject> &object) override;
