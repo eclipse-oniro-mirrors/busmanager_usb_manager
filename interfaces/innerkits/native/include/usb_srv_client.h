@@ -30,6 +30,8 @@
 #include "usb_request.h"
 #include "usb_interface_type.h"
 #include "serial_death_monitor.h"
+#include "accessory_death_monitor.h"
+#include "device_death_monitor.h"
 #include "usb_server_types.h"
 namespace OHOS {
 namespace USB {
@@ -151,6 +153,8 @@ private:
     sptr<IRemoteObject::DeathRecipient> deathRecipient_ = nullptr;
     std::mutex mutex_;
     sptr<SerialDeathMonitor> serialRemote = nullptr;
+    sptr<AccessoryDeathMonitor> accessoryRemote = nullptr;
+    sptr<DeviceDeathMonitor> deviceRemote = nullptr;
 };
 } // namespace USB
 } // namespace OHOS

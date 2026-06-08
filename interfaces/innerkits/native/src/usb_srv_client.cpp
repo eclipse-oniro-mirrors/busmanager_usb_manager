@@ -40,6 +40,8 @@ UsbSrvClient::UsbSrvClient()
 {
     Connect();
     serialRemote = new SerialDeathMonitor();
+    accessoryRemote = new AccessoryDeathMonitor();
+    deviceRemote = new DeviceDeathMonitor();
 }
 UsbSrvClient::~UsbSrvClient()
 {
@@ -122,7 +124,7 @@ int32_t UsbSrvClient::OpenDevice(const UsbDevice &device, USBDevicePipe &pipe)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling OpenDevice Start!");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
-    int32_t ret = proxy_->OpenDevice(device.GetBusNum(), device.GetDevAddr());
+    int32_t ret = proxy_->OpenDevice(device.GetBusNum(), device.GetDevAddr(), deviceRemote);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "OpenDevice failed with ret = %{public}d !", ret);
         return ret;
@@ -917,7 +919,7 @@ int32_t UsbSrvClient::GetAccessoryList(std::vector<USBAccessory> &accessList)
 int32_t UsbSrvClient::OpenAccessory(const USBAccessory &access, int32_t &fd)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
-    int32_t ret = proxy_->OpenAccessory(access, fd);
+    int32_t ret = proxy_->OpenAccessory(access, fd, accessoryRemote);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "OpenAccessory ret = %{public}d!", ret);
     }
