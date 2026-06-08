@@ -1929,6 +1929,7 @@ int32_t UsbService::OpenAccessory(const USBAccessory &access, int32_t &fd, const
     ret = usbAccessoryManager_->OpenAccessory(fd);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_DEVICE, "error ret:%{public}d", ret);
+        accessoryRemote->RemoveDeathRecipient(accessoryRecipient_);
     }
     return ret;
 }
