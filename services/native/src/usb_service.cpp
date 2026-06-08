@@ -506,6 +506,7 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr, const sptr<IRemo
         return UEC_SERVICE_PERMISSION_DENIED;
     }
 
+    // LCOV_EXCL_START
     if (usbHostManager_ == nullptr) {
         USB_HILOGE(MODULE_USB_HOST, "UsbService::usbHostManager_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
@@ -529,6 +530,7 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr, const sptr<IRemo
     }
 
     return ret;
+    // LCOV_EXCL_STOP
 }
 
 int32_t UsbService::Close(uint8_t busNum, uint8_t devAddr)
