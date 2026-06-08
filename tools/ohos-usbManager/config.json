@@ -1,0 +1,63 @@
+{
+    "name": "ohos-usbManager",
+    "description": "OpenHarmony USB CLI query tool for listing USB devices, accessories, and virtual serial ports",
+    "installPath": "/system/bin/cli_tool/executable",
+    "version": "1.0.0",
+    "commandFormat": {
+        "main": "ohos-usbManager [--help] [--version] <subcommand>",
+        "flags": [
+            {
+                "name": "--help",
+                "description": "Show usage information"
+            },
+            {
+                "name": "--version",
+                "description": "Show version information"
+            }
+        ],
+        "subcommands": [
+            {
+                "name": "get-device-list",
+                "description": "List all attached USB peripheral devices"
+            },
+            {
+                "name": "get-accessory-list",
+                "description": "List all connected USB accessories"
+            },
+            {
+                "name": "get-usbserial-list",
+                "description": "List all available USB virtual serial ports"
+            }
+        ]
+    },
+    "outputFormat": {
+        "success": {
+            "schema": {
+                "number": "int - count of items",
+                "list": "array - list of device objects"
+            },
+            "example": {
+                "number": 1,
+                "list": [
+                    {
+                        "busNum": 1,
+                        "devAddress": 2,
+                        "name": "device_name",
+                        "vendorId": 1234,
+                        "productId": 5678
+                    }
+                ]
+            }
+        },
+        "error": {
+            "schema": {
+                "code": "int - error code",
+                "message": "string - error description"
+            },
+            "example": {
+                "code": 1,
+                "message": "service unavailable"
+            }
+        }
+    }
+}
