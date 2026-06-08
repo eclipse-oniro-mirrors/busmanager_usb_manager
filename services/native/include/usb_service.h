@@ -246,6 +246,7 @@ private:
         uint32_t tokenId_;
     };
 
+#ifdef USB_MANAGER_FEATURE_HOST
     class DeviceDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
         DeviceDeathRecipient(UsbService *service, uint8_t busNum, uint8_t devAddr, uint32_t tokenId)
@@ -257,6 +258,7 @@ private:
         uint8_t busNum_;
         uint8_t devAddr_;
     };
+#endif
 
     class AccessoryDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
