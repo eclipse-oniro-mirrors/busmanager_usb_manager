@@ -13,7 +13,6 @@
  * limitations under the License.
  */
 
-import usbManager from '@ohos.usbManager';
 import { UiDriver, BY } from '@ohos.UiTest';
 import CheckEmptyUtils from './CheckEmptyUtils.js';
 import { describe, beforeAll, beforeEach, afterEach, afterAll, it, expect, TestType, Size, Level } from '@ohos/hypium';
@@ -40,14 +39,11 @@ describe('UsbCoreJsFunctionsTest', function () {
 
   beforeAll(async function () {
     console.log(TAG, '*************Usb Unit UsbCoreJsFunctionsTest Begin*************');
-    var Version = usbManager.getVersion();
     console.info(TAG, 'beforeAll: begin test getversion :' + Version);
     // version > 17  host currentMode = 2 device currentMode = 1
-    gDeviceList = usbManager.getDevices();
     console.info(TAG, 'beforeAll: usb case gDeviceList.length return: ' + JSON.stringify(gDeviceList));
     isDeviceConnected = deviceConnected();
     if (isDeviceConnected) {
-      let hasRight = usbManager.hasRight(gDeviceList[0].name);
       if (!hasRight) {
         console.info(TAG, `beforeAll: usb requestRight start`);
         await getPermission();
@@ -98,24 +94,14 @@ describe('UsbCoreJsFunctionsTest', function () {
 
   async function getPermission() {
     console.info('**************getPermission**************');
-    try {
-      usbManager.requestRight(gDeviceList[0].name).then(hasRight => {
-        console.info(TAG, `usb requestRight success, hasRight: ${hasRight}`);
-      })
-    } catch (err) {
-      console.info(TAG, `usb getPermission to requestRight hasRight fail: `, err);
-      return
-    }
   }
 
   function getPipe(testCaseName) {
-    gPipe = usbManager.connectDevice(devices);
     console.info(TAG, `usb ${testCaseName} connectDevice getPipe ret: ${JSON.stringify(gPipe)}`);
     expect(gPipe !== null).assertTrue();
   }
 
   function toClosePipe(testCaseName) {
-    let isPipClose = usbManager.closePipe(gPipe);
     console.info(TAG, `usb ${testCaseName} closePipe getPipe ret: ${isPipClose}`);
     expect(isPipClose).assertEqual(0);
   }
@@ -158,7 +144,6 @@ describe('UsbCoreJsFunctionsTest', function () {
     }
 
     for (var i = 0; i < gDeviceList.length; i++) {
-      var hasRight = usbManager.hasRight(gDeviceList[i].name);
       console.info(TAG, 'usb has_right ret :' + hasRight);
       expect(hasRight).assertTrue();
     }
@@ -182,7 +167,6 @@ describe('UsbCoreJsFunctionsTest', function () {
 
     for (var i = 0; i < gDeviceList.length; i++) {
       try {
-        let hasRight = await usbManager.requestRight(gDeviceList[i].name);
         console.info(TAG, 'usb testRequestRight001 ret :' + hasRight);
         expect(hasRight).assertTrue();
       } catch(error) {
@@ -206,7 +190,6 @@ describe('UsbCoreJsFunctionsTest', function () {
       expect(isDeviceConnected).assertFalse();
       return
     }
-    let remRight = usbManager.removeRight(devices.name);
     console.info(TAG, 'usb testRemoveRight001 ret :' + remRight);
     expect(remRight).assertTrue();
     await getPermission();
@@ -230,7 +213,6 @@ describe('UsbCoreJsFunctionsTest', function () {
       return
     }
 
-    gPipe = usbManager.connectDevice(devices);
     console.info(TAG, 'usb case testConnectDevice001 ret: ' + JSON.stringify(gPipe));
     expect(CheckEmptyUtils.isEmpty(gPipe)).assertFalse();
     toClosePipe('testConnectDevice001');
@@ -252,8 +234,6 @@ describe('UsbCoreJsFunctionsTest', function () {
     }
     getPipe('testClosePipe001');
 
-    let isPipClose = usbManager.closePipe(gPipe);
-    console.info(TAG, 'usb case closePipe ret: ' + isPipClose);
     expect(isPipClose).assertEqual(0);
   })
 
@@ -349,7 +329,6 @@ describe('UsbCoreJsFunctionsTest', function () {
     }
 
     getPipe('testGetRawDescriptor001');
-    var descriptor = usbManager.getRawDescriptor(gPipe);
     console.info(TAG, 'usb case testGetRawDescriptor001 ret: ' + JSON.stringify(descriptor));
     expect(descriptor.length).assertLarger(0);
     toClosePipe('testGetRawDescriptor001');
@@ -371,7 +350,6 @@ describe('UsbCoreJsFunctionsTest', function () {
     }
 
     getPipe('testGetFileDescriptor001');
-    var fileDescriptor = usbManager.getFileDescriptor(gPipe);
     console.info(TAG, 'usb case testGetFileDescriptor001 ret: ' + fileDescriptor);
     expect(fileDescriptor >= 0).assertTrue();
     toClosePipe('testGetFileDescriptor001');
@@ -395,7 +373,6 @@ describe('UsbCoreJsFunctionsTest', function () {
     getPipe('testGetFileDescriptor002');
     var tempPipe = {busNum : 255, devAddress : 255};
     console.info(TAG, 'usb case testGetFileDescriptor002 param: ' + JSON.stringify(tempPipe));
-    var fileDescriptor = usbManager.getFileDescriptor(tempPipe);
     console.info(TAG, 'usb case testGetFileDescriptor002 ret: ' + fileDescriptor);
     expect(fileDescriptor).assertEqual(-1);
     toClosePipe('testGetFileDescriptor002');
@@ -465,7 +442,6 @@ describe('UsbCoreJsFunctionsTest', function () {
     }
     
     try {
-      var maskCode = usbManager.getFileDescriptor("invalid");
       console.info(TAG, 'usb testGetFileDescriptor005 case getFileDescriptor return: ' + maskCode);
       expect(maskCode !== null).assertFalse();
     } catch (err) {
@@ -490,7 +466,6 @@ describe('UsbCoreJsFunctionsTest', function () {
     }
     
     try {
-      var maskCode = usbManager.getFileDescriptor();
       console.info(TAG, 'usb testGetFileDescriptor006 case getFileDescriptor return: ' + maskCode);
       expect(maskCode !== null).assertFalse();
     } catch (err) {
