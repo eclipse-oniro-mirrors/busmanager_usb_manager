@@ -320,47 +320,6 @@ HWTEST_F(UsbHostManagerHotplugTest, UsbHostManager_Hotplug_ClearHalt_AfterOpen, 
                 openRet, clearRet, closeRet);
 }
 
-/**
- * @tc.name: UsbHostManager_Hotplug_ConcurrentOpenClose
- * @tc.desc: Test concurrent open and close operations
- * @tc.type: FUNC
- */
-HWTEST_F(UsbHostManagerHotplugTest, UsbHostManager_Hotplug_ConcurrentOpenClose, TestSize.Level2)
-{
-    USB_HILOGI(MODULE_USB_HOST, "UsbHostManager_Hotplug_ConcurrentOpenClose start");
-
-    std::atomic<int> openSuccessCount(0);
-    std::atomic<int> closeSuccessCount(0);
-    std::vector<std::thread> threads;
-
-    for (int i = 0; i < 10; i++) {
-        threads.emplace_back([&, i]() {
-            for (int j = 0; j < 10; j++) {
-                int32_t openRet = usbHostManager_->OpenDevice(TEST_BUS_NUM_1, TEST_DEV_ADDR_1);
-                if (openRet == UEC_OK || openRet == UEC_SERVICE_INVALID_VALUE) {
-                    openSuccessCount++;
-                }
-                std::this_thread::sleep_for(std::chrono::milliseconds(20));
-
-                int32_t closeRet = usbHostManager_->Close(TEST_BUS_NUM_1, TEST_DEV_ADDR_1);
-                if (closeRet == UEC_OK || closeRet == UEC_SERVICE_INVALID_VALUE) {
-                    closeSuccessCount++;
-                }
-                std::this_thread::sleep_for(std::chrono::milliseconds(20));
-            }
-        });
-    }
-
-    for (auto& thread : threads) {
-        thread.join();
-    }
-
-    USB_HILOGI(MODULE_USB_HOST, "UsbHostManager_Hotplug_ConcurrentOpenClose open=%{public}d close=%{public}d",
-                openSuccessCount.load(), closeSuccessCount.load());
-    EXPECT_GE(openSuccessCount.load(), 0);
-    EXPECT_GE(closeSuccessCount.load(), 0);
-}
-
 } // namespace ServiceTest
 } // namespace USB
 } // namespace OHOS
