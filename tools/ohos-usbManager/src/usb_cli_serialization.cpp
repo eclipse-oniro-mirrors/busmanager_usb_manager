@@ -157,8 +157,7 @@ cJSON* SerializeSerialPort(const UsbSerialPort &port)
     cJSON_AddNumberToObject(json, "portId", static_cast<double>(port.portId_));
     
     // deviceName: "busNum-devAddr"
-    std::string deviceName = std::to_string(port.busNum_) + "-" + 
-                             std::to_string(port.devAddr_);
+    std::string deviceName = std::to_string(port.busNum_) + "-" + std::to_string(port.devAddr_);
     cJSON_AddStringToObject(json, "deviceName", deviceName.c_str());
     
     return json;
