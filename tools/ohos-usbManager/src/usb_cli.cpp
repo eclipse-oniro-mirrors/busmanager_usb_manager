@@ -22,6 +22,8 @@
 #include "usb_errors.h"
 #include "usb_cli_serialization.h"
 
+#define ARGC_TWO 2
+
 using namespace OHOS::USB;
 
 static const char *TOOL_VERSION = "1.0.0";
@@ -169,9 +171,9 @@ static int HandleGetSerialList()
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2 || HasFlag(argc, argv, "--help")) {
+    if (argc < ARGC_TWO || HasFlag(argc, argv, "--help")) {
         PrintMainHelp();
-        return (argc < 2) ? 1 : 0;
+        return (argc < ARGC_TWO) ? 1 : 0;
     }
 
     if (HasFlag(argc, argv, "--version")) {
@@ -219,6 +221,6 @@ int main(int argc, char *argv[])
 
     std::string errMsg = "Unknown subcommand: ";
     errMsg += subcommand;
-    std::cout << FormatError(2, errMsg) << std::endl;
+    std::cout << FormatError(ARGC_TWO, errMsg) << std::endl;
     return 1;
 }
