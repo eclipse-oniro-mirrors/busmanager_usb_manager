@@ -57,7 +57,7 @@ group("usb_cli") {
 }
 
 group("usb_cli_test") {
-  test_only = true
+  testonly = true
   deps = []
   if (usb_manager_feature_support_cli) {
     deps += [ "tests:usb_cli_unittest" ]
