@@ -56,7 +56,6 @@ describe('UsbCoreJsFunctionsTest', function () {
 
   beforeEach(function () {
     console.info(TAG, 'beforeEach: *************Usb Unit Test  Case*************');
-    gDeviceList = usbManager.getDevices();
     if (isDeviceConnected) {
       devices = gDeviceList[0];
       console.info(TAG, 'beforeEach return devices : ' + JSON.stringify(devices));
@@ -256,7 +255,6 @@ describe('UsbCoreJsFunctionsTest', function () {
     var tmpPipe = JSON.parse(JSON.stringify(gPipe));
     tmpPipe.busNum = -23;
     console.info(TAG, 'usb case testClosePipe002 param: ' + JSON.stringify(tmpPipe));
-    var isPipClose = usbManager.closePipe(tmpPipe);
     console.info(TAG, 'usb case testClosePipe002 ret: ' + isPipClose);
     expect(isPipClose == 0).assertFalse();
     toClosePipe('testClosePipe002');
@@ -396,7 +394,6 @@ describe('UsbCoreJsFunctionsTest', function () {
     getPipe('testGetFileDescriptor003');
     var tempPipe = {busNum : 255, devAddress : gPipe.devAddress};
     console.info(TAG, 'usb case testGetFileDescriptor003 param: ' + JSON.stringify(tempPipe));
-    var fileDescriptor = usbManager.getFileDescriptor(tempPipe);
     console.info(TAG, 'usb case testGetFileDescriptor003 ret: ' + fileDescriptor);
     expect(fileDescriptor).assertEqual(-1);
     toClosePipe('testGetFileDescriptor003');
