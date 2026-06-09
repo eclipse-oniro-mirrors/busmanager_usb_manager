@@ -121,7 +121,7 @@ HWTEST_F(UsbHostManagerHotplugTest, UsbHostManager_Hotplug_ResetDuringOpen, Test
 
     int32_t closeRet = usbHostManager_->Close(TEST_BUS_NUM_1, TEST_DEV_ADDR_1);
 
-    USB_HILOGI(MODULE_USB_HOST, "UsbHostManager_Hotplug_ResetDuringOpen open=%{public}d reset=%{public}d close=%{public}d",
+    USB_HILOGI(MODULE_USB_HOST, "open=%{public}d reset=%{public}d close=%{public}d",
                 openRet, resetRet, closeRet);
 }
 
@@ -165,7 +165,7 @@ HWTEST_F(UsbHostManagerHotplugTest, UsbHostManager_Hotplug_ClaimInterfaceAfterOp
 
     int32_t closeRet = usbHostManager_->Close(TEST_BUS_NUM_1, TEST_DEV_ADDR_1);
 
-    USB_HILOGI(MODULE_USB_HOST, "UsbHostManager_Hotplug_ClaimInterfaceAfterOpen open=%{public}d claim=%{public}d close=%{public}d",
+    USB_HILOGI(MODULE_USB_HOST, "open=%{public}d claim=%{public}d close=%{public}d",
                 openRet, claimRet, closeRet);
 }
 
@@ -235,7 +235,7 @@ HWTEST_F(UsbHostManagerHotplugTest, UsbHostManager_Hotplug_TransferDuringDisconn
 
     int32_t closeRet = usbHostManager_->Close(TEST_BUS_NUM_1, TEST_DEV_ADDR_1);
 
-    USB_HILOGI(MODULE_USB_HOST, "UsbHostManager_Hotplug_TransferDuringDisconnect open=%{public}d write=%{public}d close=%{public}d",
+    USB_HILOGI(MODULE_USB_HOST, "open=%{public}d write=%{public}d close=%{public}d",
                 openRet, writeRet, closeRet);
 }
 
@@ -256,7 +256,7 @@ HWTEST_F(UsbHostManagerHotplugTest, UsbHostManager_Hotplug_SetInterfaceAfterOpen
 
     int32_t closeRet = usbHostManager_->Close(TEST_BUS_NUM_1, TEST_DEV_ADDR_1);
 
-    USB_HILOGI(MODULE_USB_HOST, "UsbHostManager_Hotplug_SetInterfaceAfterOpen open=%{public}d set=%{public}d close=%{public}d",
+    USB_HILOGI(MODULE_USB_HOST, "open=%{public}d set=%{public}d close=%{public}d",
                 openRet, setRet, closeRet);
 }
 
@@ -276,7 +276,7 @@ HWTEST_F(UsbHostManagerHotplugTest, UsbHostManager_Hotplug_GetRawDescriptor_Afte
 
     int32_t closeRet = usbHostManager_->Close(TEST_BUS_NUM_1, TEST_DEV_ADDR_1);
 
-    USB_HILOGI(MODULE_USB_HOST, "UsbHostManager_Hotplug_GetRawDescriptor_AfterOpen open=%{public}d desc=%{public}d close=%{public}d size=%{public}zu",
+    USB_HILOGI(MODULE_USB_HOST, "open=%{public}d desc=%{public}d close=%{public}d size=%{public}zu",
                 openRet, descRet, closeRet, bufferData.size());
 }
 
@@ -296,7 +296,7 @@ HWTEST_F(UsbHostManagerHotplugTest, UsbHostManager_Hotplug_GetFileDescriptor_Aft
 
     int32_t closeRet = usbHostManager_->Close(TEST_BUS_NUM_1, TEST_DEV_ADDR_1);
 
-    USB_HILOGI(MODULE_USB_HOST, "UsbHostManager_Hotplug_GetFileDescriptor_AfterOpen open=%{public}d fd=%{public}d close=%{public}d",
+    USB_HILOGI(MODULE_USB_HOST, "open=%{public}d fd=%{public}d close=%{public}d",
                 openRet, fdRet, closeRet);
 }
 
@@ -316,7 +316,7 @@ HWTEST_F(UsbHostManagerHotplugTest, UsbHostManager_Hotplug_ClearHalt_AfterOpen, 
 
     int32_t closeRet = usbHostManager_->Close(TEST_BUS_NUM_1, TEST_DEV_ADDR_1);
 
-    USB_HILOGI(MODULE_USB_HOST, "UsbHostManager_Hotplug_ClearHalt_AfterOpen open=%{public}d clear=%{public}d close=%{public}d",
+    USB_HILOGI(MODULE_USB_HOST, "open=%{public}d clear=%{public}d close=%{public}d",
                 openRet, clearRet, closeRet);
 }
 

@@ -374,7 +374,7 @@ HWTEST_F(UsbHostManagerEdmTest, UsbHostManager_EDM_CompositePolicy_DeviceAndInte
     int32_t ret3 = usbHostManager_->ManageInterfaceType(disableType, false);
     EXPECT_EQ(ret3, UEC_OK);
 
-    USB_HILOGI(MODULE_USB_HOST, "UsbHostManager_EDM_CompositePolicy_DeviceAndInterface ret1=%{public}d ret2=%{public}d ret3=%{public}d",
+    USB_HILOGI(MODULE_USB_HOST, "ret1=%{public}d ret2=%{public}d ret3=%{public}d",
                 ret1, ret2, ret3);
 }
 
