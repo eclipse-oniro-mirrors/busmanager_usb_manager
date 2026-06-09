@@ -101,7 +101,8 @@
             }],
             "test": [
                 "//base/usb/usb_manager/test/device:usb_device_test",
-                "//base/usb/usb_manager/test/native:usb_unittest_test"
+                "//base/usb/usb_manager/test/native:usb_unittest_test",
+                "//base/usb/usb_manager/tools/ohos-usbManager:usb_cli_test"
             ]
         }
     }

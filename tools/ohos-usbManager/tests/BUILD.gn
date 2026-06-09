@@ -24,17 +24,17 @@ config("usb_cli_test_config") {
 }
 
 ohos_unittest("usb_cli_unittest") {
-  module_out_path = "usb_manager/tools"
+  module_out_path = "${usb_manager_part_name}/usb_unittest_test"
   sources = [
     "usb_cli_serialization_test.cpp",
+    "../src/usb_cli_serialization.cpp",
   ]
   configs = [
     "${utils_path}:utils_config",
     ":usb_cli_test_config",
   ]
   deps = [
-    "${usb_manager_path}/interfaces/innerkits:usbsrv_client",
-    "${usb_manager_path}/tools/ohos-usbManager:ohos-usbManager",
+    "${usb_manager_path}/interfaces/innerkits:usbsrv_client"
   ]
   external_deps = [
     "cJSON:cjson",
