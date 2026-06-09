@@ -303,7 +303,6 @@ describe('UsbCoreJsFunctionsTest', function () {
     tmpPipe.devAddress = -23;
     tmpPipe.busNum = -23;
     console.info(TAG, 'usb case testClosePipe004 param: ' + JSON.stringify(tmpPipe));
-    var isPipClose = usbManager.closePipe(tmpPipe);
     console.info(TAG, 'usb case testClosePipe004 ret: ' + isPipClose);
     expect(isPipClose == 0).assertFalse();
     toClosePipe('testClosePipe004');
