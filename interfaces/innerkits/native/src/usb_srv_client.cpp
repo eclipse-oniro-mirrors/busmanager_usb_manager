@@ -343,7 +343,7 @@ int32_t UsbSrvClient::GetFileDescriptor(USBDevicePipe &pipe, int32_t &fd)
 bool UsbSrvClient::Close(const USBDevicePipe &pipe)
 {
     RETURN_IF_WITH_RET(proxy_ == nullptr, false);
-    int32_t ret = proxy_->Close(pipe.GetBusNum(), pipe.GetDevAddr(), deviceRemote);
+    int32_t ret = proxy_->Close(pipe.GetBusNum(), pipe.GetDevAddr());
     return (ret == UEC_OK);
 }
 
@@ -965,7 +965,7 @@ int32_t UsbSrvClient::CancelAccessoryRight(const USBAccessory &access)
 int32_t UsbSrvClient::CloseAccessory(const int32_t fd)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
-    int32_t ret = proxy_->CloseAccessory(fd, accessoryRemote);
+    int32_t ret = proxy_->CloseAccessory(fd);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "CloseAccessory ret = %{public}d!", ret);
     }
