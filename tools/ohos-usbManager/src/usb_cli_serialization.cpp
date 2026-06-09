@@ -107,7 +107,7 @@ cJSON* SerializeDevice(UsbDevice &device)
     }
     cJSON_AddNumberToObject(json, "busNum", static_cast<double>(device.GetBusNum()));
     cJSON_AddNumberToObject(json, "devAddress", static_cast<double>(device.GetDevAddr()));
-    cJSON_AddStringToObject(json, "serial", device.GetmSerial().c_str());
+    cJSON_AddStringToObject(json, "serial", "");
     cJSON_AddStringToObject(json, "name", device.GetName().c_str());
     cJSON_AddStringToObject(json, "manufacturerName", device.GetManufacturerName().c_str());
     cJSON_AddStringToObject(json, "productName", device.GetProductName().c_str());
@@ -144,7 +144,7 @@ cJSON* SerializeAccessory(const USBAccessory &accessory)
     cJSON_AddStringToObject(json, "product", accessory.GetProduct().c_str());
     cJSON_AddStringToObject(json, "description", accessory.GetDescription().c_str());
     cJSON_AddStringToObject(json, "version", accessory.GetVersion().c_str());
-    cJSON_AddStringToObject(json, "serialNumber", accessory.GetSerialNumber().c_str());
+    cJSON_AddStringToObject(json, "serialNumber", "");
     return json;
 }
 
@@ -155,11 +155,12 @@ cJSON* SerializeSerialPort(const UsbSerialPort &port)
         return nullptr;
     }
     cJSON_AddNumberToObject(json, "portId", static_cast<double>(port.portId_));
-    cJSON_AddNumberToObject(json, "busNum", static_cast<double>(port.busNum_));
-    cJSON_AddNumberToObject(json, "devAddr", static_cast<double>(port.devAddr_));
-    cJSON_AddNumberToObject(json, "vid", static_cast<double>(port.vid_));
-    cJSON_AddNumberToObject(json, "pid", static_cast<double>(port.pid_));
-    cJSON_AddStringToObject(json, "serialNum", port.serialNum_.c_str());
+    
+    // deviceName: "busNum-devAddr"
+    std::string deviceName = std::to_string(port.busNum_) + "-" + 
+                             std::to_string(port.devAddr_);
+    cJSON_AddStringToObject(json, "deviceName", deviceName.c_str());
+    
     return json;
 }
 

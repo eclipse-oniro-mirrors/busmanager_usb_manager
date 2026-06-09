@@ -124,11 +124,6 @@ static int HandleGetDeviceList()
         items.push_back(item);
     }
     std::cout << FormatSuccess(items) << std::endl;
-    for (auto *item : items) {
-        if (item) {
-            cJSON_Delete(item);
-        }
-    }
     return 0;
 }
 
@@ -149,11 +144,6 @@ static int HandleGetAccessoryList()
         items.push_back(item);
     }
     std::cout << FormatSuccess(items) << std::endl;
-    for (auto *item : items) {
-        if (item) {
-            cJSON_Delete(item);
-        }
-    }
     return 0;
 }
 
@@ -174,11 +164,6 @@ static int HandleGetSerialList()
         items.push_back(item);
     }
     std::cout << FormatSuccess(items) << std::endl;
-    for (auto *item : items) {
-        if (item) {
-            cJSON_Delete(item);
-        }
-    }
     return 0;
 }
 
