@@ -14,7 +14,6 @@
  */
 
 #include "usb_cli_serialization.h"
-#include <sstream>
 #include "cJSON.h"
 #include "usb_config.h"
 #include "usb_endpoint.h"
@@ -23,7 +22,7 @@
 namespace OHOS {
 namespace USB {
 
-static cJSON* SerializeEndpoint(const USBEndpoint &endpoint)
+static cJSON* SerializeEndpoint(USBEndpoint &endpoint)
 {
     cJSON *json = cJSON_CreateObject();
     if (!json) {
@@ -40,7 +39,7 @@ static cJSON* SerializeEndpoint(const USBEndpoint &endpoint)
     return json;
 }
 
-static cJSON* SerializeInterface(const UsbInterface &iface)
+static cJSON* SerializeInterface(UsbInterface &iface)
 {
     cJSON *json = cJSON_CreateObject();
     if (!json) {
@@ -58,7 +57,7 @@ static cJSON* SerializeInterface(const UsbInterface &iface)
         cJSON_Delete(json);
         return nullptr;
     }
-    const auto &eps = iface.GetEndpoints();
+    auto &eps = iface.GetEndpoints();
     for (size_t i = 0; i < eps.size(); ++i) {
         cJSON *ep = SerializeEndpoint(eps[i]);
         if (ep) {
@@ -69,7 +68,7 @@ static cJSON* SerializeInterface(const UsbInterface &iface)
     return json;
 }
 
-static cJSON* SerializeConfig(const USBConfig &config)
+static cJSON* SerializeConfig(USBConfig &config)
 {
     cJSON *json = cJSON_CreateObject();
     if (!json) {
@@ -100,7 +99,7 @@ static cJSON* SerializeConfig(const USBConfig &config)
     return json;
 }
 
-cJSON* SerializeDevice(const UsbDevice &device)
+cJSON* SerializeDevice(UsbDevice &device)
 {
     cJSON *json = cJSON_CreateObject();
     if (!json) {
@@ -124,7 +123,7 @@ cJSON* SerializeDevice(const UsbDevice &device)
         cJSON_Delete(json);
         return nullptr;
     }
-    const auto &cfgs = device.GetConfigs();
+    auto &cfgs = device.GetConfigs();
     for (size_t i = 0; i < cfgs.size(); ++i) {
         cJSON *cfg = SerializeConfig(cfgs[i]);
         if (cfg) {
@@ -156,9 +155,11 @@ cJSON* SerializeSerialPort(const UsbSerialPort &port)
         return nullptr;
     }
     cJSON_AddNumberToObject(json, "portId", static_cast<double>(port.portId_));
-    std::ostringstream deviceName;
-    deviceName << static_cast<int>(port.busNum_) << "-" << static_cast<int>(port.devAddr_);
-    cJSON_AddStringToObject(json, "deviceName", deviceName.str().c_str());
+    cJSON_AddNumberToObject(json, "busNum", static_cast<double>(port.busNum_));
+    cJSON_AddNumberToObject(json, "devAddr", static_cast<double>(port.devAddr_));
+    cJSON_AddNumberToObject(json, "vid", static_cast<double>(port.vid_));
+    cJSON_AddNumberToObject(json, "pid", static_cast<double>(port.pid_));
+    cJSON_AddStringToObject(json, "serialNum", port.serialNum_.c_str());
     return json;
 }
 

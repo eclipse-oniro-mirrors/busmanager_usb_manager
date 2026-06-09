@@ -26,7 +26,7 @@
 namespace OHOS {
 namespace USB {
 
-cJSON* SerializeDevice(const UsbDevice &device);
+cJSON* SerializeDevice(UsbDevice &device);
 cJSON* SerializeAccessory(const USBAccessory &accessory);
 cJSON* SerializeSerialPort(const UsbSerialPort &port);
 

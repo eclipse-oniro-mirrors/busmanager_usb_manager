@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 #include "usb_srv_client.h"
+#include "usb_errors.h"
 #include "usb_cli_serialization.h"
 
 using namespace OHOS::USB;
@@ -98,13 +99,21 @@ static bool HasFlag(int argc, char *argv[], const char *flag)
     return false;
 }
 
+static std::string MapErrorMessage(int32_t ret)
+{
+    if (ret == UEC_INTERFACE_NO_INIT) {
+        return FormatError(1, "USB service unavailable");
+    }
+    return FormatError(ret, "Query failed");
+}
+
 static int HandleGetDeviceList()
 {
     UsbSrvClient &client = UsbSrvClient::GetInstance();
     std::vector<UsbDevice> deviceList;
     int32_t ret = client.GetDevices(deviceList);
     if (ret != 0) {
-        std::cout << FormatError(ret, "failed to get device list") << std::endl;
+        std::cout << MapErrorMessage(ret) << std::endl;
         return 1;
     }
 
@@ -129,7 +138,7 @@ static int HandleGetAccessoryList()
     std::vector<USBAccessory> accessList;
     int32_t ret = client.GetAccessoryList(accessList);
     if (ret != 0) {
-        std::cout << FormatError(ret, "failed to get accessory list") << std::endl;
+        std::cout << MapErrorMessage(ret) << std::endl;
         return 1;
     }
 
@@ -154,7 +163,7 @@ static int HandleGetSerialList()
     std::vector<UsbSerialPort> serialPortList;
     int32_t ret = client.SerialGetPortList(serialPortList);
     if (ret != 0) {
-        std::cout << FormatError(ret, "failed to get serial port list") << std::endl;
+        std::cout << MapErrorMessage(ret) << std::endl;
         return 1;
     }
 
@@ -223,7 +232,8 @@ int main(int argc, char *argv[])
         return HandleGetSerialList();
     }
 
-    std::cout << "Unrecognized subcommand: " << subcommand << std::endl << std::endl;
-    PrintMainHelp();
+    std::string errMsg = "Unknown subcommand: ";
+    errMsg += subcommand;
+    std::cout << FormatError(2, errMsg) << std::endl;
     return 1;
 }

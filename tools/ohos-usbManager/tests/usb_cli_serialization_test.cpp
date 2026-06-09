@@ -142,6 +142,9 @@ HWTEST_F(UsbCliSerializationTest, SerializeSerialPort_PublicApiFields, TestSize.
     port.portId_ = 3;
     port.busNum_ = 5;
     port.devAddr_ = 7;
+    port.vid_ = 0x1234;
+    port.pid_ = 0x5678;
+    port.serialNum_ = "SN001";
 
     cJSON *json = SerializeSerialPort(port);
     ASSERT_NE(json, nullptr);
@@ -150,15 +153,25 @@ HWTEST_F(UsbCliSerializationTest, SerializeSerialPort_PublicApiFields, TestSize.
     ASSERT_NE(item, nullptr);
     EXPECT_EQ(item->valueint, 3);
 
-    item = cJSON_GetObjectItem(json, "deviceName");
+    item = cJSON_GetObjectItem(json, "busNum");
     ASSERT_NE(item, nullptr);
-    EXPECT_STREQ(item->valuestring, "5-7");
+    EXPECT_EQ(item->valueint, 5);
 
-    EXPECT_EQ(cJSON_GetObjectItem(json, "busNum"), nullptr);
-    EXPECT_EQ(cJSON_GetObjectItem(json, "devAddr"), nullptr);
-    EXPECT_EQ(cJSON_GetObjectItem(json, "vid"), nullptr);
-    EXPECT_EQ(cJSON_GetObjectItem(json, "pid"), nullptr);
-    EXPECT_EQ(cJSON_GetObjectItem(json, "serialNum"), nullptr);
+    item = cJSON_GetObjectItem(json, "devAddr");
+    ASSERT_NE(item, nullptr);
+    EXPECT_EQ(item->valueint, 7);
+
+    item = cJSON_GetObjectItem(json, "vid");
+    ASSERT_NE(item, nullptr);
+    EXPECT_EQ(item->valueint, 0x1234);
+
+    item = cJSON_GetObjectItem(json, "pid");
+    ASSERT_NE(item, nullptr);
+    EXPECT_EQ(item->valueint, 0x5678);
+
+    item = cJSON_GetObjectItem(json, "serialNum");
+    ASSERT_NE(item, nullptr);
+    EXPECT_STREQ(item->valuestring, "SN001");
 
     cJSON_Delete(json);
 }
