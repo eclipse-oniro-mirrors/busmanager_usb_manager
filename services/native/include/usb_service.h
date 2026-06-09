@@ -94,7 +94,7 @@ public:
     int32_t DeviceEvent(const HDI::Usb::V1_0::USBDeviceInfo &info);
 #ifdef USB_MANAGER_FEATURE_HOST
     int32_t OpenDevice(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote) override;
-    int32_t Close(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote) override;
+    int32_t Close(uint8_t busNum, uint8_t devAddr) override;
     int32_t ResetDevice(uint8_t busNum, uint8_t devAddr) override;
     int32_t ClaimInterface(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid, uint8_t force) override;
     int32_t SetInterface(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid, uint8_t altIndex) override;
@@ -168,7 +168,7 @@ public:
     int32_t UserChangeProcess();
     int32_t GetAccessoryList(std::vector<USBAccessory> &accessList) override;
     int32_t OpenAccessory(const USBAccessory &access, int32_t &fd, const sptr<IRemoteObject> &accessoryRemote) override;
-    int32_t CloseAccessory(int32_t fd, const sptr<IRemoteObject> &accessoryRemote) override;
+    int32_t CloseAccessory(int32_t fd) override;
     int32_t AddAccessoryRight(const uint32_t tokenId, const USBAccessory &access) override;
     int32_t HasAccessoryRight(const USBAccessory &access, bool &result) override;
     int32_t RequestAccessoryRight(const USBAccessory &access, bool &result) override;
@@ -339,6 +339,8 @@ private:
     sptr<IRemoteObject::DeathRecipient> recipient_;
     sptr<UsbService::DeviceDeathRecipient> deviceRecipient_ = nullptr;
     sptr<UsbService::AccessoryDeathRecipient> accessoryRecipient_ = nullptr;
+    sptr<IRemoteObject> deviceRemote_ = nullptr;
+    sptr<IRemoteObject> accessoryRemote_ = nullptr;
 };
 } // namespace USB
 } // namespace OHOS
