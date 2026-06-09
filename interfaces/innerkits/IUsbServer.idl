@@ -26,7 +26,7 @@ interface OHOS.USB.IUsbServer {
     /* the function about UsbService */
     [macrodef USB_MANAGER_FEATURE_HOST] void GetDevices([out]UsbDevice[] deviceList);
     [macrodef USB_MANAGER_FEATURE_HOST] void OpenDevice([in]unsigned char busNum, [in]unsigned char devAddr, [in]IRemoteObject deviceRemote);
-    [macrodef USB_MANAGER_FEATURE_HOST] void Close([in]unsigned char busNum, [in]unsigned char devAddr);
+    [macrodef USB_MANAGER_FEATURE_HOST] void Close([in]unsigned char busNum, [in]unsigned char devAddr, [in]IRemoteObject deviceRemote);
     [macrodef USB_MANAGER_FEATURE_HOST] void ResetDevice([in]unsigned char busNum, [in]unsigned char devAddr);
     [macrodef USB_MANAGER_FEATURE_HOST] void ClaimInterface([in]unsigned char busNum, [in]unsigned char devAddr, [in]unsigned char interfaceid, [in]unsigned char force);
     [macrodef USB_MANAGER_FEATURE_HOST] void SetInterface([in]unsigned char busNum, [in]unsigned char devAddr, [in]unsigned char interfaceid, [in]unsigned char altIndex);
@@ -75,7 +75,7 @@ interface OHOS.USB.IUsbServer {
     [macrodef USB_MANAGER_FEATURE_DEVICE] void CancelAccessoryRight([in] USBAccessory access);
     [macrodef USB_MANAGER_FEATURE_DEVICE] void GetAccessoryList([out] USBAccessory[] accessList);
     [macrodef USB_MANAGER_FEATURE_DEVICE] void OpenAccessory([in] USBAccessory access, [out] FileDescriptor fd, [in]IRemoteObject accessoryRemote);
-    [macrodef USB_MANAGER_FEATURE_DEVICE] void CloseAccessory([in] int fd);
+    [macrodef USB_MANAGER_FEATURE_DEVICE] void CloseAccessory([in] int fd, [in]IRemoteObject accessoryRemote);
 
     [macrodef USB_MANAGER_FEATURE_PORT] void GetPorts([out]UsbPort[] ports);
     [macrodef USB_MANAGER_FEATURE_PORT] void GetSupportedModes([in] int portId, [out] int supportedModes);

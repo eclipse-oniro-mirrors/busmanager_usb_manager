@@ -94,7 +94,7 @@ public:
     int32_t DeviceEvent(const HDI::Usb::V1_0::USBDeviceInfo &info);
 #ifdef USB_MANAGER_FEATURE_HOST
     int32_t OpenDevice(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote) override;
-    int32_t Close(uint8_t busNum, uint8_t devAddr) override;
+    int32_t Close(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote) override;
     int32_t ResetDevice(uint8_t busNum, uint8_t devAddr) override;
     int32_t ClaimInterface(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid, uint8_t force) override;
     int32_t SetInterface(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid, uint8_t altIndex) override;
@@ -168,7 +168,7 @@ public:
     int32_t UserChangeProcess();
     int32_t GetAccessoryList(std::vector<USBAccessory> &accessList) override;
     int32_t OpenAccessory(const USBAccessory &access, int32_t &fd, const sptr<IRemoteObject> &accessoryRemote) override;
-    int32_t CloseAccessory(int32_t fd) override;
+    int32_t CloseAccessory(int32_t fd, const sptr<IRemoteObject> &accessoryRemote) override;
     int32_t AddAccessoryRight(const uint32_t tokenId, const USBAccessory &access) override;
     int32_t HasAccessoryRight(const USBAccessory &access, bool &result) override;
     int32_t RequestAccessoryRight(const USBAccessory &access, bool &result) override;
@@ -249,12 +249,11 @@ private:
 #ifdef USB_MANAGER_FEATURE_HOST
     class DeviceDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
-        DeviceDeathRecipient(UsbService *service, uint8_t busNum, uint8_t devAddr)
-            : service_(service), busNum_(busNum), devAddr_(devAddr){};
+        DeviceDeathRecipient(uint8_t busNum, uint8_t devAddr)
+            : busNum_(busNum), devAddr_(devAddr){};
         ~DeviceDeathRecipient() {};
         void OnRemoteDied(const wptr<IRemoteObject> &object) override;
     private:
-        UsbService *service_;
         uint8_t busNum_;
         uint8_t devAddr_;
     };
@@ -262,12 +261,11 @@ private:
 
     class AccessoryDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
-        AccessoryDeathRecipient(UsbService *service, int32_t fd)
-            : service_(service), fd_(fd){};
+        AccessoryDeathRecipient(int32_t fd)
+            : fd_(fd){};
         ~AccessoryDeathRecipient() {};
         void OnRemoteDied(const wptr<IRemoteObject> &object) override;
     private:
-        UsbService *service_;
         int32_t fd_;
     };
 
@@ -339,6 +337,8 @@ private:
     Utils::Timer unloadSelfTimer_ {"unLoadTimer"};
     uint32_t unloadSelfTimerId_ {UINT32_MAX};
     sptr<IRemoteObject::DeathRecipient> recipient_;
+    sptr<UsbService::DeviceDeathRecipient> deviceRecipient_ = nullptr;
+    sptr<UsbService::AccessoryDeathRecipient> accessoryRecipient_ = nullptr;
 };
 } // namespace USB
 } // namespace OHOS
