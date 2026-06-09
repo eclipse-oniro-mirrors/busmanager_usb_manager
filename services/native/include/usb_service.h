@@ -257,7 +257,7 @@ private:
         uint8_t busNum_;
         uint8_t devAddr_;
     };
-#endif
+#endif // USB_MANAGER_FEATURE_HOST
 
     class AccessoryDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
@@ -337,7 +337,9 @@ private:
     Utils::Timer unloadSelfTimer_ {"unLoadTimer"};
     uint32_t unloadSelfTimerId_ {UINT32_MAX};
     sptr<IRemoteObject::DeathRecipient> recipient_;
+#ifdef USB_MANAGER_FEATURE_HOST
     sptr<UsbService::DeviceDeathRecipient> deviceRecipient_ = nullptr;
+#endif // USB_MANAGER_FEATURE_HOST
     sptr<UsbService::AccessoryDeathRecipient> accessoryRecipient_ = nullptr;
     sptr<IRemoteObject> deviceRemote_ = nullptr;
     sptr<IRemoteObject> accessoryRemote_ = nullptr;

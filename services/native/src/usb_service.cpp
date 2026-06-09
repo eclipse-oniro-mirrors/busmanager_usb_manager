@@ -2587,7 +2587,7 @@ void UsbService::DeviceDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &o
     service->Close(this->busNum_, this->devAddr_);
     USB_HILOGI(MODULE_USB_SERVICE, "UsbService DeviceDeathRecipient exit");
 }
-#endif
+#endif // USB_MANAGER_FEATURE_HOST
 // LCOV_EXCL_STOP
 
 // LCOV_EXCL_START
