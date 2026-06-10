@@ -22,6 +22,9 @@ config("usbsrv_public_config") {
     "native/include",
     "${usb_manager_path}/utils/native/include",
   ]
+  cflags = [
+    "-Wno-tautological-constant-out-of-range-compare",
+  ]
 }
 
 ohos_shared_library("usbservice") {
