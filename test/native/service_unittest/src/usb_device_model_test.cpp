@@ -294,8 +294,8 @@ HWTEST_F(UsbDeviceModelTest, UsbDevice_FullPropertySet_001, TestSize.Level1)
     device.SetClass(0x00);
     device.SetSubclass(0x00);
     device.SetProtocol(0x00);
-    device.SetProductName("Huawei Phone");
-    device.SetManufacturerName("Huawei");
+    device.SetProductName("Test Phone");
+    device.SetManufacturerName("TestMfg");
     device.SetmSerial("HW12345678");
     device.SetVersion("3.0.0");
     device.SetAuthorizeStatus(ENABLED);
@@ -307,8 +307,8 @@ HWTEST_F(UsbDeviceModelTest, UsbDevice_FullPropertySet_001, TestSize.Level1)
     EXPECT_EQ(device.GetClass(), 0x00);
     EXPECT_EQ(device.GetSubclass(), 0x00);
     EXPECT_EQ(device.GetProtocol(), 0x00);
-    EXPECT_EQ(device.GetName(), "Huawei Phone");
-    EXPECT_EQ(device.GetManufacturerName(), "Huawei");
+    EXPECT_EQ(device.GetName(), "Test Phone");
+    EXPECT_EQ(device.GetManufacturerName(), "TestMfg");
     EXPECT_EQ(device.GetmSerial(), "HW12345678");
     EXPECT_EQ(device.GetVersion(), "3.0.0");
     EXPECT_EQ(device.GetAuthorizeStatus(), ENABLED);
