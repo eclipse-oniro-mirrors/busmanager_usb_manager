@@ -517,7 +517,7 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr, const sptr<IRemo
         USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDevice deviceRecipient_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
-    if (!deviceRemote->AddDeathRecipient(deviceRecipient_)) {
+    if (deviceRemote == nullptr || !deviceRemote->AddDeathRecipient(deviceRecipient_)) {
         USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDevice add DeathRecipient failed");
         return UEC_SERVICE_INVALID_VALUE;
     }
@@ -547,7 +547,7 @@ int32_t UsbService::Close(uint8_t busNum, uint8_t devAddr)
         return UEC_SERVICE_INVALID_VALUE;
     }
     int32_t ret = usbHostManager_->Close(busNum, devAddr);
-    if (ret == UEC_OK) {
+    if (ret == UEC_OK && deviceRemote_ != nullptr) {
         deviceRemote_->RemoveDeathRecipient(deviceRecipient_);
         deviceRecipient_ = nullptr;
         deviceRemote_ = nullptr;
@@ -1928,7 +1928,7 @@ int32_t UsbService::OpenAccessory(const USBAccessory &access, int32_t &fd, const
         USB_HILOGE(MODULE_USB_DEVICE, "UsbService::OpenAccessory accessoryRecipient_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
-    if (!accessoryRemote->AddDeathRecipient(accessoryRecipient_)) {
+    if (accessoryRemote == nullptr || !accessoryRemote->AddDeathRecipient(accessoryRecipient_)) {
         USB_HILOGE(MODULE_USB_DEVICE, "UsbService::OpenAccessory add DeathRecipient failed");
         CloseAccessory(fd);
         return UEC_SERVICE_INVALID_VALUE;
@@ -1955,7 +1955,7 @@ int32_t UsbService::CloseAccessory(int32_t fd)
     int32_t ret = usbAccessoryManager_->CloseAccessory(fd);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_DEVICE, "error ret:%{public}d", ret);
-    } else {
+    } else if (accessoryRemote != nullptr) {
         accessoryRemote_->RemoveDeathRecipient(accessoryRecipient_);
         accessoryRecipient_ = nullptr;
         accessoryRemote_ = nullptr;
