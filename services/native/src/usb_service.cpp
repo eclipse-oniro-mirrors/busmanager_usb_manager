@@ -532,14 +532,9 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr, const sptr<IRemo
         return ret;
     }
 
-    {
-        std::lock_guard<std::mutex> guard(deviceClientMutex_);
-        DeviceClientInfo info;
-        info.deviceRemote = deviceRemote;
-        info.deviceRecipient = deviceRecipient;
-        info.tokenId = tokenId;
-        deviceClientMap_[key] = info;
-    }
+    std::lock_guard<std::mutex> guard(deviceClientMutex_);
+    DeviceClientInfo info = {deviceRemote, deviceRecipient, tokenId};
+    deviceClientMap_[key] = info;
 
     return ret;
     // LCOV_EXCL_STOP
@@ -1331,7 +1326,8 @@ void UsbService::RemoveDeviceClientInfo(uint8_t busNum, uint8_t devAddr, uint32_
             it->second.deviceRemote->RemoveDeathRecipient(it->second.deviceRecipient);
         }
         deviceClientMap_.erase(it);
-        USB_HILOGI(MODULE_USB_HOST, "Removed device client info busNum=%{public}u devAddr=%{public}u tokenId=%{public}u",
+        USB_HILOGI(MODULE_USB_HOST,
+            "Removed device client info busNum=%{public}u devAddr=%{public}u tokenId=%{public}u",
             busNum, devAddr, tokenId);
     }
 }
@@ -1970,14 +1966,9 @@ int32_t UsbService::OpenAccessory(const USBAccessory &access, int32_t &fd, const
         return ret;
     }
 
-    {
-        std::lock_guard<std::mutex> guard(accessoryClientMutex_);
-        AccessoryClientInfo info;
-        info.accessoryRemote = accessoryRemote;
-        info.accessoryRecipient = accessoryRecipient;
-        info.tokenId = tokenIdNum;
-        accessoryClientMap_[std::make_pair(fd, tokenIdNum)] = info;
-    }
+    std::lock_guard<std::mutex> guard(accessoryClientMutex_);
+    AccessoryClientInfo info = {accessoryRemote, accessoryRecipient, tokenIdNum};
+    accessoryClientMap_[std::make_pair(fd, tokenIdNum)] = info;
 
     return ret;
 }
@@ -2636,7 +2627,8 @@ void UsbService::SerialDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &o
 #ifdef USB_MANAGER_FEATURE_HOST
 void UsbService::DeviceDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &object)
 {
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbService DeviceDeathRecipient enter busNum=%{public}u devAddr=%{public}u tokenId=%{public}u",
+    USB_HILOGI(MODULE_USB_SERVICE,
+        "UsbService DeviceDeathRecipient enter busNum=%{public}u devAddr=%{public}u tokenId=%{public}u",
         busNum_, devAddr_, tokenId_);
     sptr<UsbService> service = UsbService::GetGlobalInstance();
     service->RemoveDeviceClientInfo(busNum_, devAddr_, tokenId_);
@@ -2650,7 +2642,8 @@ void UsbService::DeviceDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &o
 #ifdef USB_MANAGER_FEATURE_DEVICE
 void UsbService::AccessoryDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &object)
 {
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbService AccessoryDeathRecipient enter fd=%{public}d tokenId=%{public}u", fd_, tokenId_);
+    USB_HILOGI(MODULE_USB_SERVICE,
+        "UsbService AccessoryDeathRecipient enter fd=%{public}d tokenId=%{public}u", fd_, tokenId_);
     sptr<UsbService> service = UsbService::GetGlobalInstance();
     service->RemoveAccessoryClientInfo(fd_, tokenId_);
     service->CloseAccessory(fd_);
