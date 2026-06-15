@@ -1948,22 +1948,20 @@ int32_t UsbService::OpenAccessory(const USBAccessory &access, int32_t &fd, const
         return UEC_SERVICE_PERMISSION_DENIED;
     }
 
-    uint32_t tokenIdNum = std::stoul(tokenId);
-    sptr<AccessoryDeathRecipient> accessoryRecipient = new AccessoryDeathRecipient(fd, tokenIdNum);
-    if (accessoryRecipient == nullptr) {
-        USB_HILOGE(MODULE_USB_DEVICE, "UsbService::OpenAccessory accessoryRecipient is nullptr");
-        return UEC_SERVICE_INVALID_VALUE;
-    }
-    if (accessoryRemote == nullptr || !accessoryRemote->AddDeathRecipient(accessoryRecipient)) {
-        USB_HILOGE(MODULE_USB_DEVICE, "UsbService::OpenAccessory add DeathRecipient failed");
-        return UEC_SERVICE_INVALID_VALUE;
-    }
-
     ret = usbAccessoryManager_->OpenAccessory(fd);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_DEVICE, "error ret:%{public}d", ret);
-        accessoryRemote->RemoveDeathRecipient(accessoryRecipient);
         return ret;
+    }
+
+    uint32_t tokenIdNum = std::stoul(tokenId);
+    sptr<AccessoryDeathRecipient> accessoryRecipient = new AccessoryDeathRecipient(fd, tokenIdNum);
+    if (accessoryRecipient == nullptr || accessoryRemote == nullptr ||
+        !accessoryRemote->AddDeathRecipient(accessoryRecipient)) {
+        CloseAccessory(fd);
+        fd = -1;
+        USB_HILOGE(MODULE_USB_DEVICE, "UsbService::OpenAccessory add DeathRecipient failed");
+        return UEC_SERVICE_INVALID_VALUE;
     }
 
     std::lock_guard<std::mutex> guard(accessoryClientMutex_);
