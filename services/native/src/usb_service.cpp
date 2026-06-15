@@ -1321,20 +1321,6 @@ void UsbService::UsbTransInfoChange(HDI::Usb::V1_2::USBTransferInfo &info, const
 // LCOV_EXCL_STOP
 
 // LCOV_EXCL_START
-void UsbService::RemoveAccessoryClientInfo(int32_t fd, uint32_t tokenId)
-{
-    std::pair<int32_t, uint32_t> key = std::make_pair(fd, tokenId);
-    std::lock_guard<std::mutex> guard(accessoryClientMutex_);
-    auto it = accessoryClientMap_.find(key);
-    if (it != accessoryClientMap_.end()) {
-        if (it->second.accessoryRemote != nullptr && it->second.accessoryRecipient != nullptr) {
-            it->second.accessoryRemote->RemoveDeathRecipient(it->second.accessoryRecipient);
-        }
-        accessoryClientMap_.erase(it);
-        USB_HILOGI(MODULE_USB_DEVICE, "Removed accessory client info fd=%{public}d tokenId=%{public}u", fd, tokenId);
-    }
-}
-
 void UsbService::RemoveDeviceClientInfo(uint8_t busNum, uint8_t devAddr, uint32_t tokenId)
 {
     std::tuple<uint8_t, uint8_t, uint32_t> key = std::make_tuple(busNum, devAddr, tokenId);
@@ -1995,7 +1981,6 @@ int32_t UsbService::OpenAccessory(const USBAccessory &access, int32_t &fd, const
 
     return ret;
 }
-}
 // LCOV_EXCL_STOP
 
 // LCOV_EXCL_START
@@ -2014,6 +1999,22 @@ int32_t UsbService::CloseAccessory(int32_t fd)
         USB_HILOGE(MODULE_USB_DEVICE, "error ret:%{public}d", ret);
     }
     return ret;
+}
+// LCOV_EXCL_STOP
+
+// LCOV_EXCL_START
+void UsbService::RemoveAccessoryClientInfo(int32_t fd, uint32_t tokenId)
+{
+    std::pair<int32_t, uint32_t> key = std::make_pair(fd, tokenId);
+    std::lock_guard<std::mutex> guard(accessoryClientMutex_);
+    auto it = accessoryClientMap_.find(key);
+    if (it != accessoryClientMap_.end()) {
+        if (it->second.accessoryRemote != nullptr && it->second.accessoryRecipient != nullptr) {
+            it->second.accessoryRemote->RemoveDeathRecipient(it->second.accessoryRecipient);
+        }
+        accessoryClientMap_.erase(it);
+        USB_HILOGI(MODULE_USB_DEVICE, "Removed accessory client info fd=%{public}d tokenId=%{public}u", fd, tokenId);
+    }
 }
 // LCOV_EXCL_STOP
 
@@ -2646,6 +2647,7 @@ void UsbService::DeviceDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &o
 // LCOV_EXCL_STOP
 
 // LCOV_EXCL_START
+#ifdef USB_MANAGER_FEATURE_DEVICE
 void UsbService::AccessoryDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &object)
 {
     USB_HILOGI(MODULE_USB_SERVICE, "UsbService AccessoryDeathRecipient enter fd=%{public}d tokenId=%{public}u", fd_, tokenId_);
@@ -2654,6 +2656,7 @@ void UsbService::AccessoryDeathRecipient::OnRemoteDied(const wptr<IRemoteObject>
     service->CloseAccessory(fd_);
     USB_HILOGI(MODULE_USB_SERVICE, "UsbService AccessoryDeathRecipient exit");
 }
+#endif // USB_MANAGER_FEATURE_DEVICE
 // LCOV_EXCL_STOP
 
 // LCOV_EXCL_START

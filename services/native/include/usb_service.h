@@ -260,6 +260,7 @@ private:
     };
 #endif // USB_MANAGER_FEATURE_HOST
 
+#ifdef USB_MANAGER_FEATURE_DEVICE
     class AccessoryDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
         AccessoryDeathRecipient(int32_t fd, uint32_t tokenId)
@@ -270,6 +271,7 @@ private:
         int32_t fd_;
         uint32_t tokenId_;
     };
+#endif // USB_MANAGER_FEATURE_DEVICE
 
 private:
     bool Init();
@@ -305,10 +307,12 @@ private:
         const std::vector<UsbDeviceTypeInfo> &deviceTypes);
     void UsbTransInfoChange(HDI::Usb::V1_2::USBTransferInfo &info, const UsbTransInfo &param);
     void RemoveDeviceClientInfo(uint8_t busNum, uint8_t devAddr, uint32_t tokenId);
-    void RemoveAccessoryClientInfo(int32_t fd, uint32_t tokenId);
     std::string GetDeviceVidPidSerialNumber(const std::string &deviceName);
     int32_t GetDeviceVidPidSerialNumber(const std::string &deviceName, std::string& strDesc);
 #endif // USB_MANAGER_FEATURE_HOST
+#ifdef USB_MANAGER_FEATURE_DEVICE
+    void RemoveAccessoryClientInfo(int32_t fd, uint32_t tokenId);
+#endif // USB_MANAGER_FEATURE_DEVICE
 #if defined(USB_MANAGER_FEATURE_HOST) || defined(USB_MANAGER_FEATURE_DEVICE)
     bool GetCallingInfo(std::string &bundleName, std::string &tokenId, int32_t &userId);
 #endif // USB_MANAGER_FEATURE_HOST || USB_MANAGER_FEATURE_DEVICE
@@ -320,10 +324,24 @@ private:
     std::mutex unloadSelfTimerMutex_;
 #ifdef USB_MANAGER_FEATURE_HOST
     std::shared_ptr<UsbHostManager> usbHostManager_;
+    struct DeviceClientInfo {
+        sptr<IRemoteObject> deviceRemote;
+        sptr<UsbService::DeviceDeathRecipient> deviceRecipient;
+        uint32_t tokenId;
+    };
+    std::map<std::tuple<uint8_t, uint8_t, uint32_t>, DeviceClientInfo> deviceClientMap_;
+    std::mutex deviceClientMutex_;
 #endif // USB_MANAGER_FEATURE_HOST
 #ifdef USB_MANAGER_FEATURE_DEVICE
     std::shared_ptr<UsbDeviceManager> usbDeviceManager_;
     std::shared_ptr<UsbAccessoryManager> usbAccessoryManager_;
+    struct AccessoryClientInfo {
+        sptr<IRemoteObject> accessoryRemote;
+        sptr<UsbService::AccessoryDeathRecipient> accessoryRecipient;
+        uint32_t tokenId;
+    };
+    std::map<std::pair<int32_t, uint32_t>, AccessoryClientInfo> accessoryClientMap_;
+    std::mutex accessoryClientMutex_;
 #endif // USB_MANAGER_FEATURE_DEVICE
 #ifdef USB_MANAGER_FEATURE_PORT
     std::shared_ptr<UsbPortManager> usbPortManager_;
@@ -341,22 +359,6 @@ private:
     Utils::Timer unloadSelfTimer_ {"unLoadTimer"};
     uint32_t unloadSelfTimerId_ {UINT32_MAX};
     sptr<IRemoteObject::DeathRecipient> recipient_;
-#ifdef USB_MANAGER_FEATURE_HOST
-    struct DeviceClientInfo {
-        sptr<IRemoteObject> deviceRemote;
-        sptr<UsbService::DeviceDeathRecipient> deviceRecipient;
-        uint32_t tokenId;
-    };
-    std::map<std::tuple<uint8_t, uint8_t, uint32_t>, DeviceClientInfo> deviceClientMap_;
-    std::mutex deviceClientMutex_;
-#endif // USB_MANAGER_FEATURE_HOST
-    struct AccessoryClientInfo {
-        sptr<IRemoteObject> accessoryRemote;
-        sptr<UsbService::AccessoryDeathRecipient> accessoryRecipient;
-        uint32_t tokenId;
-    };
-    std::map<std::pair<int32_t, uint32_t>, AccessoryClientInfo> accessoryClientMap_;
-    std::mutex accessoryClientMutex_;
 };
 } // namespace USB
 } // namespace OHOS
