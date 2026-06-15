@@ -1941,6 +1941,14 @@ int32_t UsbService::OpenAccessory(const USBAccessory &access, int32_t &fd, const
         USB_HILOGE(MODULE_USB_DEVICE, "invalid usbAccessoryManager_");
         return UEC_SERVICE_INVALID_VALUE;
     }
+    std::string bundleName;
+    std::string tokenId;
+    int32_t userId = USB_RIGHT_USERID_INVALID;
+    if (!GetCallingInfo(bundleName, tokenId, userId)) {
+        USB_HILOGE(MODULE_USB_DEVICE, "GetCallingInfo false");
+        ReportUsbOperationFaultSysEvent("OpenAccessory", UEC_SERVICE_GET_TOKEN_INFO_FAILED, "GetCallingInfo false");
+        return UEC_SERVICE_GET_TOKEN_INFO_FAILED;
+    }
 
     std::string serialNum = "";
     int32_t ret = usbAccessoryManager_->GetAccessorySerialNumber(access, bundleName, serialNum);
@@ -1958,8 +1966,8 @@ int32_t UsbService::OpenAccessory(const USBAccessory &access, int32_t &fd, const
         return UEC_SERVICE_PERMISSION_DENIED;
     }
 
-    uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
-    sptr<AccessoryDeathRecipient> accessoryRecipient = new AccessoryDeathRecipient(fd, tokenId);
+    uint32_t tokenIdNum = std::stoul(tokenId);
+    sptr<AccessoryDeathRecipient> accessoryRecipient = new AccessoryDeathRecipient(fd, tokenIdNum);
     if (accessoryRecipient == nullptr) {
         USB_HILOGE(MODULE_USB_DEVICE, "UsbService::OpenAccessory accessoryRecipient is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
@@ -1981,11 +1989,12 @@ int32_t UsbService::OpenAccessory(const USBAccessory &access, int32_t &fd, const
         AccessoryClientInfo info;
         info.accessoryRemote = accessoryRemote;
         info.accessoryRecipient = accessoryRecipient;
-        info.tokenId = tokenId;
-        accessoryClientMap_[std::make_pair(fd, tokenId)] = info;
+        info.tokenId = tokenIdNum;
+        accessoryClientMap_[std::make_pair(fd, tokenIdNum)] = info;
     }
 
     return ret;
+}
 }
 // LCOV_EXCL_STOP
 
