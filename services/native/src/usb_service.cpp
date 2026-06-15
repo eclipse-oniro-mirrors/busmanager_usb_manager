@@ -507,28 +507,38 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr, const sptr<IRemo
     }
 
     // LCOV_EXCL_START
+    uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
+    std::tuple<uint8_t, uint8_t, uint32_t> key = std::make_tuple(busNum, devAddr, tokenId);
+
     if (usbHostManager_ == nullptr) {
         USB_HILOGE(MODULE_USB_HOST, "UsbService::usbHostManager_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
 
-    deviceRecipient_ = new DeviceDeathRecipient(busNum, devAddr);
-    if (deviceRecipient_ == nullptr) {
-        USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDevice deviceRecipient_ is nullptr");
+    sptr<DeviceDeathRecipient> deviceRecipient = new DeviceDeathRecipient(busNum, devAddr, tokenId);
+    if (deviceRecipient == nullptr) {
+        USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDevice deviceRecipient is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
-    if (deviceRemote == nullptr || !deviceRemote->AddDeathRecipient(deviceRecipient_)) {
+    if (deviceRemote == nullptr || !deviceRemote->AddDeathRecipient(deviceRecipient)) {
         USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDevice add DeathRecipient failed");
         return UEC_SERVICE_INVALID_VALUE;
     }
-    deviceRemote_ = deviceRemote;
 
     int32_t ret = usbHostManager_->OpenDevice(busNum, devAddr);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_HOST, "OpenDevice failed ret:%{public}d", ret);
-        deviceRemote->RemoveDeathRecipient(deviceRecipient_);
-        deviceRecipient_ = nullptr;
-        deviceRemote_ = nullptr;
+        deviceRemote->RemoveDeathRecipient(deviceRecipient);
+        return ret;
+    }
+
+    {
+        std::lock_guard<std::mutex> guard(deviceClientMutex_);
+        DeviceClientInfo info;
+        info.deviceRemote = deviceRemote;
+        info.deviceRecipient = deviceRecipient;
+        info.tokenId = tokenId;
+        deviceClientMap_[key] = info;
     }
 
     return ret;
@@ -546,11 +556,13 @@ int32_t UsbService::Close(uint8_t busNum, uint8_t devAddr)
         USB_HILOGE(MODULE_USB_HOST, "UsbService::usbHostManager_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
+
+    uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
+    RemoveDeviceClientInfo(busNum, devAddr, tokenId);
+
     int32_t ret = usbHostManager_->Close(busNum, devAddr);
-    if (ret == UEC_OK && deviceRemote_ != nullptr) {
-        deviceRemote_->RemoveDeathRecipient(deviceRecipient_);
-        deviceRecipient_ = nullptr;
-        deviceRemote_ = nullptr;
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "Close failed ret:%{public}d", ret);
     }
     return ret;
     // LCOV_EXCL_STOP
@@ -1308,6 +1320,37 @@ void UsbService::UsbTransInfoChange(HDI::Usb::V1_2::USBTransferInfo &info, const
 }
 // LCOV_EXCL_STOP
 
+// LCOV_EXCL_START
+void UsbService::RemoveAccessoryClientInfo(int32_t fd, uint32_t tokenId)
+{
+    std::pair<int32_t, uint32_t> key = std::make_pair(fd, tokenId);
+    std::lock_guard<std::mutex> guard(accessoryClientMutex_);
+    auto it = accessoryClientMap_.find(key);
+    if (it != accessoryClientMap_.end()) {
+        if (it->second.accessoryRemote != nullptr && it->second.accessoryRecipient != nullptr) {
+            it->second.accessoryRemote->RemoveDeathRecipient(it->second.accessoryRecipient);
+        }
+        accessoryClientMap_.erase(it);
+        USB_HILOGI(MODULE_USB_DEVICE, "Removed accessory client info fd=%{public}d tokenId=%{public}u", fd, tokenId);
+    }
+}
+
+void UsbService::RemoveDeviceClientInfo(uint8_t busNum, uint8_t devAddr, uint32_t tokenId)
+{
+    std::tuple<uint8_t, uint8_t, uint32_t> key = std::make_tuple(busNum, devAddr, tokenId);
+    std::lock_guard<std::mutex> guard(deviceClientMutex_);
+    auto it = deviceClientMap_.find(key);
+    if (it != deviceClientMap_.end()) {
+        if (it->second.deviceRemote != nullptr && it->second.deviceRecipient != nullptr) {
+            it->second.deviceRemote->RemoveDeathRecipient(it->second.deviceRecipient);
+        }
+        deviceClientMap_.erase(it);
+        USB_HILOGI(MODULE_USB_HOST, "Removed device client info busNum=%{public}u devAddr=%{public}u tokenId=%{public}u",
+            busNum, devAddr, tokenId);
+    }
+}
+// LCOV_EXCL_STOP
+
 void UsbService::GetTransferTypeString(const UsbTransInfo &transInfo, USBEndpoint &ep, std::string &transType)
 {
     switch (transInfo.type) {
@@ -1898,14 +1941,6 @@ int32_t UsbService::OpenAccessory(const USBAccessory &access, int32_t &fd, const
         USB_HILOGE(MODULE_USB_DEVICE, "invalid usbAccessoryManager_");
         return UEC_SERVICE_INVALID_VALUE;
     }
-    std::string bundleName;
-    std::string tokenId;
-    int32_t userId = USB_RIGHT_USERID_INVALID;
-    if (!GetCallingInfo(bundleName, tokenId, userId)) {
-        USB_HILOGE(MODULE_USB_DEVICE, "GetCallingInfo false");
-        ReportUsbOperationFaultSysEvent("OpenAccessory", UEC_SERVICE_GET_TOKEN_INFO_FAILED, "GetCallingInfo false");
-        return UEC_SERVICE_GET_TOKEN_INFO_FAILED;
-    }
 
     std::string serialNum = "";
     int32_t ret = usbAccessoryManager_->GetAccessorySerialNumber(access, bundleName, serialNum);
@@ -1923,24 +1958,33 @@ int32_t UsbService::OpenAccessory(const USBAccessory &access, int32_t &fd, const
         return UEC_SERVICE_PERMISSION_DENIED;
     }
 
-    accessoryRecipient_ = new AccessoryDeathRecipient(fd);
-    if (accessoryRecipient_ == nullptr) {
-        USB_HILOGE(MODULE_USB_DEVICE, "UsbService::OpenAccessory accessoryRecipient_ is nullptr");
+    uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
+    sptr<AccessoryDeathRecipient> accessoryRecipient = new AccessoryDeathRecipient(fd, tokenId);
+    if (accessoryRecipient == nullptr) {
+        USB_HILOGE(MODULE_USB_DEVICE, "UsbService::OpenAccessory accessoryRecipient is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
-    if (accessoryRemote == nullptr || !accessoryRemote->AddDeathRecipient(accessoryRecipient_)) {
+    if (accessoryRemote == nullptr || !accessoryRemote->AddDeathRecipient(accessoryRecipient)) {
         USB_HILOGE(MODULE_USB_DEVICE, "UsbService::OpenAccessory add DeathRecipient failed");
-        CloseAccessory(fd);
         return UEC_SERVICE_INVALID_VALUE;
     }
-    accessoryRemote_ = accessoryRemote;
+
     ret = usbAccessoryManager_->OpenAccessory(fd);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_DEVICE, "error ret:%{public}d", ret);
-        accessoryRemote->RemoveDeathRecipient(accessoryRecipient_);
-        accessoryRecipient_ = nullptr;
-        accessoryRemote_ = nullptr;
+        accessoryRemote->RemoveDeathRecipient(accessoryRecipient);
+        return ret;
     }
+
+    {
+        std::lock_guard<std::mutex> guard(accessoryClientMutex_);
+        AccessoryClientInfo info;
+        info.accessoryRemote = accessoryRemote;
+        info.accessoryRecipient = accessoryRecipient;
+        info.tokenId = tokenId;
+        accessoryClientMap_[std::make_pair(fd, tokenId)] = info;
+    }
+
     return ret;
 }
 // LCOV_EXCL_STOP
@@ -1952,13 +1996,13 @@ int32_t UsbService::CloseAccessory(int32_t fd)
         USB_HILOGE(MODULE_USB_DEVICE, "invalid usbAccessoryManager_");
         return UEC_SERVICE_INVALID_VALUE;
     }
+
+    uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
+    RemoveAccessoryClientInfo(fd, tokenId);
+
     int32_t ret = usbAccessoryManager_->CloseAccessory(fd);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_DEVICE, "error ret:%{public}d", ret);
-    } else if (accessoryRemote != nullptr) {
-        accessoryRemote_->RemoveDeathRecipient(accessoryRecipient_);
-        accessoryRecipient_ = nullptr;
-        accessoryRemote_ = nullptr;
     }
     return ret;
 }
@@ -2582,9 +2626,11 @@ void UsbService::SerialDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &o
 #ifdef USB_MANAGER_FEATURE_HOST
 void UsbService::DeviceDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &object)
 {
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbService DeviceDeathRecipient enter");
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbService DeviceDeathRecipient enter busNum=%{public}u devAddr=%{public}u tokenId=%{public}u",
+        busNum_, devAddr_, tokenId_);
     sptr<UsbService> service = UsbService::GetGlobalInstance();
-    service->Close(this->busNum_, this->devAddr_);
+    service->RemoveDeviceClientInfo(busNum_, devAddr_, tokenId_);
+    service->Close(busNum_, devAddr_);
     USB_HILOGI(MODULE_USB_SERVICE, "UsbService DeviceDeathRecipient exit");
 }
 #endif // USB_MANAGER_FEATURE_HOST
@@ -2593,9 +2639,10 @@ void UsbService::DeviceDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &o
 // LCOV_EXCL_START
 void UsbService::AccessoryDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &object)
 {
-    USB_HILOGI(MODULE_USB_SERVICE, "UsbService AccessoryDeathRecipient enter");
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbService AccessoryDeathRecipient enter fd=%{public}d tokenId=%{public}u", fd_, tokenId_);
     sptr<UsbService> service = UsbService::GetGlobalInstance();
-    service->CloseAccessory(this->fd_);
+    service->RemoveAccessoryClientInfo(fd_, tokenId_);
+    service->CloseAccessory(fd_);
     USB_HILOGI(MODULE_USB_SERVICE, "UsbService AccessoryDeathRecipient exit");
 }
 // LCOV_EXCL_STOP
