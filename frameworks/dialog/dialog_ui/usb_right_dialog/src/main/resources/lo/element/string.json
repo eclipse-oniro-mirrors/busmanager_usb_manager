@@ -156,9 +156,9 @@
         },
         {
             "name":"serial_right_title",
-            "value":"ອະນຸຍາດໃຫ້ເຂົ້າເຖິງແບບເປັນລຳດັບ",
+            "value":"ອະນຸຍາດໃຫ້ເຂົ້າເຖິງ Serial",
             "attr":{
-                "priority":"translate"
+                "priority":"LT"
             }
         }
     ]

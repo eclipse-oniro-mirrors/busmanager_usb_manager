@@ -156,9 +156,9 @@
         },
         {
             "name":"serial_right_title",
-            "value":"Autorisation d'accès en série",
+            "value":"Autorisation d'accès au port série",
             "attr":{
-                "priority":"translate"
+                "priority":"LT"
             }
         }
     ]
