@@ -158,7 +158,7 @@
             "name":"serial_right_title",
             "value":"직렬 액세스 승인",
             "attr":{
-                "priority":"translate"
+                "priority":"LT"
             }
         }
     ]

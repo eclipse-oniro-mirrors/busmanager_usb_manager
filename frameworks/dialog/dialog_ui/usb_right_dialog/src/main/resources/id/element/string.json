@@ -158,7 +158,7 @@
             "name":"serial_right_title",
             "value":"Otorisasi akses serial",
             "attr":{
-                "priority":"translate"
+                "priority":"LT"
             }
         }
     ]
