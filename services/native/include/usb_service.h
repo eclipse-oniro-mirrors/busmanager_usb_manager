@@ -93,7 +93,7 @@ public:
     void UnLoadSelf(UnLoadSaType type);
     int32_t DeviceEvent(const HDI::Usb::V1_0::USBDeviceInfo &info);
 #ifdef USB_MANAGER_FEATURE_HOST
-    int32_t OpenDevice(uint8_t busNum, uint8_t devAddr) override;
+    int32_t OpenDevice(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote) override;
     int32_t Close(uint8_t busNum, uint8_t devAddr) override;
     int32_t ResetDevice(uint8_t busNum, uint8_t devAddr) override;
     int32_t ClaimInterface(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid, uint8_t force) override;
@@ -167,7 +167,7 @@ public:
     void SetPhyConnect(bool phyConnect);
     int32_t UserChangeProcess();
     int32_t GetAccessoryList(std::vector<USBAccessory> &accessList) override;
-    int32_t OpenAccessory(const USBAccessory &access, int32_t &fd) override;
+    int32_t OpenAccessory(const USBAccessory &access, int32_t &fd, const sptr<IRemoteObject> &accessoryRemote) override;
     int32_t CloseAccessory(int32_t fd) override;
     int32_t AddAccessoryRight(const uint32_t tokenId, const USBAccessory &access) override;
     int32_t HasAccessoryRight(const USBAccessory &access, bool &result) override;
@@ -246,6 +246,33 @@ private:
         uint32_t tokenId_;
     };
 
+#ifdef USB_MANAGER_FEATURE_HOST
+    class DeviceDeathRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        DeviceDeathRecipient(uint8_t busNum, uint8_t devAddr, uint32_t tokenId)
+            : busNum_(busNum), devAddr_(devAddr), tokenId_(tokenId){};
+        ~DeviceDeathRecipient() {};
+        void OnRemoteDied(const wptr<IRemoteObject> &object) override;
+    private:
+        uint8_t busNum_;
+        uint8_t devAddr_;
+        uint32_t tokenId_;
+    };
+#endif // USB_MANAGER_FEATURE_HOST
+
+#ifdef USB_MANAGER_FEATURE_DEVICE
+    class AccessoryDeathRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        AccessoryDeathRecipient(int32_t fd, uint32_t tokenId)
+            : fd_(fd), tokenId_(tokenId){};
+        ~AccessoryDeathRecipient() {};
+        void OnRemoteDied(const wptr<IRemoteObject> &object) override;
+    private:
+        int32_t fd_;
+        uint32_t tokenId_;
+    };
+#endif // USB_MANAGER_FEATURE_DEVICE
+
 private:
     bool Init();
     bool InitUsbd();
@@ -279,9 +306,13 @@ private:
     void UsbDeviceTypeChange(std::vector<UsbDeviceType> &disableType,
         const std::vector<UsbDeviceTypeInfo> &deviceTypes);
     void UsbTransInfoChange(HDI::Usb::V1_2::USBTransferInfo &info, const UsbTransInfo &param);
+    void RemoveDeviceClientInfo(uint8_t busNum, uint8_t devAddr, uint32_t tokenId);
     std::string GetDeviceVidPidSerialNumber(const std::string &deviceName);
     int32_t GetDeviceVidPidSerialNumber(const std::string &deviceName, std::string& strDesc);
 #endif // USB_MANAGER_FEATURE_HOST
+#ifdef USB_MANAGER_FEATURE_DEVICE
+    void RemoveAccessoryClientInfo(int32_t fd, uint32_t tokenId);
+#endif // USB_MANAGER_FEATURE_DEVICE
 #if defined(USB_MANAGER_FEATURE_HOST) || defined(USB_MANAGER_FEATURE_DEVICE)
     bool GetCallingInfo(std::string &bundleName, std::string &tokenId, int32_t &userId);
 #endif // USB_MANAGER_FEATURE_HOST || USB_MANAGER_FEATURE_DEVICE
@@ -293,10 +324,24 @@ private:
     std::mutex unloadSelfTimerMutex_;
 #ifdef USB_MANAGER_FEATURE_HOST
     std::shared_ptr<UsbHostManager> usbHostManager_;
+    struct DeviceClientInfo {
+        sptr<IRemoteObject> deviceRemote;
+        sptr<UsbService::DeviceDeathRecipient> deviceRecipient;
+        uint32_t tokenId;
+    };
+    std::map<std::tuple<uint8_t, uint8_t, uint32_t>, DeviceClientInfo> deviceClientMap_;
+    std::mutex deviceClientMutex_;
 #endif // USB_MANAGER_FEATURE_HOST
 #ifdef USB_MANAGER_FEATURE_DEVICE
     std::shared_ptr<UsbDeviceManager> usbDeviceManager_;
     std::shared_ptr<UsbAccessoryManager> usbAccessoryManager_;
+    struct AccessoryClientInfo {
+        sptr<IRemoteObject> accessoryRemote;
+        sptr<UsbService::AccessoryDeathRecipient> accessoryRecipient;
+        uint32_t tokenId;
+    };
+    std::map<std::pair<int32_t, uint32_t>, AccessoryClientInfo> accessoryClientMap_;
+    std::mutex accessoryClientMutex_;
 #endif // USB_MANAGER_FEATURE_DEVICE
 #ifdef USB_MANAGER_FEATURE_PORT
     std::shared_ptr<UsbPortManager> usbPortManager_;
