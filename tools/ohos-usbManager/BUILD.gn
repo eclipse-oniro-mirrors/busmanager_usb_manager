@@ -28,15 +28,21 @@ ohos_executable("ohos-usbManager") {
     cfi_cross_dso = true
     debug = false
   }
+
   branch_protector_ret = "pac_ret"
+
+  cli_config_file = "ohos-usbManager.json"
+
   sources = [
     "src/usb_cli.cpp",
     "src/usb_cli_serialization.cpp",
   ]
+
   configs = [
     "${utils_path}:utils_config",
     ":usb_cli_config",
   ]
+
   deps = [ "${usb_manager_path}/interfaces/innerkits:usbsrv_client" ]
   external_deps = [
     "cJSON:cjson",
@@ -44,7 +50,11 @@ ohos_executable("ohos-usbManager") {
     "hilog:libhilog",
     "ipc:ipc_core",
   ]
+
   install_enable = true
+  install_images = [ "system" ]
+  relative_install_dir = "cli_tool/executable"
+
   subsystem_name = "usb"
   part_name = "usb_manager"
 }

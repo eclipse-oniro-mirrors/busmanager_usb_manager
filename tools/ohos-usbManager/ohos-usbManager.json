@@ -1,0 +1,133 @@
+{
+  "name": "ohos-usbManager",
+  "description": "OpenHarmony USB CLI query tool for listing USB devices, accessories, and virtual serial ports",
+  "executablePath": "/system/bin/cli_tool/executable/ohos-usbManager",
+  "requestPermissions": [],
+  "version": "1.0.0",
+  "inputSchema": {
+    "type": "object",
+    "properties": {}
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {}
+  },
+  "hasSubCommand": true,
+  "subcommands": {
+    "get-device-list": {
+      "description": "List all attached USB peripheral devices.",
+      "requestPermissions": [],
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "integer",
+            "description": "The number of attached USB devices.",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "list": {
+            "type": "array",
+            "description": "The list of attached USB devices.",
+            "items": {
+              "type": "object",
+              "description": "Metadata of a USB device.",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Device name."
+                },
+                "serial": {
+                  "type": "string",
+                  "description": "Serial number."
+                },
+                "manufacturerName": {
+                  "type": "string",
+                  "description": "Manufacturer name."
+                },
+                "productName": {
+                  "type": "string",
+                  "description": "Product name."
+                },
+                "version": {
+                  "type": "string",
+                  "description": "USB version."
+                },
+                "vendorId": {
+                  "type": "integer",
+                  "description": "Vendor ID."
+                },
+                "productId": {
+                  "type": "integer",
+                  "description": "Product ID."
+                },
+                "clazz": {
+                  "type": "integer",
+                  "description": "USB class."
+                },
+                "subClass": {
+                  "type": "integer",
+                  "description": "USB subclass."
+                },
+                "protocol": {
+                  "type": "integer",
+                  "description": "USB protocol."
+                },
+                "devAddress": {
+                  "type": "integer",
+                  "description": "USB device address."
+                },
+                "busNum": {
+                  "type": "integer",
+                  "description": "USB bus number."
+                },
+                "configs": {
+                  "type": "array",
+                  "description": "List of the USB configurations.",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "description": "Config index."
+                      },
+                      "attributes": {
+                        "type": "integer",
+                        "description": "Config attributes."
+                      },
+                      "isRemoteWakeup": {
+                        "type": "boolean",
+                        "description": "Whether the config supports remote wakeup."
+                      },
+                      "isSelfPowered": {
+                        "type": "boolean",
+                        "description": "Whether the device has power supply itself."
+                      },
+                      "maxPower": {
+                        "type": "integer",
+                        "description": "The maximum power supply required by the config (maxPower times 2mA)."
+                      },
+                      "name": {
+                        "type": "string",
+                        "description": "The name of the config."
+                      },
+                      "interfaces": {
+                        "type": "array",
+                        "description": "List of the USB interfaces.",
+                        "items": {}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
