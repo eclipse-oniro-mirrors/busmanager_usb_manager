@@ -12,6 +12,7 @@
 # limitations under the License.
 
 import("//build/ohos.gni")
+import("//build/ohos/cli/ohos_cli_executable.gni")
 import("./../../usbmgr.gni")
 
 config("usb_cli_config") {

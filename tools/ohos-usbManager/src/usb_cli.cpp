@@ -167,12 +167,10 @@ int main(int argc, char *argv[])
         std::cout << FormatError(1, "Missing subcommand. Please specify a subcommand to execute.") << std::endl;
         return 1;
     }
-
     if (HasFlag(argc, argv, "--help")) {
         PrintMainHelp();
         return 0;
     }
-
     if (HasFlag(argc, argv, "--version")) {
         PrintVersion();
         return 0;
@@ -191,7 +189,6 @@ int main(int argc, char *argv[])
         }
         return HandleGetDeviceList();
     }
-
     if (strcmp(subcommand, CMD_GET_ACCESSORY_LIST) == 0) {
         if (HasFlag(argc, argv, "--help")) {
             PrintAccessoryListHelp();
@@ -203,7 +200,6 @@ int main(int argc, char *argv[])
         }
         return HandleGetAccessoryList();
     }
-
     if (strcmp(subcommand, CMD_GET_USBSERIAL_LIST) == 0) {
         if (HasFlag(argc, argv, "--help")) {
             PrintSerialListHelp();
