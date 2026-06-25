@@ -1,0 +1,378 @@
+{
+  "name": "ohos-usbManager",
+  "description": "OpenHarmony USB CLI query tool for listing USB devices, accessories, and virtual serial ports",
+  "executablePath": "/system/bin/cli_tool/executable/ohos-usbManager",
+  "requirePermissions": [],
+  "version": "1.0.0",
+  "inputSchema": {
+    "type": "object",
+    "properties": {}
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {}
+  },
+  "hasSubCommand": true,
+  "subcommands": {
+    "get-device-list": {
+      "description": "List all attached USB peripheral devices.",
+      "requirePermissions": [],
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["result"],
+            "description": "Response type indicator"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["success", "failed"],
+            "description": "Execution status"
+          },
+          "data": {
+            "type": "object",
+            "description": "USB device list data.",
+            "properties": {
+              "number": {
+                "type": "integer",
+                "description": "The number of attached USB devices.",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "list": {
+                "type": "array",
+                "description": "The list of attached USB devices.",
+                "items": {
+                  "type": "object",
+                  "description": "Metadata of a USB device.",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Device name."
+                    },
+                    "serial": {
+                      "type": "string",
+                      "description": "Serial number."
+                    },
+                    "manufacturerName": {
+                      "type": "string",
+                      "description": "Manufacturer name."
+                    },
+                    "productName": {
+                      "type": "string",
+                      "description": "Product name."
+                    },
+                    "version": {
+                      "type": "string",
+                      "description": "USB version."
+                    },
+                    "vendorId": {
+                      "type": "integer",
+                      "description": "Vendor ID."
+                    },
+                    "productId": {
+                      "type": "integer",
+                      "description": "Product ID."
+                    },
+                    "clazz": {
+                      "type": "integer",
+                      "description": "USB class."
+                    },
+                    "subClass": {
+                      "type": "integer",
+                      "description": "USB subclass."
+                    },
+                    "protocol": {
+                      "type": "integer",
+                      "description": "USB protocol."
+                    },
+                    "devAddress": {
+                      "type": "integer",
+                      "description": "USB device address."
+                    },
+                    "busNum": {
+                      "type": "integer",
+                      "description": "USB bus number."
+                    },
+                    "configs": {
+                      "type": "array",
+                      "description": "List of the USB configurations.",
+                      "items": {
+                        "type": "object",
+                        "description": "Metadata of the USB configuration.",
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "description": "Config index."
+                          },
+                          "attributes": {
+                            "type": "integer",
+                            "description": "Config attributes."
+                          },
+                          "isRemoteWakeup": {
+                            "type": "boolean",
+                            "description": "Whether the config supports remote wakeup."
+                          },
+                          "isSelfPowered": {
+                            "type": "boolean",
+                            "description": "Whether the device has power supply itself."
+                          },
+                          "maxPower": {
+                            "type": "integer",
+                            "description": "The maximum power supply required by the config (maxPower times 2mA)."
+                          },
+                          "name": {
+                            "type": "string",
+                            "description": "The name of the config."
+                          },
+                          "interfaces": {
+                            "type": "array",
+                            "description": "List of the USB interfaces.",
+                            "items": {
+                              "type": "object",
+                              "description": "Metadata of a USB interface.",
+                              "properties": {
+                                "id": {
+                                  "type": "integer",
+                                  "description": "Interface ID."
+                                },
+                                "protocol": {
+                                  "type": "integer",
+                                  "description": "Interface protocol."
+                                },
+                                "clazz": {
+                                  "type": "integer",
+                                  "description": "Interface class."
+                                },
+                                "subClass": {
+                                  "type": "integer",
+                                  "description": "Interface subclass."
+                                },
+                                "alternateSetting": {
+                                  "type": "integer",
+                                  "description": "Alternate setting index."
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "Interface name."
+                                },
+                                "endpoints": {
+                                  "type": "array",
+                                  "description": "List of the USB endpoints.",
+                                  "items": {
+                                    "type": "object",
+                                    "description": "Metadata of a USB endpoint.",
+                                    "properties": {
+                                      "address": {
+                                        "type": "integer",
+                                        "description": "Endpoint address."
+                                      },
+                                      "attributes": {
+                                        "type": "integer",
+                                        "description": "Endpoint attributes."
+                                      },
+                                      "interval": {
+                                        "type": "integer",
+                                        "description": "Endpoint polling interval."
+                                      },
+                                      "maxPacketSize": {
+                                        "type": "integer",
+                                        "description": "Maximum packet size supported by the endpoint."
+                                      },
+                                      "direction": {
+                                        "type": "integer",
+                                        "description": "Transfer direction (0 = out, 1 = in)."
+                                      },
+                                      "number": {
+                                        "type": "integer",
+                                        "description": "Endpoint number."
+                                      },
+                                      "type": {
+                                        "type": "integer",
+                                        "description": "Endpoint transfer type (0 = control, 1 = isochronous, 2 = bulk, 3 = interrupt)."
+                                      },
+                                      "interfaceId": {
+                                        "type": "integer",
+                                        "description": "ID of the interface that owns this endpoint."
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "errCode": {
+            "type": "string",
+            "description": "Error code when execution fails."
+          },
+          "errMsg": {
+            "type": "string",
+            "description": "Error message when execution fails."
+          },
+          "suggestion": {
+            "type": "string",
+            "description": "Suggested solution when execution fails."
+          }
+        },
+        "required": ["type", "status"]
+      }
+    },
+    "get-accessory-list": {
+      "description": "List all connected USB accessories.",
+      "requirePermissions": [],
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["result"],
+            "description": "Response type indicator"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["success", "failed"],
+            "description": "Execution status"
+          },
+          "data": {
+            "type": "object",
+            "description": "USB accessory list data.",
+            "properties": {
+              "number": {
+                "type": "integer",
+                "description": "The number of connected USB accessories.",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "list": {
+                "type": "array",
+                "description": "The list of connected USB accessories.",
+                "items": {
+                  "type": "object",
+                  "description": "Metadata of a USB accessory.",
+                  "properties": {
+                    "manufacturer": {
+                      "type": "string",
+                      "description": "Accessory manufacturer."
+                    },
+                    "product": {
+                      "type": "string",
+                      "description": "Accessory product name."
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Accessory description."
+                    },
+                    "version": {
+                      "type": "string",
+                      "description": "Accessory version."
+                    },
+                    "serialNumber": {
+                      "type": "string",
+                      "description": "Accessory serial number."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "errCode": {
+            "type": "string",
+            "description": "Error code when execution fails."
+          },
+          "errMsg": {
+            "type": "string",
+            "description": "Error message when execution fails."
+          },
+          "suggestion": {
+            "type": "string",
+            "description": "Suggested solution when execution fails."
+          }
+        },
+        "required": ["type", "status"]
+      }
+    },
+    "get-usbserial-list": {
+      "description": "List all available USB virtual serial ports.",
+      "requirePermissions": [],
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["result"],
+            "description": "Response type indicator"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["success", "failed"],
+            "description": "Execution status"
+          },
+          "data": {
+            "type": "object",
+            "description": "USB serial list data.",
+            "properties": {
+              "number": {
+                "type": "integer",
+                "description": "The number of available USB virtual serial ports.",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "list": {
+                "type": "array",
+                "description": "The list of available USB virtual serial ports.",
+                "items": {
+                  "type": "object",
+                  "description": "Metadata of a USB virtual serial port.",
+                  "properties": {
+                    "portId": {
+                      "type": "integer",
+                      "description": "Serial port ID."
+                    },
+                    "deviceName": {
+                      "type": "string",
+                      "description": "Device name in 'busNum-devAddr' format."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "errCode": {
+            "type": "string",
+            "description": "Error code when execution fails."
+          },
+          "errMsg": {
+            "type": "string",
+            "description": "Error message when execution fails."
+          },
+          "suggestion": {
+            "type": "string",
+            "description": "Suggested solution when execution fails."
+          }
+        },
+        "required": ["type", "status"]
+      }
+    }
+  }
+}

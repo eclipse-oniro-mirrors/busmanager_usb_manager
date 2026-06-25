@@ -18,7 +18,8 @@
             "usb_manager_feature_usb_right_dialog",
             "usb_manager_feature_host",
             "usb_manager_feature_device",
-            "usb_manager_feature_port"
+            "usb_manager_feature_port",
+            "usb_manager_feature_support_cli"
         ],
         "syscap": [
             "SystemCapability.USB.USBManager.Serial",
@@ -75,7 +76,8 @@
                     "//base/usb/usb_manager/interfaces/kits/js/napi:usb",
                     "//base/usb/usb_manager/frameworks/dialog/dialog_ui/usb_right_dialog:dialog_hap",
                     "//base/usb/usb_manager/frameworks/ets/taihe:usb_taihe",
-                    "//base/usb/usb_manager/interfaces/kits/js/napi:serial"
+                    "//base/usb/usb_manager/interfaces/kits/js/napi:serial",
+                    "//base/usb/usb_manager/tools/ohos-usbManager:usb_cli"
                 ],
                 "service_group": [
                     "//base/usb/usb_manager/sa_profile:usbmgr_sa_profile",
@@ -99,7 +101,8 @@
             }],
             "test": [
                 "//base/usb/usb_manager/test/device:usb_device_test",
-                "//base/usb/usb_manager/test/native:usb_unittest_test"
+                "//base/usb/usb_manager/test/native:usb_unittest_test",
+                "//base/usb/usb_manager/tools/ohos-usbManager:usb_cli_test"
             ]
         }
     }

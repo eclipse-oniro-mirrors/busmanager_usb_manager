@@ -1,0 +1,47 @@
+# Copyright (c) 2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/test.gni")
+import("./../../../usbmgr.gni")
+
+config("usb_cli_test_config") {
+  visibility = [ ":*" ]
+  include_dirs = [
+    "${usb_manager_path}/interfaces/innerkits/native/include",
+    "${usb_manager_path}/tools/ohos-usbManager/src",
+    "${utils_path}/native/include",
+  ]
+}
+
+ohos_unittest("usb_cli_unittest") {
+  module_out_path = "${usb_manager_part_name}/usb_unittest_test"
+  sources = [
+    "usb_cli_serialization_test.cpp",
+    "../src/usb_cli_serialization.cpp",
+  ]
+  configs = [
+    "${utils_path}:utils_config",
+    ":usb_cli_test_config",
+  ]
+  deps = [
+    "${usb_manager_path}/interfaces/innerkits:usbsrv_client"
+  ]
+  external_deps = [
+    "cJSON:cjson",
+    "c_utils:utils",
+    "hilog:libhilog",
+    "ipc:ipc_core",
+  ]
+  subsystem_name = "usb"
+  part_name = "usb_manager"
+}
