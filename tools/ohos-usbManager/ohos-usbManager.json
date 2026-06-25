@@ -2,7 +2,7 @@
   "name": "ohos-usbManager",
   "description": "OpenHarmony USB CLI query tool for listing USB devices, accessories, and virtual serial ports",
   "executablePath": "/system/bin/cli_tool/executable/ohos-usbManager",
-  "requestPermissions": [],
+  "requirePermissions": [],
   "version": "1.0.0",
   "inputSchema": {
     "type": "object",
@@ -16,7 +16,7 @@
   "subcommands": {
     "get-device-list": {
       "description": "List all attached USB peripheral devices.",
-      "requestPermissions": [],
+      "requirePermissions": [],
       "inputSchema": {
         "type": "object",
         "properties": {}
@@ -232,7 +232,7 @@
     },
     "get-accessory-list": {
       "description": "List all connected USB accessories.",
-      "requestPermissions": [],
+      "requirePermissions": [],
       "inputSchema": {
         "type": "object",
         "properties": {}
@@ -310,7 +310,7 @@
     },
     "get-usbserial-list": {
       "description": "List all available USB virtual serial ports.",
-      "requestPermissions": [],
+      "requirePermissions": [],
       "inputSchema": {
         "type": "object",
         "properties": {}
