@@ -17,6 +17,7 @@
 #include "cJSON.h"
 #include "usb_config.h"
 #include "usb_endpoint.h"
+#include "usb_errors.h"
 #include "usb_interface.h"
 
 #define ARG_ONE 1
