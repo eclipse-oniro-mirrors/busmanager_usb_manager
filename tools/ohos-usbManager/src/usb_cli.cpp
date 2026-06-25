@@ -22,6 +22,7 @@
 #include "usb_errors.h"
 #include "usb_cli_serialization.h"
 
+#define ARGC_ONE 1
 #define ARGC_TWO 2
 
 using namespace OHOS::USB;
@@ -161,11 +162,11 @@ static int HandleGetSerialList()
     return 0;
 }
 
-int main(int argc, char *argv[])
+int preprocessArgs(int argc, char *argv[])
 {
     if (argc < ARGC_TWO) {
         std::cout << FormatError(1, "Missing subcommand. Please specify a subcommand to execute.") << std::endl;
-        return 1;
+        return -1;
     }
     if (HasFlag(argc, argv, "--help")) {
         PrintMainHelp();
@@ -175,7 +176,15 @@ int main(int argc, char *argv[])
         PrintVersion();
         return 0;
     }
+    return 1;
+}
 
+int main(int argc, char *argv[])
+{
+    auto ret = preprocessArgs(argc, argv);
+    if (ret <= 0) {
+        return ret;
+    }
     const char *subcommand = argv[1];
 
     if (strcmp(subcommand, CMD_GET_DEVICE_LIST) == 0) {
