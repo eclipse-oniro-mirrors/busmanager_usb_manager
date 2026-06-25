@@ -167,44 +167,86 @@ std::string FormatSuccess(const std::vector<cJSON*> &items)
 {
     cJSON *root = cJSON_CreateObject();
     if (!root) {
-        return "{\"number\":0,\"list\":[]}";
+        return "{\"type\":\"result\",\"status\":\"failed\",\"errCode\":\"INTERNAL_ERROR\",\"errMsg\":\"Failed to create JSON object\",\"suggestion\":\"Please check if the device is connected and the connection is normal.\"}";
     }
+    cJSON_AddStringToObject(root, "type", "result");
+    cJSON_AddStringToObject(root, "status", "success");
+
+    cJSON *data = cJSON_CreateObject();
+    if (!data) {
+        cJSON_Delete(root);
+        return "{\"type\":\"result\",\"status\":\"failed\",\"errCode\":\"INTERNAL_ERROR\",\"errMsg\":\"Failed to create data object\",\"suggestion\":\"Please check if the device is connected and the connection is normal.\"}";
+    }
+
     cJSON *list = cJSON_CreateArray();
     if (!list) {
+        cJSON_Delete(data);
         cJSON_Delete(root);
-        return "{\"number\":0,\"list\":[]}";
+        return "{\"type\":\"result\",\"status\":\"failed\",\"errCode\":\"INTERNAL_ERROR\",\"errMsg\":\"Failed to create list array\",\"suggestion\":\"Please check if the device is connected and the connection is normal.\"}";
     }
     for (auto *item : items) {
         if (item) {
             cJSON_AddItemToArray(list, item);
         }
     }
-    cJSON_AddNumberToObject(root, "number", static_cast<double>(cJSON_GetArraySize(list)));
-    cJSON_AddItemToObject(root, "list", list);
+    cJSON_AddNumberToObject(data, "number", static_cast<double>(cJSON_GetArraySize(list)));
+    cJSON_AddItemToObject(data, "list", list);
+    cJSON_AddItemToObject(root, "data", data);
 
     char *output = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
     if (!output) {
-        return "{\"number\":0,\"list\":[]}";
+        return "{\"type\":\"result\",\"status\":\"failed\",\"errCode\":\"INTERNAL_ERROR\",\"errMsg\":\"Failed to format JSON output\",\"suggestion\":\"Please check if the device is connected and the connection is normal.\"}";
     }
     std::string result(output);
     cJSON_free(output);
     return result;
 }
 
+static std::string GetErrorCodeString(int32_t code)
+{
+    if (code == 1) {
+        return "MISSING_SUBCOMMAND";
+    }
+    if (code == 2) {
+        return "UNKNOWN_SUBCOMMAND";
+    }
+    if (code == UEC_INTERFACE_NO_INIT || code == UEC_SERVICE_NO_INIT) {
+        return "USB_SERVICE_UNAVAILABLE";
+    }
+    if (code == UEC_INTERFACE_PERMISSION_DENIED || code == UEC_SERVICE_PERMISSION_DENIED) {
+        return "PERMISSION_DENIED";
+    }
+    if (code == UEC_SERIAL_PORT_NOT_EXIST) {
+        return "SERIAL_PORT_NOT_FOUND";
+    }
+    return "QUERY_FAILED";
+}
+
+static std::string GetErrorSuggestion(int32_t code)
+{
+    if (code == 1) {
+        return "Run './ohos-usbManager --help' for available commands.";
+    }
+    return "Please check if the device is connected and the connection is normal.";
+}
+
 std::string FormatError(int32_t code, const std::string &message)
 {
     cJSON *root = cJSON_CreateObject();
     if (!root) {
-        return "{\"code\":-1,\"message\":\"internal error\"}";
+        return "{\"type\":\"result\",\"status\":\"failed\",\"errCode\":\"INTERNAL_ERROR\",\"errMsg\":\"Failed to create JSON object\",\"suggestion\":\"Please check if the device is connected and the connection is normal.\"}";
     }
-    cJSON_AddNumberToObject(root, "code", static_cast<double>(code));
-    cJSON_AddStringToObject(root, "message", message.c_str());
+    cJSON_AddStringToObject(root, "type", "result");
+    cJSON_AddStringToObject(root, "status", "failed");
+    cJSON_AddStringToObject(root, "errCode", GetErrorCodeString(code).c_str());
+    cJSON_AddStringToObject(root, "errMsg", message.c_str());
+    cJSON_AddStringToObject(root, "suggestion", GetErrorSuggestion(code).c_str());
 
     char *output = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
     if (!output) {
-        return "{\"code\":-1,\"message\":\"internal error\"}";
+        return "{\"type\":\"result\",\"status\":\"failed\",\"errCode\":\"INTERNAL_ERROR\",\"errMsg\":\"Failed to format JSON output\",\"suggestion\":\"Please check if the device is connected and the connection is normal.\"}";
     }
     std::string result(output);
     cJSON_free(output);

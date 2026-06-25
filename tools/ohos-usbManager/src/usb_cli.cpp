@@ -101,21 +101,13 @@ static bool HasFlag(int argc, char *argv[], const char *flag)
     return false;
 }
 
-static std::string MapErrorMessage(int32_t ret)
-{
-    if (ret == UEC_INTERFACE_NO_INIT) {
-        return FormatError(1, "USB service unavailable");
-    }
-    return FormatError(ret, "Query failed");
-}
-
 static int HandleGetDeviceList()
 {
     UsbSrvClient &client = UsbSrvClient::GetInstance();
     std::vector<UsbDevice> deviceList;
     int32_t ret = client.GetDevices(deviceList);
     if (ret != 0) {
-        std::cout << MapErrorMessage(ret) << std::endl;
+        std::cout << FormatError(ret, "Query failed") << std::endl;
         return 1;
     }
 
@@ -135,7 +127,7 @@ static int HandleGetAccessoryList()
     std::vector<USBAccessory> accessList;
     int32_t ret = client.GetAccessoryList(accessList);
     if (ret != 0) {
-        std::cout << MapErrorMessage(ret) << std::endl;
+        std::cout << FormatError(ret, "Query failed") << std::endl;
         return 1;
     }
 
@@ -155,7 +147,7 @@ static int HandleGetSerialList()
     std::vector<UsbSerialPort> serialPortList;
     int32_t ret = client.SerialGetPortList(serialPortList);
     if (ret != 0) {
-        std::cout << MapErrorMessage(ret) << std::endl;
+        std::cout << FormatError(ret, "Query failed") << std::endl;
         return 1;
     }
 
@@ -171,9 +163,14 @@ static int HandleGetSerialList()
 
 int main(int argc, char *argv[])
 {
-    if (argc < ARGC_TWO || HasFlag(argc, argv, "--help")) {
+    if (argc < ARGC_TWO) {
+        std::cout << FormatError(1, "Missing subcommand. Please specify a subcommand to execute.") << std::endl;
+        return 1;
+    }
+
+    if (HasFlag(argc, argv, "--help")) {
         PrintMainHelp();
-        return (argc < ARGC_TWO) ? 1 : 0;
+        return 0;
     }
 
     if (HasFlag(argc, argv, "--version")) {
