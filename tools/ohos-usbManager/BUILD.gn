@@ -23,7 +23,7 @@ config("usb_cli_config") {
   ]
 }
 
-ohos_executable("ohos-usbManager") {
+ohos_cli_executable("ohos-usbManager") {
   sanitize = {
     cfi = true
     cfi_cross_dso = true
