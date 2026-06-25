@@ -162,7 +162,7 @@ static int HandleGetSerialList()
     return 0;
 }
 
-int preprocessArgs(int argc, char *argv[])
+int PreprocessArgs(int argc, char *argv[])
 {
     if (argc < ARGC_TWO) {
         std::cout << FormatError(1, "Missing subcommand. Please specify a subcommand to execute.") << std::endl;
@@ -181,7 +181,7 @@ int preprocessArgs(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-    auto ret = preprocessArgs(argc, argv);
+    auto ret = PreprocessArgs(argc, argv);
     if (ret <= 0) {
         return ret;
     }
