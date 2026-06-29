@@ -307,8 +307,8 @@ private:
     std::mutex serialManagerMutex_;
     std::mutex serialPidVidMapMutex_;
     std::mutex unloadSelfTimerMutex_;
-#ifdef USB_MANAGER_FEATURE_HOST 
-    std::shared_ptr<UsbHostManager> usbHostManager_; 
+#ifdef USB_MANAGER_FEATURE_HOST
+    std::shared_ptr<UsbHostManager> usbHostManager_;
 #endif // USB_MANAGER_FEATURE_HOST
 #ifdef USB_MANAGER_FEATURE_DEVICE
     std::shared_ptr<UsbDeviceManager> usbDeviceManager_;
