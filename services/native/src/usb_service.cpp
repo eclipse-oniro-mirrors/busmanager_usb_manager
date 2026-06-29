@@ -534,7 +534,7 @@ int32_t UsbService::Close(uint8_t busNum, uint8_t devAddr)
         USB_HILOGE(MODULE_USB_HOST, "UsbService::usbHostManager_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
-    return ret = usbHostManager_->Close(busNum, devAddr);
+    return usbHostManager_->Close(busNum, devAddr);
     // LCOV_EXCL_STOP
 }
 
