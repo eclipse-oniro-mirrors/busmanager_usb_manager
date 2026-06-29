@@ -1,6 +1,6 @@
 # ohos-usbManager
 
-OpenHarmony USB CLI query tool for listing USB devices, accessories, and virtual serial ports.
+OpenHarmony USB CLI query tool for listing USB devices, accessories, and serial ports.
 
 ## Directory Structure
 

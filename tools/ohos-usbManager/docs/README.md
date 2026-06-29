@@ -2,7 +2,7 @@
 
 ## Overview
 
-`ohos-usbManager` is a command-line tool for querying USB device information on OpenHarmony systems. It provides read-only access to USB peripheral, accessory, and virtual serial port lists via JSON output.
+`ohos-usbManager` is a command-line tool for querying USB device information on OpenHarmony systems. It provides read-only access to USB peripheral, accessory, and serial port lists via JSON output.
 
 ## Installation Path
 
@@ -74,12 +74,12 @@ Output:
 }
 ```
 
-### get-usbserial-list
+### get-serial-list
 
-List all available USB virtual serial ports.
+List all available serial ports.
 
 ```bash
-ohos-usbManager get-usbserial-list
+ohos-usbManager get-serial-list
 ```
 
 Output:
@@ -149,8 +149,8 @@ ohos-usbManager get-device-list
 # List all USB accessories
 ohos-usbManager get-accessory-list
 
-# List all virtual serial ports
-ohos-usbManager get-usbserial-list
+# List all serial ports
+ohos-usbManager get-serial-list
 
 # Show help
 ohos-usbManager --help

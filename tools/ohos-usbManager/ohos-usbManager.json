@@ -1,6 +1,6 @@
 {
   "name": "ohos-usbManager",
-  "description": "OpenHarmony USB CLI query tool for listing USB devices, accessories, and virtual serial ports",
+  "description": "OpenHarmony USB CLI query tool for listing USB devices, accessories, and serial ports",
   "executablePath": "/system/bin/cli_tool/executable/ohos-usbManager",
   "requirePermissions": [],
   "version": "1.0.0",
@@ -308,8 +308,8 @@
         "required": ["type", "status"]
       }
     },
-    "get-usbserial-list": {
-      "description": "List all available USB virtual serial ports.",
+    "get-serial-list": {
+      "description": "List all available serial ports.",
       "requirePermissions": [],
       "inputSchema": {
         "type": "object",
@@ -330,20 +330,20 @@
           },
           "data": {
             "type": "object",
-            "description": "USB serial list data.",
+            "description": "Serial list data.",
             "properties": {
               "number": {
                 "type": "integer",
-                "description": "The number of available USB virtual serial ports.",
+                "description": "The number of available serial ports.",
                 "minimum": 0,
                 "maximum": 255
               },
               "list": {
                 "type": "array",
-                "description": "The list of available USB virtual serial ports.",
+                "description": "The list of available serial ports.",
                 "items": {
                   "type": "object",
-                  "description": "Metadata of a USB virtual serial port.",
+                  "description": "Metadata of a serial port.",
                   "properties": {
                     "portId": {
                       "type": "integer",
