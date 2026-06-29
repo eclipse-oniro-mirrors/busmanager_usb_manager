@@ -93,7 +93,7 @@ public:
     void UnLoadSelf(UnLoadSaType type);
     int32_t DeviceEvent(const HDI::Usb::V1_0::USBDeviceInfo &info);
 #ifdef USB_MANAGER_FEATURE_HOST
-    int32_t OpenDevice(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote) override;
+    int32_t OpenDevice(uint8_t busNum, uint8_t devAddr) override;
     int32_t Close(uint8_t busNum, uint8_t devAddr) override;
     int32_t ResetDevice(uint8_t busNum, uint8_t devAddr) override;
     int32_t ClaimInterface(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid, uint8_t force) override;
@@ -246,20 +246,6 @@ private:
         uint32_t tokenId_;
     };
 
-#ifdef USB_MANAGER_FEATURE_HOST
-    class DeviceDeathRecipient : public IRemoteObject::DeathRecipient {
-    public:
-        DeviceDeathRecipient(uint8_t busNum, uint8_t devAddr, uint32_t tokenId)
-            : busNum_(busNum), devAddr_(devAddr), tokenId_(tokenId){};
-        ~DeviceDeathRecipient() {};
-        void OnRemoteDied(const wptr<IRemoteObject> &object) override;
-    private:
-        uint8_t busNum_;
-        uint8_t devAddr_;
-        uint32_t tokenId_;
-    };
-#endif // USB_MANAGER_FEATURE_HOST
-
 #ifdef USB_MANAGER_FEATURE_DEVICE
     class AccessoryDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
@@ -306,7 +292,6 @@ private:
     void UsbDeviceTypeChange(std::vector<UsbDeviceType> &disableType,
         const std::vector<UsbDeviceTypeInfo> &deviceTypes);
     void UsbTransInfoChange(HDI::Usb::V1_2::USBTransferInfo &info, const UsbTransInfo &param);
-    void RemoveDeviceClientInfo(uint8_t busNum, uint8_t devAddr, uint32_t tokenId);
     std::string GetDeviceVidPidSerialNumber(const std::string &deviceName);
     int32_t GetDeviceVidPidSerialNumber(const std::string &deviceName, std::string& strDesc);
 #endif // USB_MANAGER_FEATURE_HOST
@@ -324,13 +309,6 @@ private:
     std::mutex unloadSelfTimerMutex_;
 #ifdef USB_MANAGER_FEATURE_HOST
     std::shared_ptr<UsbHostManager> usbHostManager_;
-    struct DeviceClientInfo {
-        sptr<IRemoteObject> deviceRemote;
-        sptr<UsbService::DeviceDeathRecipient> deviceRecipient;
-        uint32_t tokenId;
-    };
-    std::map<std::tuple<uint8_t, uint8_t, uint32_t>, DeviceClientInfo> deviceClientMap_;
-    std::mutex deviceClientMutex_;
 #endif // USB_MANAGER_FEATURE_HOST
 #ifdef USB_MANAGER_FEATURE_DEVICE
     std::shared_ptr<UsbDeviceManager> usbDeviceManager_;
