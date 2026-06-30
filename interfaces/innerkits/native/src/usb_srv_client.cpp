@@ -903,10 +903,10 @@ std::string UsbSrvClient::UsbFunctionsToString(int32_t funcs)
     return result;
 }
 
-int32_t UsbSrvClient::GetAccessoryList(std::vector<USBAccessory> &accessList)
+int32_t UsbSrvClient::GetAccessoryList(std::vector<USBAccessory> &accessList, const bool isCliTool)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
-    int32_t ret = proxy_->GetAccessoryList(accessList);
+    int32_t ret = proxy_->GetAccessoryList(accessList, isCliTool);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "GetAccessoryList failed ret = %{public}d!", ret);
         return ret;

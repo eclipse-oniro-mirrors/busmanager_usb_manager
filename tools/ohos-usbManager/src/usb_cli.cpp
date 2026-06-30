@@ -24,6 +24,7 @@
 
 #define ARGC_ONE 1
 #define ARGC_TWO 2
+#define CLASS_HUB 0x09
 
 using namespace OHOS::USB;
 
@@ -32,7 +33,7 @@ static const char *TOOL_NAME = "ohos-usbManager";
 
 static const char *CMD_GET_DEVICE_LIST = "get-device-list";
 static const char *CMD_GET_ACCESSORY_LIST = "get-accessory-list";
-static const char *CMD_GET_USBSERIAL_LIST = "get-usbserial-list";
+static const char *CMD_GET_USBSERIAL_LIST = "get-serial-list";
 
 static void PrintMainHelp()
 {
@@ -43,12 +44,12 @@ static void PrintMainHelp()
     std::cout << "  --version           Show version information" << std::endl;
     std::cout << "  get-device-list     List all attached USB peripheral devices" << std::endl;
     std::cout << "  get-accessory-list  List all connected USB accessories" << std::endl;
-    std::cout << "  get-usbserial-list  List all available USB virtual serial ports" << std::endl;
+    std::cout << "  get-serial-list  List all available serial ports" << std::endl;
     std::cout << std::endl;
     std::cout << "Examples:" << std::endl;
     std::cout << "  " << TOOL_NAME << " get-device-list" << std::endl;
     std::cout << "  " << TOOL_NAME << " get-accessory-list" << std::endl;
-    std::cout << "  " << TOOL_NAME << " get-usbserial-list" << std::endl;
+    std::cout << "  " << TOOL_NAME << " get-serial-list" << std::endl;
 }
 
 static void PrintDeviceListHelp()
@@ -77,14 +78,14 @@ static void PrintAccessoryListHelp()
 
 static void PrintSerialListHelp()
 {
-    std::cout << "Usage: " << TOOL_NAME << " get-usbserial-list [--help] [--version]" << std::endl;
+    std::cout << "Usage: " << TOOL_NAME << " get-serial-list [--help] [--version]" << std::endl;
     std::cout << std::endl;
     std::cout << "Parameters:" << std::endl;
     std::cout << "  --help      Show this help message" << std::endl;
     std::cout << "  --version   Show version information" << std::endl;
     std::cout << std::endl;
     std::cout << "Examples:" << std::endl;
-    std::cout << "  " << TOOL_NAME << " get-usbserial-list" << std::endl;
+    std::cout << "  " << TOOL_NAME << " get-serial-list" << std::endl;
 }
 
 static void PrintVersion()
@@ -115,6 +116,9 @@ static int HandleGetDeviceList()
     std::vector<cJSON*> items;
     items.reserve(deviceList.size());
     for (auto &device : deviceList) {
+        if (device.GetClass() == CLASS_HUB) {
+            continue;
+        }
         cJSON *item = SerializeDevice(device);
         items.push_back(item);
     }

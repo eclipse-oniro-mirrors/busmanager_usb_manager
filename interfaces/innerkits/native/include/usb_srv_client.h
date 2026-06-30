@@ -107,7 +107,7 @@ public:
     int32_t HasAccessoryRight(const USBAccessory &access, bool &result);
     int32_t RequestAccessoryRight(const USBAccessory &access, bool &result);
     int32_t CancelAccessoryRight(const USBAccessory &access);
-    int32_t GetAccessoryList(std::vector<USBAccessory> &accessList);
+    int32_t GetAccessoryList(std::vector<USBAccessory> &accessList, const bool isCliTool = false);
     int32_t OpenAccessory(const USBAccessory &access, int32_t &fd);
     int32_t CloseAccessory(const int32_t fd);
 

@@ -168,11 +168,22 @@ HWTEST_F(UsbCliSerializationTest, FormatSuccess_EmptyList, TestSize.Level1)
     cJSON *root = cJSON_Parse(result.c_str());
     ASSERT_NE(root, nullptr);
 
-    cJSON *number = cJSON_GetObjectItem(root, "number");
+    cJSON *type = cJSON_GetObjectItem(root, "type");
+    ASSERT_NE(type, nullptr);
+    EXPECT_STREQ(type->valuestring, "result");
+
+    cJSON *status = cJSON_GetObjectItem(root, "status");
+    ASSERT_NE(status, nullptr);
+    EXPECT_STREQ(status->valuestring, "success");
+
+    cJSON *data = cJSON_GetObjectItem(root, "data");
+    ASSERT_NE(data, nullptr);
+
+    cJSON *number = cJSON_GetObjectItem(data, "number");
     ASSERT_NE(number, nullptr);
     EXPECT_EQ(number->valueint, 0);
 
-    cJSON *list = cJSON_GetObjectItem(root, "list");
+    cJSON *list = cJSON_GetObjectItem(data, "list");
     ASSERT_NE(list, nullptr);
     EXPECT_EQ(cJSON_GetArraySize(list), 0);
 
@@ -193,18 +204,26 @@ HWTEST_F(UsbCliSerializationTest, FormatSuccess_WithItems, TestSize.Level1)
     cJSON *root = cJSON_Parse(result.c_str());
     ASSERT_NE(root, nullptr);
 
-    cJSON *number = cJSON_GetObjectItem(root, "number");
+    cJSON *type = cJSON_GetObjectItem(root, "type");
+    ASSERT_NE(type, nullptr);
+    EXPECT_STREQ(type->valuestring, "result");
+
+    cJSON *status = cJSON_GetObjectItem(root, "status");
+    ASSERT_NE(status, nullptr);
+    EXPECT_STREQ(status->valuestring, "success");
+
+    cJSON *data = cJSON_GetObjectItem(root, "data");
+    ASSERT_NE(data, nullptr);
+
+    cJSON *number = cJSON_GetObjectItem(data, "number");
     ASSERT_NE(number, nullptr);
     EXPECT_EQ(number->valueint, 2);
 
-    cJSON *list = cJSON_GetObjectItem(root, "list");
+    cJSON *list = cJSON_GetObjectItem(data, "list");
     ASSERT_NE(list, nullptr);
     EXPECT_EQ(cJSON_GetArraySize(list), 2);
 
     cJSON_Delete(root);
-    for (auto *item : items) {
-        cJSON_Delete(item);
-    }
 }
 
 HWTEST_F(UsbCliSerializationTest, FormatError_Structure, TestSize.Level1)
@@ -214,13 +233,25 @@ HWTEST_F(UsbCliSerializationTest, FormatError_Structure, TestSize.Level1)
     cJSON *root = cJSON_Parse(result.c_str());
     ASSERT_NE(root, nullptr);
 
-    cJSON *code = cJSON_GetObjectItem(root, "code");
-    ASSERT_NE(code, nullptr);
-    EXPECT_EQ(code->valueint, 42);
+    cJSON *type = cJSON_GetObjectItem(root, "type");
+    ASSERT_NE(type, nullptr);
+    EXPECT_STREQ(type->valuestring, "result");
 
-    cJSON *message = cJSON_GetObjectItem(root, "message");
-    ASSERT_NE(message, nullptr);
-    EXPECT_STREQ(message->valuestring, "test error");
+    cJSON *status = cJSON_GetObjectItem(root, "status");
+    ASSERT_NE(status, nullptr);
+    EXPECT_STREQ(status->valuestring, "failed");
+
+    cJSON *errCode = cJSON_GetObjectItem(root, "errCode");
+    ASSERT_NE(errCode, nullptr);
+    EXPECT_STREQ(errCode->valuestring, "QUERY_FAILED");
+
+    cJSON *errMsg = cJSON_GetObjectItem(root, "errMsg");
+    ASSERT_NE(errMsg, nullptr);
+    EXPECT_STREQ(errMsg->valuestring, "test error");
+
+    cJSON *suggestion = cJSON_GetObjectItem(root, "suggestion");
+    ASSERT_NE(suggestion, nullptr);
+    EXPECT_STREQ(suggestion->valuestring, "Please check if the device is connected and the connection is normal.");
 
     cJSON_Delete(root);
 }

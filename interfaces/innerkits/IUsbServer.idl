@@ -73,7 +73,7 @@ interface OHOS.USB.IUsbServer {
     [macrodef USB_MANAGER_FEATURE_DEVICE] void HasAccessoryRight([in] USBAccessory access, [out] boolean checkResult);
     [macrodef USB_MANAGER_FEATURE_DEVICE] void RequestAccessoryRight([in] USBAccessory access, [out] boolean checkResult);
     [macrodef USB_MANAGER_FEATURE_DEVICE] void CancelAccessoryRight([in] USBAccessory access);
-    [macrodef USB_MANAGER_FEATURE_DEVICE] void GetAccessoryList([out] USBAccessory[] accessList);
+    [macrodef USB_MANAGER_FEATURE_DEVICE] void GetAccessoryList([out] USBAccessory[] accessList, [in] boolean isCliTool);
     [macrodef USB_MANAGER_FEATURE_DEVICE] void OpenAccessory([in] USBAccessory access, [out] FileDescriptor fd, [in]IRemoteObject accessoryRemote);
     [macrodef USB_MANAGER_FEATURE_DEVICE] void CloseAccessory([in] int fd);
 
