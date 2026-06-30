@@ -1849,7 +1849,7 @@ int32_t UsbService::UserChangeProcess()
 // LCOV_EXCL_STOP
 
 // LCOV_EXCL_START
-int32_t UsbService::GetAccessoryList(std::vector<USBAccessory> &accessList)
+int32_t UsbService::GetAccessoryList(std::vector<USBAccessory> &accessList, const bool isCliTool)
 {
     if (usbAccessoryManager_ == nullptr) {
         USB_HILOGE(MODULE_USB_DEVICE, "invalid usbAccessoryManager_");
@@ -1858,7 +1858,8 @@ int32_t UsbService::GetAccessoryList(std::vector<USBAccessory> &accessList)
     std::string bundleName;
     std::string tokenId;
     int32_t userId = USB_RIGHT_USERID_INVALID;
-    if (!GetCallingInfo(bundleName, tokenId, userId)) {
+    if (!isCliTool && !GetCallingInfo(bundleName, tokenId, userId)) {
+        // only internal CLi tool is allowed to skip GetCallingInfo
         USB_HILOGE(MODULE_USB_DEVICE, "GetCallingInfo false");
         ReportUsbOperationFaultSysEvent("GetAccessoryList ", UEC_SERVICE_INNER_ERR, "GetCallingInfo false");
         return UEC_SERVICE_INNER_ERR;

@@ -166,7 +166,7 @@ public:
     void UpdateDeviceState(int32_t status);
     void SetPhyConnect(bool phyConnect);
     int32_t UserChangeProcess();
-    int32_t GetAccessoryList(std::vector<USBAccessory> &accessList) override;
+    int32_t GetAccessoryList(std::vector<USBAccessory> &accessList, const bool isCliTool = false) override;
     int32_t OpenAccessory(const USBAccessory &access, int32_t &fd) override;
     int32_t CloseAccessory(int32_t fd) override;
     int32_t AddAccessoryRight(const uint32_t tokenId, const USBAccessory &access) override;
