@@ -81,7 +81,7 @@
             "name":"serial_right_title",
             "value":"Serial access authorization",
             "attr":{
-                "priority":"translate"
+                "priority":"LT"
             }
         },
         {

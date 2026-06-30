@@ -135,7 +135,7 @@
         },
         {
             "name":"USB_hdc_notifier_content",
-            "value":"Zum Deaktivieren von USB-Debugging berühren",
+            "value":"Zum Deaktivieren von USB-Debugging antippen.",
             "attr":{
                 "priority":"LT"
             }
@@ -156,9 +156,9 @@
         },
         {
             "name":"serial_right_title",
-            "value":"Serielle Zugriffsautorisierung",
+            "value":"Autorisierung für seriellen Zugriff",
             "attr":{
-                "priority":"translate"
+                "priority":"LT"
             }
         }
     ]

@@ -535,6 +535,54 @@ ohos_unittest("test_usbdfx") {
   ]
 }
 
+ohos_unittest("test_usbhostmanagerextended") {
+  module_out_path = module_output_path
+  sources = [
+    "src/usb_host_manager_extended_test.cpp",
+  ]
+
+  configs = [
+    "${utils_path}:utils_config",
+    ":module_private_config",
+  ]
+
+  deps = [
+    "${usb_manager_path}/interfaces/innerkits:usbsrv_client",
+    "${usb_manager_path}/services:usbservice",
+  ]
+
+  external_deps = [
+    "c_utils:utils",
+    "googletest:gtest_main",
+    "hilog:libhilog",
+    "ipc:ipc_core",
+  ]
+}
+
+ohos_unittest("test_usbdevicemodel") {
+  module_out_path = module_output_path
+  sources = [
+    "src/usb_device_model_test.cpp",
+  ]
+
+  configs = [
+    "${utils_path}:utils_config",
+    ":module_private_config",
+  ]
+
+  deps = [
+    "${usb_manager_path}/interfaces/innerkits:usbsrv_client",
+    "${usb_manager_path}/services:usbservice",
+  ]
+
+  external_deps = [
+    "c_utils:utils",
+    "googletest:gtest_main",
+    "hilog:libhilog",
+    "ipc:ipc_core",
+  ]
+}
+
 group("unittest") {
   testonly = true
   deps = [
@@ -552,5 +600,7 @@ group("unittest") {
     ":test_usbmanageinterface",
     ":test_usbmanagedevicepolicy",
     ":test_usbrequest",
+    ":test_usbhostmanagerextended",
+    ":test_usbdevicemodel",
   ]
 }

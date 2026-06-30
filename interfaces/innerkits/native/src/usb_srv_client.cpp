@@ -40,6 +40,7 @@ UsbSrvClient::UsbSrvClient()
 {
     Connect();
     serialRemote = new SerialDeathMonitor();
+    accessoryRemote = new AccessoryDeathMonitor();
 }
 UsbSrvClient::~UsbSrvClient()
 {
@@ -917,7 +918,7 @@ int32_t UsbSrvClient::GetAccessoryList(std::vector<USBAccessory> &accessList, co
 int32_t UsbSrvClient::OpenAccessory(const USBAccessory &access, int32_t &fd)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
-    int32_t ret = proxy_->OpenAccessory(access, fd);
+    int32_t ret = proxy_->OpenAccessory(access, fd, accessoryRemote);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "OpenAccessory ret = %{public}d!", ret);
     }

@@ -78,6 +78,8 @@ constexpr int32_t USB_RIGHT_USERID_INVALID = -1;
 #endif // USB_MANAGER_FEATURE_HOST || USB_MANAGER_FEATURE_DEVICE
 constexpr int32_t API_VERSION_ID_18 = 18;
 static const std::filesystem::path TTYUSB_PATH = "/sys/bus/usb-serial/devices";
+static const std::filesystem::path TTYACM_PATH = "/sys/class/tty";
+static const std::string TTYACM_PREFIX = "ttyACM";
 constexpr const pid_t ROOT_UID = 0;
 constexpr const pid_t EDM_UID = 3057;
 } // namespace
@@ -511,6 +513,7 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr)
         USB_HILOGE(MODULE_USB_HOST, "UsbService::usbHostManager_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
+
     int32_t ret = usbHostManager_->OpenDevice(busNum, devAddr);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_HOST, "OpenDevice failed ret:%{public}d", ret);
@@ -1578,9 +1581,9 @@ int32_t UsbService::RemoveRight(const std::string &deviceName)
         return false;
     }
 
-    if (usbRightManager_->RemoveDeviceRight(deviceVidPidSerialNum, bundleName, tokenId, userId)) {
-        USB_HILOGI(MODULE_USB_HOST, "RemoveDeviceRight done");
-        return UEC_OK;
+    if (!usbRightManager_->RemoveDeviceRight(deviceVidPidSerialNum, bundleName, tokenId, userId)) {
+        USB_HILOGE(MODULE_USB_SERVICE, "RemoveDeviceRight failed");
+        return UEC_SERVICE_PERMISSION_DENIED;
     }
 
     USB_HILOGI(MODULE_USB_HOST, "RemoveRight done");
@@ -1872,7 +1875,7 @@ int32_t UsbService::GetAccessoryList(std::vector<USBAccessory> &accessList, cons
 // LCOV_EXCL_STOP
 
 // LCOV_EXCL_START
-int32_t UsbService::OpenAccessory(const USBAccessory &access, int32_t &fd)
+int32_t UsbService::OpenAccessory(const USBAccessory &access, int32_t &fd, const sptr<IRemoteObject> &accessoryRemote)
 {
     if (usbAccessoryManager_ == nullptr) {
         USB_HILOGE(MODULE_USB_DEVICE, "invalid usbAccessoryManager_");
@@ -1906,7 +1909,23 @@ int32_t UsbService::OpenAccessory(const USBAccessory &access, int32_t &fd)
     ret = usbAccessoryManager_->OpenAccessory(fd);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_DEVICE, "error ret:%{public}d", ret);
+        return ret;
     }
+
+    uint32_t tokenIdNum = std::stoul(tokenId);
+    sptr<AccessoryDeathRecipient> accessoryRecipient = new AccessoryDeathRecipient(fd, tokenIdNum);
+    if (accessoryRecipient == nullptr || accessoryRemote == nullptr ||
+        !accessoryRemote->AddDeathRecipient(accessoryRecipient)) {
+        CloseAccessory(fd);
+        fd = -1;
+        USB_HILOGE(MODULE_USB_DEVICE, "UsbService::OpenAccessory add DeathRecipient failed");
+        return UEC_SERVICE_INVALID_VALUE;
+    }
+
+    std::lock_guard<std::mutex> guard(accessoryClientMutex_);
+    AccessoryClientInfo info = {accessoryRemote, accessoryRecipient, tokenIdNum};
+    accessoryClientMap_[std::make_pair(fd, tokenIdNum)] = info;
+
     return ret;
 }
 // LCOV_EXCL_STOP
@@ -1918,11 +1937,31 @@ int32_t UsbService::CloseAccessory(int32_t fd)
         USB_HILOGE(MODULE_USB_DEVICE, "invalid usbAccessoryManager_");
         return UEC_SERVICE_INVALID_VALUE;
     }
+
+    uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
+    RemoveAccessoryClientInfo(fd, tokenId);
+
     int32_t ret = usbAccessoryManager_->CloseAccessory(fd);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_DEVICE, "error ret:%{public}d", ret);
     }
     return ret;
+}
+// LCOV_EXCL_STOP
+
+// LCOV_EXCL_START
+void UsbService::RemoveAccessoryClientInfo(int32_t fd, uint32_t tokenId)
+{
+    std::pair<int32_t, uint32_t> key = std::make_pair(fd, tokenId);
+    std::lock_guard<std::mutex> guard(accessoryClientMutex_);
+    auto it = accessoryClientMap_.find(key);
+    if (it != accessoryClientMap_.end()) {
+        if (it->second.accessoryRemote != nullptr && it->second.accessoryRecipient != nullptr) {
+            it->second.accessoryRemote->RemoveDeathRecipient(it->second.accessoryRecipient);
+        }
+        accessoryClientMap_.erase(it);
+        USB_HILOGI(MODULE_USB_DEVICE, "Removed accessory client info fd=%{public}d tokenId=%{public}u", fd, tokenId);
+    }
 }
 // LCOV_EXCL_STOP
 
@@ -2541,6 +2580,20 @@ void UsbService::SerialDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &o
 // LCOV_EXCL_STOP
 
 // LCOV_EXCL_START
+#ifdef USB_MANAGER_FEATURE_DEVICE
+void UsbService::AccessoryDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &object)
+{
+    USB_HILOGI(MODULE_USB_SERVICE,
+        "UsbService AccessoryDeathRecipient enter fd=%{public}d tokenId=%{public}u", fd_, tokenId_);
+    sptr<UsbService> service = UsbService::GetGlobalInstance();
+    service->RemoveAccessoryClientInfo(fd_, tokenId_);
+    service->CloseAccessory(fd_);
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbService AccessoryDeathRecipient exit");
+}
+#endif // USB_MANAGER_FEATURE_DEVICE
+// LCOV_EXCL_STOP
+
+// LCOV_EXCL_START
 void UsbService::FreeTokenId(int32_t portId, uint32_t tokenId)
 {
     usbSerialManager_->FreeTokenId(portId, tokenId);
@@ -2557,16 +2610,21 @@ sptr<UsbService> UsbService::GetGlobalInstance()
 bool CheckForTtyUSB()
 {
     USB_HILOGI(MODULE_USB_SERVICE, "CheckForTtyUSB");
-    if (!exists(TTYUSB_PATH)) {
-        USB_HILOGE(MODULE_USB_SERVICE, "%{public}s: The path does not exist", __func__);
-        return false;
-    }
-    for (const auto& entry : std::filesystem::directory_iterator(TTYUSB_PATH)) {
-        if (entry.is_directory()) {
-            return true;
+    if (std::filesystem::exists(TTYUSB_PATH)) {
+        for (const auto& entry : std::filesystem::directory_iterator(TTYUSB_PATH)) {
+            if (entry.is_directory()) {
+                return true;
+            }
         }
     }
-    USB_HILOGI(MODULE_USB_SERVICE, "can't find ttyUSB");
+    if (std::filesystem::exists(TTYACM_PATH)) {
+        for (const auto& entry : std::filesystem::directory_iterator(TTYACM_PATH)) {
+            if (entry.is_directory() && entry.path().filename().string().find(TTYACM_PREFIX) == 0) {
+                return true;
+            }
+        }
+    }
+    USB_HILOGI(MODULE_USB_SERVICE, "can't find ttyUSB or ttyACM");
     return false;
 }
 

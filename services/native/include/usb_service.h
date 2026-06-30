@@ -246,6 +246,19 @@ private:
         uint32_t tokenId_;
     };
 
+#ifdef USB_MANAGER_FEATURE_DEVICE
+    class AccessoryDeathRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        AccessoryDeathRecipient(int32_t fd, uint32_t tokenId)
+            : fd_(fd), tokenId_(tokenId){};
+        ~AccessoryDeathRecipient() {};
+        void OnRemoteDied(const wptr<IRemoteObject> &object) override;
+    private:
+        int32_t fd_;
+        uint32_t tokenId_;
+    };
+#endif // USB_MANAGER_FEATURE_DEVICE
+
 private:
     bool Init();
     bool InitUsbd();
@@ -282,6 +295,9 @@ private:
     std::string GetDeviceVidPidSerialNumber(const std::string &deviceName);
     int32_t GetDeviceVidPidSerialNumber(const std::string &deviceName, std::string& strDesc);
 #endif // USB_MANAGER_FEATURE_HOST
+#ifdef USB_MANAGER_FEATURE_DEVICE
+    void RemoveAccessoryClientInfo(int32_t fd, uint32_t tokenId);
+#endif // USB_MANAGER_FEATURE_DEVICE
 #if defined(USB_MANAGER_FEATURE_HOST) || defined(USB_MANAGER_FEATURE_DEVICE)
     bool GetCallingInfo(std::string &bundleName, std::string &tokenId, int32_t &userId);
 #endif // USB_MANAGER_FEATURE_HOST || USB_MANAGER_FEATURE_DEVICE
@@ -297,6 +313,13 @@ private:
 #ifdef USB_MANAGER_FEATURE_DEVICE
     std::shared_ptr<UsbDeviceManager> usbDeviceManager_;
     std::shared_ptr<UsbAccessoryManager> usbAccessoryManager_;
+    struct AccessoryClientInfo {
+        sptr<IRemoteObject> accessoryRemote;
+        sptr<UsbService::AccessoryDeathRecipient> accessoryRecipient;
+        uint32_t tokenId;
+    };
+    std::map<std::pair<int32_t, uint32_t>, AccessoryClientInfo> accessoryClientMap_;
+    std::mutex accessoryClientMutex_;
 #endif // USB_MANAGER_FEATURE_DEVICE
 #ifdef USB_MANAGER_FEATURE_PORT
     std::shared_ptr<UsbPortManager> usbPortManager_;

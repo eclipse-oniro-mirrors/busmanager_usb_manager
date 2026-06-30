@@ -156,9 +156,9 @@
         },
         {
             "name":"serial_right_title",
-            "value":"シリアルアクセス承認",
+            "value":"シリアルポートのアクセス許可",
             "attr":{
-                "priority":"translate"
+                "priority":"LT"
             }
         }
     ]

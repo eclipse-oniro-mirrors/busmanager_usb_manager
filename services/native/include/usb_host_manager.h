@@ -139,14 +139,16 @@ private:
     bool IsEdmEnabled();
     int32_t ExecuteManageDevicePolicy(std::vector<UsbDeviceId> &trustList);
     int32_t ExecuteManageInterfaceType(const std::vector<UsbDeviceType> &disableType, bool disable);
-    void ExecuteManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable, bool isDev);
-    void ManageUsbTypeDeviceImpl(const UsbDeviceType &type, bool disable);
-    void ManageUsbTypeInterfaceImpl(const UsbDeviceType &type, bool disable);
+    void ExecuteManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable);
+    void ManageUsbTypeDeviceImpl(const std::vector<UsbDeviceType> &types, bool disable);
+    void ManageUsbTypeInterfaceImpl(const std::vector<UsbDeviceType> &types, bool disable);
+    bool IsUsbInterfaceTypeMatched(const std::vector<UsbDeviceType> &types, const UsbInterface intf);
     int32_t GetEdmPolicy(bool &IsGlobalDisabled, std::vector<UsbDeviceType> &disableType,
         std::vector<UsbDeviceId> &trustUsbDeviceIds);
     int32_t GetUsbPolicy(bool &IsGlobalDisabled, std::vector<UsbDeviceType> &disableType,
         std::vector<UsbDeviceId> &trustUsbDeviceIds);
     int32_t GetEdmTypePolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceType> &disableType);
+    int32_t GetEdmPermTypePolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceType> &disableType);
     void ReadTypePolicyFromParcel(MessageParcel &reply, int size, std::vector<UsbDeviceType> &disableType);
     int32_t GetEdmGlobalPolicy(sptr<IRemoteObject> remote, bool &IsGlobalDisabled);
     int32_t GetEdmStroageTypePolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceType> &disableType);
