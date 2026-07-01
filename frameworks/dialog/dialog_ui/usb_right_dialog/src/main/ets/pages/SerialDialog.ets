@@ -38,7 +38,7 @@ struct SerialDialogComponent {
           try {
             let tokenId: string = globalThis.want.parameters['tokenId'];
             let deviceId: string = globalThis.want.parameters['deviceId'];
-            console.info('SerialRight allowed, tokenId: ' + tokenId + ', deviceId: ' + deviceId);
+            console.info('SerialRight allowed');
             serial.addPortAuthorization(tokenId, deviceId).then(() => {
               console.info('SerialRight addPortAuthorization success');
             }).catch((err: Error) => {
