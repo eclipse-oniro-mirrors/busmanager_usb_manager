@@ -2486,9 +2486,7 @@ bool UsbService::IsNotNeedUnload()
     bool hasActiveDevices = false;
     bool isGadgetConnected = false;
 #ifdef USB_MANAGER_FEATURE_HOST
-    std::vector<UsbDevice> devices;
-    (void)usbHostManager_->GetDevices(devices);
-    hasActiveDevices = !devices.empty();
+    hasActiveDevices = usbHostManager_->hasActiveDevice();
 #endif // USB_MANAGER_FEATURE_HOST
 #ifdef USB_MANAGER_FEATURE_DEVICE
     isGadgetConnected = usbDeviceManager_->IsGadgetConnected();

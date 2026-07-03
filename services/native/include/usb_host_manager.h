@@ -126,6 +126,7 @@ public:
     int32_t BulkWrite(
         const HDI::Usb::V1_0::UsbDev &devInfo, const HDI::Usb::V1_0::UsbPipe &pipe, sptr<Ashmem> &ashmem);
     int32_t BulkCancel(const HDI::Usb::V1_0::UsbDev &devInfo, const HDI::Usb::V1_0::UsbPipe &pipe);
+    bool hasActiveDevice();
 
 private:
     bool PublishCommonEvent(const std::string &event, UsbDevice &dev);
