@@ -835,8 +835,8 @@ int32_t usbControlTransferSync(
     ani_ref bufferRef;
     ani_env *env = ::taihe::get_env();
     ani_object array_obj = reinterpret_cast<ani_object>(requestparam.data);
-    if (env == nullprt) {
-        USB_HILOGE(MODULE_USB_NAPI, "get_env failed,env is nullptr");
+    if (env == nullptr) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: get_env failed,env is nullptr!", __func__);
         return ERROR;
     }
 
@@ -874,8 +874,8 @@ int32_t bulkTransferSync(::ohos::usbManager::USBDevicePipe const &pipe, ::ohos::
     ani_ref bufferRef;
     ani_env *env = ::taihe::get_env();
     ani_object array_obj = reinterpret_cast<ani_object>(buffer);
-    if (env == nullprt) {
-        USB_HILOGE(MODULE_USB_NAPI, "get_env failed,env is nullptr");
+    if (env == nullptr) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: get_env failed,env is nullptr!", __func__);
         return ERROR;
     }
 
@@ -1341,8 +1341,8 @@ bool ExtractBufferData(USBTransferAsyncContext* context, ani_object array_obj)
     ani_ref buffer;
     ani_env* env = ::taihe::get_env();
     ani_vm* vm = nullptr;
-    if (env == nullprt) {
-        USB_HILOGE(MODULE_USB_NAPI, "get_env failed,env is nullptr");
+    if (env == nullptr) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: get_env failed,env is nullptr!", __func__);
         return ERROR;
     }
 
@@ -1365,8 +1365,8 @@ bool SetupCallback(USBTransferAsyncContext* context, ani_object callbackObj)
 {
     ani_ref callback;
     ani_env* env = ::taihe::get_env();
-    if (env == nullprt) {
-        USB_HILOGE(MODULE_USB_NAPI, "get_env failed,env is nullptr");
+    if (env == nullptr) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: get_env failed,env is nullptr!", __func__);
         return ERROR;
     }
 

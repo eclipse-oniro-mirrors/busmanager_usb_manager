@@ -319,8 +319,8 @@ int32_t ReadSync(int32_t portId, uintptr_t buffer, ::taihe::optional_view<int32_
     ani_ref bufferRef;
     ani_env *env = ::taihe::get_env();
     ani_object array_obj = reinterpret_cast<ani_object>(buffer);
-    if (env == nullprt) {
-        USB_HILOGE(MODULE_USB_NAPI, "get_env failed,env is nullptr");
+    if (env == nullptr) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: get_env failed,env is nullptr!", __func__);
         return ERROR;
     }
 
