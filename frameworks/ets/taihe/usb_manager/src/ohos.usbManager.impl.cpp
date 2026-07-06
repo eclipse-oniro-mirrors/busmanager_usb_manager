@@ -1341,6 +1341,12 @@ bool ExtractBufferData(USBTransferAsyncContext* context, ani_object array_obj)
     ani_ref buffer;
     ani_env* env = ::taihe::get_env();
     ani_vm* vm = nullptr;
+    if (env == nullptr || context->callbackRef == nullptr) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: env/callbackRef is nullptr", __func__);
+        delete context;
+        return;
+    }
+
     if (env->GetVM(&vm) != ANI_OK ||
         env->Object_GetFieldByName_Ref(array_obj, "buffer", &buffer) != ANI_OK) {
         return false;
@@ -1360,6 +1366,12 @@ bool SetupCallback(USBTransferAsyncContext* context, ani_object callbackObj)
 {
     ani_ref callback;
     ani_env* env = ::taihe::get_env();
+    if (env == nullptr || context->callbackRef == nullptr) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: env/callbackRef is nullptr", __func__);
+        delete context;
+        return;
+    }
+
     if (env->GlobalReference_Create(callbackObj, &callback) == ANI_OK) {
         context->callbackRef = reinterpret_cast<ani_object>(callback);
         return true;

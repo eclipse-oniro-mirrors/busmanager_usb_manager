@@ -319,6 +319,12 @@ int32_t ReadSync(int32_t portId, uintptr_t buffer, ::taihe::optional_view<int32_
     ani_ref bufferRef;
     ani_env *env = ::taihe::get_env();
     ani_object array_obj = reinterpret_cast<ani_object>(buffer);
+    if (env == nullptr || context->callbackRef == nullptr) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: env/callbackRef is nullptr", __func__);
+        delete context;
+        return;
+    }
+
     if (ANI_OK != env->Object_GetFieldByName_Ref(array_obj, "buffer", &bufferRef)) {
         USB_HILOGE(MODULE_USB_NAPI,   "Object_GetFieldByName_Ref failed.");
         metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
