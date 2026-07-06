@@ -1343,7 +1343,7 @@ bool ExtractBufferData(USBTransferAsyncContext* context, ani_object array_obj)
     ani_vm* vm = nullptr;
     if (env == nullptr) {
         USB_HILOGE(MODULE_USB_NAPI, "%{public}s: get_env failed,env is nullptr!", __func__);
-        return ERROR;
+        return false;
     }
 
     if (env->GetVM(&vm) != ANI_OK ||
@@ -1367,7 +1367,7 @@ bool SetupCallback(USBTransferAsyncContext* context, ani_object callbackObj)
     ani_env* env = ::taihe::get_env();
     if (env == nullptr) {
         USB_HILOGE(MODULE_USB_NAPI, "%{public}s: get_env failed,env is nullptr!", __func__);
-        return ERROR;
+        return false;
     }
 
     if (env->GlobalReference_Create(callbackObj, &callback) == ANI_OK) {
