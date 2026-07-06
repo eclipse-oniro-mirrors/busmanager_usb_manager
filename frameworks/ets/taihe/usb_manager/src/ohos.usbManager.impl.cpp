@@ -835,6 +835,11 @@ int32_t usbControlTransferSync(
     ani_ref bufferRef;
     ani_env *env = ::taihe::get_env();
     ani_object array_obj = reinterpret_cast<ani_object>(requestparam.data);
+    if (env == nullprt) {
+        USB_HILOGE(MODULE_USB_NAPI, "get_env failed,env is nullptr");
+        return ERROR;
+    }
+
     if (ANI_OK != env->Object_GetFieldByName_Ref(array_obj, "buffer", &bufferRef)) {
         USB_HILOGE(MODULE_USB_NAPI, "Object_GetFieldByName_Ref failed.");
         return ERROR;
@@ -869,6 +874,11 @@ int32_t bulkTransferSync(::ohos::usbManager::USBDevicePipe const &pipe, ::ohos::
     ani_ref bufferRef;
     ani_env *env = ::taihe::get_env();
     ani_object array_obj = reinterpret_cast<ani_object>(buffer);
+    if (env == nullprt) {
+        USB_HILOGE(MODULE_USB_NAPI, "get_env failed,env is nullptr");
+        return ERROR;
+    }
+
     if (ANI_OK != env->Object_GetFieldByName_Ref(array_obj, "buffer", &bufferRef)) {
         USB_HILOGE(MODULE_USB_NAPI,   "Object_GetFieldByName_Ref failed.");
         return ERROR;
