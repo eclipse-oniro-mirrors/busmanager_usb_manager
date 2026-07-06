@@ -835,6 +835,11 @@ int32_t usbControlTransferSync(
     ani_ref bufferRef;
     ani_env *env = ::taihe::get_env();
     ani_object array_obj = reinterpret_cast<ani_object>(requestparam.data);
+    if (env == nullptr) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: get_env failed,env is nullptr!", __func__);
+        return ERROR;
+    }
+
     if (ANI_OK != env->Object_GetFieldByName_Ref(array_obj, "buffer", &bufferRef)) {
         USB_HILOGE(MODULE_USB_NAPI, "Object_GetFieldByName_Ref failed.");
         return ERROR;
@@ -869,6 +874,11 @@ int32_t bulkTransferSync(::ohos::usbManager::USBDevicePipe const &pipe, ::ohos::
     ani_ref bufferRef;
     ani_env *env = ::taihe::get_env();
     ani_object array_obj = reinterpret_cast<ani_object>(buffer);
+    if (env == nullptr) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: get_env failed,env is nullptr!", __func__);
+        return ERROR;
+    }
+
     if (ANI_OK != env->Object_GetFieldByName_Ref(array_obj, "buffer", &bufferRef)) {
         USB_HILOGE(MODULE_USB_NAPI,   "Object_GetFieldByName_Ref failed.");
         return ERROR;
@@ -1331,6 +1341,11 @@ bool ExtractBufferData(USBTransferAsyncContext* context, ani_object array_obj)
     ani_ref buffer;
     ani_env* env = ::taihe::get_env();
     ani_vm* vm = nullptr;
+    if (env == nullptr) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: get_env failed,env is nullptr!", __func__);
+        return false;
+    }
+
     if (env->GetVM(&vm) != ANI_OK ||
         env->Object_GetFieldByName_Ref(array_obj, "buffer", &buffer) != ANI_OK) {
         return false;
@@ -1350,6 +1365,11 @@ bool SetupCallback(USBTransferAsyncContext* context, ani_object callbackObj)
 {
     ani_ref callback;
     ani_env* env = ::taihe::get_env();
+    if (env == nullptr) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: get_env failed,env is nullptr!", __func__);
+        return false;
+    }
+
     if (env->GlobalReference_Create(callbackObj, &callback) == ANI_OK) {
         context->callbackRef = reinterpret_cast<ani_object>(callback);
         return true;
