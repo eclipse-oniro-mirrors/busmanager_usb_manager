@@ -319,14 +319,13 @@ int32_t ReadSync(int32_t portId, uintptr_t buffer, ::taihe::optional_view<int32_
     ani_ref bufferRef;
     ani_env *env = ::taihe::get_env();
     ani_object array_obj = reinterpret_cast<ani_object>(buffer);
-    if (env == nullptr || context->callbackRef == nullptr) {
-        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: env/callbackRef is nullptr", __func__);
-        delete context;
-        return;
+    if (env == nullprt) {
+        USB_HILOGE(MODULE_USB_NAPI, "get_env failed,env is nullptr");
+        return ERROR;
     }
 
     if (ANI_OK != env->Object_GetFieldByName_Ref(array_obj, "buffer", &bufferRef)) {
-        USB_HILOGE(MODULE_USB_NAPI,   "Object_GetFieldByName_Ref failed.");
+        USB_HILOGE(MODULE_USB_NAPI, "Object_GetFieldByName_Ref failed.");
         metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         set_business_error(SYSPARAM_INVALID_INPUT, "buffer is invalid!");
         return ERROR;
@@ -334,7 +333,7 @@ int32_t ReadSync(int32_t portId, uintptr_t buffer, ::taihe::optional_view<int32_
     void *data = nullptr;
     size_t dataSize = 0;
     if (ANI_OK != env->ArrayBuffer_GetInfo(static_cast<ani_arraybuffer>(bufferRef), &data, &dataSize)) {
-        USB_HILOGE(MODULE_USB_NAPI,   "ArrayBuffer_GetInfo failed.");
+        USB_HILOGE(MODULE_USB_NAPI, "ArrayBuffer_GetInfo failed.");
         metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
         set_business_error(SYSPARAM_INVALID_INPUT, "buffer is invalid!");
         return ERROR;
