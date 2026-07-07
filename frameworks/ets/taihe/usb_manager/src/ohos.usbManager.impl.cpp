@@ -1182,7 +1182,7 @@ static void ReadDataToBuffer(USBTransferAsyncContext *asyncContext, const OHOS::
         }
         if (actBufLen > asyncContext->bufferLength) {
             USB_HILOGW(MODULE_USB_NAPI, "read warn,expect read len:%{public}zu,actualLength:%{public}zu",
-                asyncContext->bufferlength, actBufLen);
+                asyncContext->bufferLength, actBufLen);
             actBufLen = asyncContext->bufferLength;
         }
         int32_t ret = memcpy_s(asyncContext->buffer, asyncContext->bufferLength, ashmemBuffer, actBufLen);
