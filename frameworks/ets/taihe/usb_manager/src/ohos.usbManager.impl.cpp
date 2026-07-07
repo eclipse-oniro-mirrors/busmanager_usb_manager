@@ -1171,6 +1171,7 @@ static bool CreateAndWriteAshmem(USBTransferAsyncContext *asyncContext, OHOS::HD
 static void ReadDataToBuffer(USBTransferAsyncContext *asyncContext, const OHOS::USB::TransferCallbackInfo &info)
 {
     uint8_t endpointId = static_cast<uint8_t>(asyncContext->endpoint) & OHOS::USB::USB_ENDPOINT_DIR_MASK;
+    size_t actBufLen = info.actualLength;
     if (endpointId == OHOS::USB::USB_ENDPOINT_DIR_IN) {
         asyncContext->ashmem->MapReadAndWriteAshmem();
         auto ashmemBuffer = asyncContext->ashmem->ReadFromAshmem(info.actualLength, 0);
@@ -1179,7 +1180,12 @@ static void ReadDataToBuffer(USBTransferAsyncContext *asyncContext, const OHOS::
             asyncContext->ashmem->CloseAshmem();
             return;
         }
-        int32_t ret = memcpy_s(asyncContext->buffer, asyncContext->bufferLength, ashmemBuffer, info.actualLength);
+        if (actBufLen > asyncContext->bufferLength) {
+            USB_HILOGW(MODULE_USB_NAPI, "read warn,expect read len:%{public}zu,actualLength:%{public}zu",
+                asyncContext->bufferlength, actBufLen);
+            actBufLen = asyncContext->bufferLength;
+        }
+        int32_t ret = memcpy_s(asyncContext->buffer, asyncContext->bufferLength, ashmemBuffer, actBufLen);
         if (ret != EOK) {
             USB_HILOGE(MODULE_USB_NAPI, "memcpy_s fatal failed error: %{public}d", ret);
         }
