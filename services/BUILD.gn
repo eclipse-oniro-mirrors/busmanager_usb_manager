@@ -118,6 +118,7 @@ ohos_shared_library("usbservice") {
     "i18n:intl_util",
     "data_share:datashare_common",
     "data_share:datashare_consumer",
+    "image_framework:image_native",
     "init:libbeget_proxy",
     "init:libbegetutil",
     "ipc:ipc_single",
