@@ -64,7 +64,8 @@
                 "hdf_core",
                 "external_device_manager",
                 "eventhandler",
-                "api_metrics"
+                "api_metrics",
+                "image_framework"
             ]
         },
         "build": {
