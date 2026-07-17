@@ -25,7 +25,6 @@ import Want from '@ohos.app.ability.Want';
 import deviceInfo from '@ohos.deviceInfo';
 import { SelectDialog, SheetInfoEx } from '../components/dialog';
 import systemParameterEnhance from '@ohos.systemParameterEnhance';
-import uiMaterial from '@ohos.arkui.uiMaterial'
 let TAG: string = 'UsbService';
 let USBSERVICESWITCH_ID_DEFAULT : number = -1;
 let USBSERVICESWITCH_ID_CHARGE_ONLY : number = -1;
@@ -89,9 +88,6 @@ struct IndexHapComponent {
       },
       radioContent: this.radioContent,
     }),
-    systemMaterial: new uiMaterial.ImmersiveMaterial({ style:uiMaterial.ImmersiveStyle.ULTRA_THICK }),
-    edgeLightMode:EdgeLightMode.EDGELIGHT_AUTO,
-    distortionMode:DistortionMode.DISTORTION_AUTO,
     alignment: DialogAlignment.Center,
     autoCancel: true,
     cancel: this.onCancel
