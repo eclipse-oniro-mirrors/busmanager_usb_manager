@@ -16,6 +16,7 @@
 import { AlertDialog } from '@ohos.arkui.advanced.Dialog'
 import { terminateDialog } from '../util/DialogUtil';
 import serial from '@ohos.busManager.serial'
+import uiMaterial from '@ohos.arkui.uiMaterial'
 
 @Entry
 @Component
@@ -56,7 +57,10 @@ struct SerialDialogComponent {
     cancel: () => {
       console.info('SerialRight dialog canceled');
       this.closeDialog()
-    }
+    },
+    systemMaterial: new uiMaterial.ImmersiveMaterial({ style:uiMaterial.ImmersiveStyle.ULTRA_THICK }),
+    edgeLightMode:EdgeLightMode.EDGELIGHT_AUTO,
+    distortionMode:DistortionMode.DISTORTION_AUTO,
   })
 
   closeDialog() {
