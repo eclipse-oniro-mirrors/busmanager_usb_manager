@@ -192,6 +192,7 @@ bool UsbRightManager::HasRight(const std::string &deviceName, const std::string 
 
 int32_t UsbRightManager::ConnectAbility(const int32_t userId)
 {
+    USB_HILOGI(MODULE_USB_HOST, "uid %{public}d", __func__, userId);
     if (usbAbilityConn_ == nullptr) {
         USB_HILOGI(MODULE_USB_HOST, "new UsbAbilityConn");
         usbAbilityConn_ = sptr<UsbAbilityConn>(new (std::nothrow) UsbAbilityConn());
