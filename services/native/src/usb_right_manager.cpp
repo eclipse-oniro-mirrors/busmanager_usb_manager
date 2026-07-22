@@ -192,6 +192,7 @@ bool UsbRightManager::HasRight(const std::string &deviceName, const std::string 
 
 int32_t UsbRightManager::ConnectAbility(const int32_t userId)
 {
+    USB_HILOGI(MODULE_USB_HOST, "%{public}s: uid %{public}d", __func__, userId);
     if (usbAbilityConn_ == nullptr) {
         USB_HILOGI(MODULE_USB_HOST, "new UsbAbilityConn");
         usbAbilityConn_ = sptr<UsbAbilityConn>(new (std::nothrow) UsbAbilityConn());
@@ -255,8 +256,9 @@ bool UsbRightManager::ShowUsbDialog(
     const std::string &busDev, const std::string &deviceName, const std::string &bundleName,
     const std::string &tokenId, const int32_t userId)
 {
-    USB_HILOGI(MODULE_USB_HOST, "%{public}s deviceName %{public}s bundleName %{public}s tokenId %{public}s",
-               __func__, deviceName.c_str(), bundleName.c_str(), tokenId.c_str());
+    USB_HILOGI(MODULE_USB_HOST,
+        "%{public}s deviceName %{public}s bundleName %{public}s tokenId %{public}s uid %{public}d",
+        __func__, deviceName.c_str(), bundleName.c_str(), tokenId.c_str(), userId);
 
     std::string appName;
     if (!GetAppName(bundleName, appName)) {
