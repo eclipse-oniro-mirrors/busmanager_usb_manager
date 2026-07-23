@@ -2817,6 +2817,10 @@ int32_t UsbService::SerialWrite(int32_t portId, const std::vector<uint8_t>& data
         USB_HILOGE(MODULE_USB_SERVICE, "size is more than 200kb");
         return UEC_SERIAL_IO_EXCEPTION;
     }
+    if (size > data.size()) {
+        USB_HILOGE(MODULE_USB_SERVICE, "size %{public}u is larger than data size %{public}zu", size, data.size());
+        return UEC_SERVICE_INVALID_VALUE;
+    }
     int32_t ret = ValidateUsbSerialManagerAndPort(portId);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_SERVICE, "%{public}s: ValidateUsbSerialManagerAndPort failed", __func__);

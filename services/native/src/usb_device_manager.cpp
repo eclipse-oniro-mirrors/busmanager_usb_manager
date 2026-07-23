@@ -131,6 +131,10 @@ void UsbDeviceManager::ProcessCustomControlRequestUevent(int32_t status)
         return;
     }
     cJSON *root = cJSON_CreateArray();
+    if (!root) {
+        USB_HILOGE(MODULE_USB_SERVICE, "Create json array error");
+        return;
+    }
     for (uint8_t value : ueventData) {
         cJSON_AddItemToArray(root, cJSON_CreateNumber(value));
     }
