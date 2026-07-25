@@ -2056,7 +2056,7 @@ int32_t UsbHostManager::ManageDeviceImpl(int32_t vendorId, int32_t productId, bo
     return UEC_OK;
 }
 
-int32_t UsbHostManager::ManageInterfaceTypeImpl(InterfaceType interfaceType, bool disable)
+int32_t UsbHostManager::ManageInterfceTypeImpl(InterfaceType interfaceType, bool disable)
 {
     auto iterInterface = g_typeMap.find(interfaceType);
     if (iterInterface == g_typeMap.end()) {
@@ -2297,11 +2297,13 @@ void UsbHostManager::ManageUsbTypeInterfaceImpl(const std::vector<UsbDeviceType>
         uint8_t configIndex = 0;
         if (GetActiveConfig(dev.busNum, dev.devAddr, configIndex)) {
             USB_HILOGW(MODULE_USB_HOST, "get device active config failed.");
+            (void)Close(dev.busNum, dev.devAddr);
             continue;
         }
         uint8_t index = static_cast<uint8_t>(configIndex) - 1;
         if (index >= it->second->GetConfigs().size()) {
             USB_HILOGW(MODULE_USB_HOST, "get device config info failed.");
+            (void)Close(dev.busNum, dev.devAddr);
             continue;
         }
 
