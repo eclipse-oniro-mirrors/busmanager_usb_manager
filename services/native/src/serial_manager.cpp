@@ -165,6 +165,11 @@ int32_t SerialManager::SerialWrite(int32_t portId, const std::vector<uint8_t>& d
     uint32_t &actualSize, uint32_t timeout)
 {
     USB_HILOGI(MODULE_USB_SERIAL, "%{public}s: start", __func__);
+    if (size > data.size()) {
+        USB_HILOGE(MODULE_USB_SERIAL, "%{public}s: size %{public}u is larger than data size %{public}zu",
+            __func__, size, data.size());
+        return OHOS::USB::UEC_SERVICE_INVALID_VALUE;
+    }
     int32_t ret = CheckPortAndTokenId(portId);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_SERIAL, "%{public}s: CheckPortAndTokenId failed", __func__);
@@ -391,6 +396,7 @@ void SerialManager::ListGetDumpHelp(int32_t fd)
 
 bool SerialManager::GetSerialPort(int32_t portId, OHOS::HDI::Usb::Serial::V1_0::SerialPort& serialPort)
 {
+    std::lock_guard<std::mutex> guard(serialPortMapMutex_);
     if (serialPortMap_.find(portId) == serialPortMap_.end()) {
         USB_HILOGI(MODULE_USB_SERIAL, "serialPort not found");
         return false;

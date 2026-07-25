@@ -2297,11 +2297,13 @@ void UsbHostManager::ManageUsbTypeInterfaceImpl(const std::vector<UsbDeviceType>
         uint8_t configIndex = 0;
         if (GetActiveConfig(dev.busNum, dev.devAddr, configIndex)) {
             USB_HILOGW(MODULE_USB_HOST, "get device active config failed.");
+            (void)Close(dev.busNum, dev.devAddr);
             continue;
         }
         uint8_t index = static_cast<uint8_t>(configIndex) - 1;
         if (index >= it->second->GetConfigs().size()) {
             USB_HILOGW(MODULE_USB_HOST, "get device config info failed.");
+            (void)Close(dev.busNum, dev.devAddr);
             continue;
         }
 

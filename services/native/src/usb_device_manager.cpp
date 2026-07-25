@@ -111,6 +111,10 @@ int32_t UsbDeviceManager::BindUsbdSubscriber(const sptr<HDI::Usb::V2_0::IUsbdSub
 
 int32_t UsbDeviceManager::UnbindUsbdSubscriber(const sptr<HDI::Usb::V2_0::IUsbdSubscriber> &subscriber)
 {
+    if (subscriber == nullptr) {
+        USB_HILOGE(MODULE_USB_DEVICE, "UsbDeviceManager::UnbindUsbdSubscriber subscriber is nullptr");
+        return UEC_SERVICE_INVALID_VALUE;
+    }
     if (usbDeviceInterface_ == nullptr) {
         USB_HILOGE(MODULE_USB_DEVICE, "UsbDeviceManager::BulkCancel usbDeviceInterface_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
@@ -131,6 +135,10 @@ void UsbDeviceManager::ProcessCustomControlRequestUevent(int32_t status)
         return;
     }
     cJSON *root = cJSON_CreateArray();
+    if (!root) {
+        USB_HILOGE(MODULE_USB_SERVICE, "Create json array error");
+        return;
+    }
     for (uint8_t value : ueventData) {
         cJSON_AddItemToArray(root, cJSON_CreateNumber(value));
     }

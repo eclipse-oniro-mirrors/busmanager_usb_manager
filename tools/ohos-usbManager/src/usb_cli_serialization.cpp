@@ -66,10 +66,16 @@ static cJSON* SerializeInterface(UsbInterface &iface)
     for (size_t i = 0; i < eps.size(); ++i) {
         cJSON *ep = SerializeEndpoint(eps[i]);
         if (ep) {
-            cJSON_AddItemToArray(endpoints, ep);
+            if (!cJSON_AddItemToArray(endpoints, ep)) {
+                cJSON_Delete(ep);
+            }
         }
     }
-    cJSON_AddItemToObject(json, "endpoints", endpoints);
+    if (!cJSON_AddItemToObject(json, "endpoints", endpoints)) {
+        cJSON_Delete(endpoints);
+        cJSON_Delete(json);
+        return nullptr;
+    }
     return json;
 }
 
@@ -172,6 +178,9 @@ std::string FormatSuccess(const std::vector<cJSON*> &items)
 {
     cJSON *root = cJSON_CreateObject();
     if (!root) {
+        for (auto *item : items) {
+            cJSON_Delete(item);
+        }
         return JSON_ERR_STR;
     }
     cJSON_AddStringToObject(root, "type", "result");
@@ -179,12 +188,18 @@ std::string FormatSuccess(const std::vector<cJSON*> &items)
 
     cJSON *data = cJSON_CreateObject();
     if (!data) {
+        for (auto *item : items) {
+            cJSON_Delete(item);
+        }
         cJSON_Delete(root);
         return JSON_ERR_STR;
     }
 
     cJSON *list = cJSON_CreateArray();
     if (!list) {
+        for (auto *item : items) {
+            cJSON_Delete(item);
+        }
         cJSON_Delete(data);
         cJSON_Delete(root);
         return JSON_ERR_STR;
