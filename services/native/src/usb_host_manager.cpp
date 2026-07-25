@@ -2056,7 +2056,7 @@ int32_t UsbHostManager::ManageDeviceImpl(int32_t vendorId, int32_t productId, bo
     return UEC_OK;
 }
 
-int32_t UsbHostManager::ManageInterfceTypeImpl(InterfaceType interfaceType, bool disable)
+int32_t UsbHostManager::ManageInterfaceTypeImpl(InterfaceType interfaceType, bool disable)
 {
     auto iterInterface = g_typeMap.find(interfaceType);
     if (iterInterface == g_typeMap.end()) {
