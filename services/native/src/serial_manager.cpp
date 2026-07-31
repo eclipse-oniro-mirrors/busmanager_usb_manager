@@ -39,6 +39,7 @@ constexpr int32_t ERR_CODE_DEVICENOTOPEN = -6;
 constexpr int32_t ERR_CODE_TIMEOUT = -7;
 constexpr int32_t ERR_CODE_ERROR_OVERFLOW = -8;
 constexpr int32_t ERR_CODE_ERROR_DEVICE_BUSY = -16;
+constexpr int32_t MAX_INPUT_STRING_NUMBER_SIZE = 9;
 
 SerialManager::SerialManager()
 {
@@ -325,6 +326,10 @@ bool SerialManager::CheckDataAndProcessPortId(int32_t fd, const std::vector<std:
 {
     if (!args.empty() && !std::regex_match(args[1], std::regex("^[0-9]+$"))) {
         dprintf(fd, "Invalid input, please enter a valid integer\n");
+        return false;
+    }
+    if (args[1].size() > MAX_INPUT_STRING_NUMBER_SIZE) {
+        dprintf(fd, "Invalid input, value out of range\n");
         return false;
     }
     int32_t portId = std::stoi(args[1]);
