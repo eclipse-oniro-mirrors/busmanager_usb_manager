@@ -59,7 +59,7 @@ static void Main()
 {
     struct UsbFunctionfsDescV2 descUsbFfs = {};
     FillUsbV2Head(descUsbFfs);
-    printf("sizeof descUsbFfs = %u\n", sizeof(descUsbFfs));
+    printf("sizeof descUsbFfs = %zu\n", sizeof(descUsbFfs));
     string basePath = "/dev/usb-ffs/devtest";
     string ep0Path = basePath + "/ep0";
     string ep1Path = basePath + "/ep1";
