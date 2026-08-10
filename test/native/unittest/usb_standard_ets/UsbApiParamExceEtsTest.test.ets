@@ -1960,7 +1960,6 @@ export default function UsbApiParamExceEtsTest() {
       toClosePipe("testSetConfigurationParamEx005");
     })
 
-    //第一次修改
     /**
      * @tc.name   testSetConfigurationParamEx006
      * @tc.number SUB_USB_HostManager_JS_ParamEx_6800
