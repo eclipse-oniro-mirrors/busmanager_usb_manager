@@ -1959,3 +1959,393 @@ export default function UsbApiParamExceEtsTest() {
       }
       toClosePipe("testSetConfigurationParamEx005");
     })
+
+    /**
+     * @tc.name   testSetConfigurationParamEx006
+     * @tc.number SUB_USB_HostManager_JS_ParamEx_6800
+     * @tc.desc   Negative test: configs name add "@#"
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetConfigurationParamEx006', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetConfigurationParamEx006 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+      getPipe("testSetConfigurationParamEx006");
+      try {
+        let tmpConfig = devices.configs[0];
+        tmpConfig.name = tmpConfig.name + "@#";
+        let ret = usbMgr.setConfiguration(gPipe, tmpConfig);
+        console.info(TAG, 'usb [', tmpConfig.name, '] setConfiguration ret : ', ret);
+        expect(ret).assertEqual(0);
+      } catch (err) {
+        console.info(TAG, 'testSetConfigurationParamEx006 catch err code: ', err);
+        expect(err !== null).assertFalse();
+      }
+      toClosePipe("testSetConfigurationParamEx006");
+    })
+
+    /**
+     * @tc.name   testSetConfigurationParamEx007
+     * @tc.number SUB_USB_HostManager_JS_ParamEx_6900
+     * @tc.desc   Negative test: configs maxPower add 100
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetConfigurationParamEx007', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetConfigurationParamEx007 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+      getPipe("testSetConfigurationParamEx007");
+      try {
+        let tmpConfig = devices.configs[0];
+        tmpConfig.maxPower = tmpConfig.maxPower + 100;
+        let ret = usbMgr.setConfiguration(gPipe, tmpConfig);
+        console.info(TAG, 'usb [', tmpConfig.maxPower, '] setConfiguration ret : ', ret);
+        expect(ret).assertEqual(0);
+      } catch (err) {
+        console.info(TAG, 'testSetConfigurationParamEx007 catch err code: ', err);
+        expect(err !== null).assertFalse();
+      }
+      toClosePipe("testSetConfigurationParamEx007");
+    })
+
+    /**
+     * @tc.name   testSetConfigurationParamEx008
+     * @tc.number SUB_USB_HostManager_JS_ParamEx_7000
+     * @tc.desc   Negative test: configs isRemoteWakeup is true
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetConfigurationParamEx008', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetConfigurationParamEx008 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+      getPipe("testSetConfigurationParamEx008");
+      try {
+        let tmpConfig = devices.configs[0];
+        tmpConfig.isRemoteWakeup = true;
+        let ret = usbMgr.setConfiguration(gPipe, tmpConfig);
+        console.info(TAG, 'usb [', tmpConfig.isRemoteWakeup, '] setConfiguration ret : ', ret);
+        expect(ret).assertEqual(0);
+      } catch (err) {
+        console.info(TAG, 'testSetConfigurationParamEx008 catch err code: ', err);
+        expect(err !== null).assertFalse();
+      }
+      toClosePipe("testSetConfigurationParamEx008");
+    })
+
+    /**
+     * @tc.name   testSetConfigurationParamEx009
+     * @tc.number SUB_USB_HostManager_JS_ParamEx_7100
+     * @tc.desc   Negative test: configs isRemoteWakeup is false
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetConfigurationParamEx009', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetConfigurationParamEx009 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+      getPipe("testSetConfigurationParamEx009");
+      try {
+        let tmpConfig = devices.configs[0];
+        tmpConfig.isRemoteWakeup = false;
+        let ret = usbMgr.setConfiguration(gPipe, tmpConfig);
+        console.info(TAG, 'usb [', tmpConfig.isRemoteWakeup, '] setConfiguration ret : ', ret);
+        expect(ret).assertEqual(0);
+      } catch (err) {
+        console.info(TAG, 'testSetConfigurationParamEx009 catch err code: ', err);
+        expect(err !== null).assertFalse();
+      }
+      toClosePipe("testSetConfigurationParamEx009");
+    })
+
+    /**
+     * @tc.name   testSetConfigurationParamEx010
+     * @tc.number SUB_USB_HostManager_JS_ParamEx_7200
+     * @tc.desc   Negative test: configs isSelfPowered is true
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetConfigurationParamEx010', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetConfigurationParamEx010 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+      getPipe("testSetConfigurationParamEx010");
+      try {
+        let tmpConfig = devices.configs[0];
+        tmpConfig.isSelfPowered = true;
+        let ret = usbMgr.setConfiguration(gPipe, tmpConfig);
+        console.info(TAG, 'usb [', tmpConfig.isSelfPowered, '] setConfiguration ret : ', ret);
+        expect(ret).assertEqual(0);
+      } catch (err) {
+        console.info(TAG, 'testSetConfigurationParamEx010 catch err code: ', err);
+        expect(err !== null).assertFalse();
+      }
+      toClosePipe("testSetConfigurationParamEx010");
+    })
+
+    /**
+     * @tc.name   testSetConfigurationParamEx011
+     * @tc.number SUB_USB_HostManager_JS_ParamEx_7300
+     * @tc.desc   Negative test: configs isSelfPowered is false
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetConfigurationParamEx011', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetConfigurationParamEx011 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+      getPipe("testSetConfigurationParamEx011");
+      try {
+        let tmpConfig = devices.configs[0];
+        tmpConfig.isSelfPowered = false;
+        let ret = usbMgr.setConfiguration(gPipe, tmpConfig);
+        console.info(TAG, 'usb [', tmpConfig.isSelfPowered, '] setConfiguration ret : ', ret);
+        expect(ret).assertEqual(0);
+      } catch (err) {
+        console.info(TAG, 'testSetConfigurationParamEx011 catch err code: ', err);
+        expect(err !== null).assertFalse();
+      }
+      toClosePipe("testSetConfigurationParamEx011");
+    })
+
+    /**
+     * @tc.name   testSetInterfaceParamEx001
+     * @tc.number SUB_USB_HostManager_JS_ParamEx_7400
+     * @tc.desc   Negative test: pipe busNum add 1000
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetInterfaceParamEx001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetInterfaceParamEx001 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+      getPipe("testSetInterfaceParamEx001");
+      let tmpInterface = devices.configs[0].interfaces[0];
+      try {
+        let isClaim = usbMgr.claimInterface(gPipe, tmpInterface, true);
+        expect(isClaim).assertEqual(0);
+        gPipe.busNum = gPipe.busNum + 1000;
+        let ret = usbMgr.setInterface(gPipe, tmpInterface);
+        console.info(TAG, 'usb [', gPipe.busNum, '] setInterface ret : ', ret);
+        expect(ret !== 0).assertTrue();
+      } catch (err) {
+        console.info(TAG, 'testSetInterfaceParamEx001 catch err code: ', err);
+        expect(err !== null).assertFalse();
+      }
+      toReleaseInterface("testSetInterfaceParamEx001", tmpInterface);
+      toClosePipe("testSetInterfaceParamEx001");
+    })
+
+    /**
+     * @tc.name   testSetInterfaceParamEx002
+     * @tc.number SUB_USB_HostManager_JS_ParamEx_7500
+     * @tc.desc   Negative test: pipe devAddress add 10000
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetInterfaceParamEx002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetInterfaceParamEx002 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+      getPipe("testSetInterfaceParamEx002");
+      let tmpInterface = devices.configs[0].interfaces[0];
+      try {
+        let isClaim = usbMgr.claimInterface(gPipe, tmpInterface, true);
+        expect(isClaim).assertEqual(0);
+        gPipe.devAddress = gPipe.devAddress + 10000;
+        let ret = usbMgr.setInterface(gPipe, tmpInterface);
+        console.info(TAG, 'usb [', gPipe.devAddress, '] setInterface ret : ', ret);
+        expect(ret !== 0).assertTrue();
+      } catch (err) {
+        console.info(TAG, 'testSetInterfaceParamEx002 catch err code: ', err);
+        expect(err !== null).assertFalse();
+      }
+      toReleaseInterface("testSetInterfaceParamEx002", tmpInterface);
+      toClosePipe("testSetInterfaceParamEx002");
+    })
+
+    /**
+     * @tc.name   testSetInterfaceParamEx003
+     * @tc.number SUB_USB_HostManager_JS_ParamEx_7600
+     * @tc.desc   Negative test: pipe busNum is -1
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetInterfaceParamEx003', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetInterfaceParamEx003 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+      getPipe("testSetInterfaceParamEx003");
+      let tmpInterface = devices.configs[0].interfaces[0];
+      try {
+        let isClaim = usbMgr.claimInterface(gPipe, tmpInterface, true);
+        expect(isClaim).assertEqual(0);
+        gPipe.busNum = -1;
+        let ret = usbMgr.setInterface(gPipe, tmpInterface);
+        console.info(TAG, 'usb [', gPipe.busNum, '] setInterface ret : ', ret);
+        expect(ret !== 0).assertTrue();
+      } catch (err) {
+        console.info(TAG, 'testSetInterfaceParamEx003 catch err code: ', err);
+        expect(err !== null).assertFalse();
+      }
+      toReleaseInterface("testSetInterfaceParamEx003", tmpInterface);
+      toClosePipe("testSetInterfaceParamEx003");
+    })
+
+    /**
+     * @tc.name   testSetInterfaceParamEx004
+     * @tc.number SUB_USB_HostManager_JS_ParamEx_7700
+     * @tc.desc   Negative test: pipe devAddress is -1
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetInterfaceParamEx004', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetInterfaceParamEx004 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+      getPipe("testSetInterfaceParamEx004");
+      let tmpInterface = devices.configs[0].interfaces[0];
+      try {
+        let isClaim = usbMgr.claimInterface(gPipe, tmpInterface, true);
+        expect(isClaim).assertEqual(0);
+        gPipe.devAddress = -1;
+        let ret = usbMgr.setInterface(gPipe, tmpInterface);
+        console.info(TAG, 'usb [', gPipe.devAddress, '] setInterface ret : ', ret);
+        expect(ret !== 0).assertTrue();
+      } catch (err) {
+        console.info(TAG, 'testSetInterfaceParamEx004 catch err code: ', err);
+        expect(err !== null).assertFalse();
+      }
+      toReleaseInterface("testSetInterfaceParamEx001", tmpInterface);
+      toClosePipe("testSetInterfaceParamEx004");
+    })
+
+    /**
+     * @tc.name   testSetInterfaceParamEx005
+     * @tc.number SUB_USB_HostManager_JS_ParamEx_7800
+     * @tc.desc   Negative test: pipe devAddress -1, busNum -1
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetInterfaceParamEx005', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetInterfaceParamEx005 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+      getPipe("testSetInterfaceParamEx005");
+      let tmpInterface = devices.configs[0].interfaces[0];
+      try {
+        let isClaim = usbMgr.claimInterface(gPipe, tmpInterface, true);
+        expect(isClaim).assertEqual(0);
+        gPipe.busNum = -1;
+        gPipe.devAddress = -1;
+        let ret = usbMgr.setInterface(gPipe, tmpInterface);
+        console.info(TAG, 'usb [', gPipe.busNum,', ', gPipe.devAddress, '] setInterface ret : ', ret);
+        expect(ret !== 0).assertTrue();
+      } catch (err) {
+        console.info(TAG, 'testSetInterfaceParamEx005 catch err code: ', err);
+        expect(err !== null).assertFalse();
+      }
+      toReleaseInterface("testSetInterfaceParamEx005", tmpInterface);
+      toClosePipe("testSetInterfaceParamEx005");
+    })
+
+    /**
+     * @tc.name   testSetInterfaceParamEx006
+     * @tc.number SUB_USB_HostManager_JS_ParamEx_7900
+     * @tc.desc   Negative test: interface id +100
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetInterfaceParamEx006', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetInterfaceParamEx006 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+      getPipe("testSetInterfaceParamEx006");
+      let tmpInterface = devices.configs[0].interfaces[0];
+      try {
+        let isClaim = usbMgr.claimInterface(gPipe, tmpInterface, true);
+        expect(isClaim).assertEqual(0);
+        tmpInterface.id = tmpInterface.id + 100;
+        let ret = usbMgr.setInterface(gPipe, tmpInterface);
+        console.info(TAG, 'usb [', tmpInterface.id, '] setInterface ret : ', ret);
+        expect(ret !== 0).assertTrue();
+      } catch (err) {
+        console.info(TAG, 'testSetInterfaceParamEx006 catch err code: ', err);
+        expect(err !== null).assertFalse();
+      }
+      gDeviceList = usbMgr.getDevices();
+      tmpInterface = gDeviceList[0].configs[0].interfaces[0];
+      toReleaseInterface("testSetInterfaceParamEx006", tmpInterface);
+      toClosePipe("testSetInterfaceParamEx006");
+    })
+
+    /**
+     * @tc.name   testSetInterfaceParamEx007
+     * @tc.number SUB_USB_HostManager_JS_ParamEx_8000
+     * @tc.desc   Negative test: interface id -1
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetInterfaceParamEx007', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetInterfaceParamEx007 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+      getPipe("testSetInterfaceParamEx007");
+      let tmpInterface = devices.configs[0].interfaces[0];
+      try {
+        let isClaim = usbMgr.claimInterface(gPipe, tmpInterface, true);
+        expect(isClaim).assertEqual(0);
+        tmpInterface.id = -1;
+        let ret = usbMgr.setInterface(gPipe, tmpInterface);
+        console.info(TAG, 'usb [', tmpInterface.id, '] setInterface ret : ', ret);
+        expect(ret !== 0).assertTrue();
+      } catch (err) {
+        console.info(TAG, 'testSetInterfaceParamEx007 catch err code: ', err);
+        expect(err !== null).assertFalse();
+      }
+      gDeviceList = usbMgr.getDevices();
+      tmpInterface = gDeviceList[0].configs[0].interfaces[0];
+      toReleaseInterface("testSetInterfaceParamEx007", tmpInterface);
+      toClosePipe("testSetInterfaceParamEx007");
+    })
