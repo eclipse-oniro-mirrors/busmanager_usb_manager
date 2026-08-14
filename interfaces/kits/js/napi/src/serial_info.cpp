@@ -231,10 +231,6 @@ static bool ParseWriteInterfaceParams(napi_env env, napi_callback_info info,
     if (argc == ARGC_3) {
         napi_value timeout = argv[2];
         napi_typeof(env, timeout, &type);
-        if (type == napi_undefined) {
-            timeoutValue = 0;
-            return true;
-        }
         if (!CheckAndThrowOnError(env, type == napi_number, SYSPARAM_INVALID_INPUT,
             "The type of timeout must be uint32_t.")) {
             return false;
@@ -410,10 +406,6 @@ static bool ParseReadInterfaceParams(napi_env env, napi_callback_info info, int3
     if (argc == ARGC_3) {
         napi_value timeout = argv[2];
         napi_typeof(env, timeout, &type);
-        if (type == napi_undefined) {
-            timeoutValue = 0;
-            return true;
-        }
         if (!CheckAndThrowOnError(env, type == napi_number, SYSPARAM_INVALID_INPUT,
             "The type of timeout must be uint32_t.")) {
             return false;
