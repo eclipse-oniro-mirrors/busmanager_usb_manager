@@ -55,15 +55,21 @@ UsbSrvClient& UsbSrvClient::GetInstance()
 
 int32_t UsbSrvClient::Connect(bool force)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
+    {
+        std::shared_lock<std::shared_mutex> lock(mutex_);
+        if (proxy_ != nullptr) {
+            return UEC_OK;
+        }
+    }
+    return ConnectUsbService(force);
+}
+
+int32_t UsbSrvClient::ConnectUsbService(bool force)
+{
+    std::lock_guard<std::shared_mutex> lock(mutex_);
     if (proxy_ != nullptr) {
         return UEC_OK;
     }
-    return ConnectUnLocked(force);
-}
-
-int32_t UsbSrvClient::ConnectUnLocked(bool force)
-{
     sptr<ISystemAbilityManager> sm = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
     if (sm == nullptr) {
         USB_HILOGE(MODULE_USB_INNERKIT, "fail to get SystemAbilityManager");
@@ -94,18 +100,20 @@ int32_t UsbSrvClient::ConnectUnLocked(bool force)
 
 void UsbSrvClient::ResetProxy(const wptr<IRemoteObject> &remote)
 {
-    std::lock_guard<std::mutex> lock(mutex_);
-    RETURN_IF(proxy_ == nullptr);
-    auto serviceRemote = proxy_->AsObject();
-    if ((serviceRemote != nullptr) && (serviceRemote == remote.promote())) {
-        serviceRemote->RemoveDeathRecipient(deathRecipient_);
-        proxy_ = nullptr;
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(WAIT_SERVICE_LOAD));
-        ConnectUnLocked();
-    } else {
-        USB_HILOGW(MODULE_USB_INNERKIT, "serviceRemote is null or serviceRemote != promote");
+    {
+        std::lock_guard<std::shared_mutex> lock(mutex_);
+        RETURN_IF(proxy_ == nullptr);
+        auto serviceRemote = proxy_->AsObject();
+        if ((serviceRemote != nullptr) && (serviceRemote == remote.promote())) {
+            serviceRemote->RemoveDeathRecipient(deathRecipient_);
+            proxy_ = nullptr;
+        } else {
+            USB_HILOGW(MODULE_USB_INNERKIT, "serviceRemote is null or serviceRemote != promote");
+            return;
+        }
     }
+    std::this_thread::sleep_for(std::chrono::milliseconds(WAIT_SERVICE_LOAD));
+    ConnectUsbService();
 }
 
 void UsbSrvClient::UsbSrvDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &remote)
@@ -123,6 +131,8 @@ int32_t UsbSrvClient::OpenDevice(const UsbDevice &device, USBDevicePipe &pipe)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling OpenDevice Start!");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->OpenDevice(device.GetBusNum(), device.GetDevAddr());
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "OpenDevice failed with ret = %{public}d !", ret);
@@ -138,6 +148,8 @@ int32_t UsbSrvClient::ResetDevice(USBDevicePipe &pipe)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling ResetDevice Start!");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->ResetDevice(pipe.GetBusNum(), pipe.GetDevAddr());
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "ResetDevice failed with ret = %{public}d !", ret);
@@ -151,6 +163,8 @@ bool UsbSrvClient::HasRight(std::string deviceName)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling HasRight Start!");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, false);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, false);
     bool hasRight = false;
     proxy_->HasRight(deviceName, hasRight);
     return hasRight;
@@ -159,6 +173,8 @@ bool UsbSrvClient::HasRight(std::string deviceName)
 int32_t UsbSrvClient::RequestRight(std::string deviceName)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->RequestRight(deviceName);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "Calling RequestRight failed with ret = %{public}d !", ret);
@@ -169,6 +185,8 @@ int32_t UsbSrvClient::RequestRight(std::string deviceName)
 int32_t UsbSrvClient::RemoveRight(std::string deviceName)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->RemoveRight(deviceName);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "Calling RemoveRight failed with ret = %{public}d !", ret);
@@ -179,6 +197,8 @@ int32_t UsbSrvClient::RemoveRight(std::string deviceName)
 int32_t UsbSrvClient::GetDevices(std::vector<UsbDevice> &deviceList)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->GetDevices(deviceList);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "GetDevices failed ret = %{public}d!", ret);
@@ -190,6 +210,7 @@ int32_t UsbSrvClient::GetDevices(std::vector<UsbDevice> &deviceList)
 
 int32_t UsbSrvClient::ClaimInterface(USBDevicePipe &pipe, const UsbInterface &interface, bool force)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->ClaimInterface(pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId(), force);
     if (ret != UEC_OK) {
@@ -200,6 +221,7 @@ int32_t UsbSrvClient::ClaimInterface(USBDevicePipe &pipe, const UsbInterface &in
 
 int32_t UsbSrvClient::UsbAttachKernelDriver(USBDevicePipe &pipe, const UsbInterface &interface)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->UsbAttachKernelDriver(pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId());
     if (ret != UEC_OK) {
@@ -210,6 +232,7 @@ int32_t UsbSrvClient::UsbAttachKernelDriver(USBDevicePipe &pipe, const UsbInterf
 
 int32_t UsbSrvClient::UsbDetachKernelDriver(USBDevicePipe &pipe, const UsbInterface &interface)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->UsbDetachKernelDriver(pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId());
     if (ret != UEC_OK) {
@@ -220,6 +243,7 @@ int32_t UsbSrvClient::UsbDetachKernelDriver(USBDevicePipe &pipe, const UsbInterf
 
 int32_t UsbSrvClient::ReleaseInterface(USBDevicePipe &pipe, const UsbInterface &interface)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->ReleaseInterface(pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId());
     if (ret != UEC_OK) {
@@ -231,6 +255,7 @@ int32_t UsbSrvClient::ReleaseInterface(USBDevicePipe &pipe, const UsbInterface &
 int32_t UsbSrvClient::BulkTransfer(
     USBDevicePipe &pipe, const USBEndpoint &endpoint, std::vector<uint8_t> &bufferData, int32_t timeOut)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = UEC_INTERFACE_INVALID_VALUE;
     if (USB_ENDPOINT_DIR_IN == endpoint.GetDirection()) {
@@ -263,6 +288,7 @@ void UsbSrvClient::UsbCtrlTransferChange(const HDI::Usb::V1_0::UsbCtrlTransfer &
 int32_t UsbSrvClient::ControlTransfer(
     USBDevicePipe &pipe, const UsbCtrlTransfer &ctrl, std::vector<uint8_t> &bufferData)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     UsbCtlSetUp ctlSetup;
     UsbCtrlTransferChange(ctrl, ctlSetup);
@@ -291,6 +317,7 @@ void UsbSrvClient::UsbCtrlTransferChange(const HDI::Usb::V1_2::UsbCtrlTransferPa
 int32_t UsbSrvClient::UsbControlTransfer(USBDevicePipe &pipe, const HDI::Usb::V1_2::UsbCtrlTransferParams &ctrlParams,
     std::vector<uint8_t> &bufferData)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     UsbCtlSetUp ctlSetup;
     UsbCtrlTransferChange(ctrlParams, ctlSetup);
@@ -307,6 +334,7 @@ int32_t UsbSrvClient::UsbControlTransfer(USBDevicePipe &pipe, const HDI::Usb::V1
 
 int32_t UsbSrvClient::SetConfiguration(USBDevicePipe &pipe, const USBConfig &config)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->SetActiveConfig(pipe.GetBusNum(), pipe.GetDevAddr(), config.GetId());
     return ret;
@@ -314,6 +342,7 @@ int32_t UsbSrvClient::SetConfiguration(USBDevicePipe &pipe, const USBConfig &con
 
 int32_t UsbSrvClient::SetInterface(USBDevicePipe &pipe, const UsbInterface &interface)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     return proxy_->SetInterface(
         pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId(), interface.GetAlternateSetting());
@@ -322,6 +351,8 @@ int32_t UsbSrvClient::SetInterface(USBDevicePipe &pipe, const UsbInterface &inte
 int32_t UsbSrvClient::GetRawDescriptors(USBDevicePipe &pipe, std::vector<uint8_t> &bufferData)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->GetRawDescriptor(pipe.GetBusNum(), pipe.GetDevAddr(), bufferData);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "failed ret = %{public}d!", ret);
@@ -332,6 +363,8 @@ int32_t UsbSrvClient::GetRawDescriptors(USBDevicePipe &pipe, std::vector<uint8_t
 int32_t UsbSrvClient::GetFileDescriptor(USBDevicePipe &pipe, int32_t &fd)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->GetFileDescriptor(pipe.GetBusNum(), pipe.GetDevAddr(), fd);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "failed ret = %{public}d!", ret);
@@ -341,6 +374,7 @@ int32_t UsbSrvClient::GetFileDescriptor(USBDevicePipe &pipe, int32_t &fd)
 
 bool UsbSrvClient::Close(const USBDevicePipe &pipe)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, false);
     int32_t ret = proxy_->Close(pipe.GetBusNum(), pipe.GetDevAddr());
     return (ret == UEC_OK);
@@ -348,6 +382,7 @@ bool UsbSrvClient::Close(const USBDevicePipe &pipe)
 
 int32_t UsbSrvClient::PipeRequestWait(USBDevicePipe &pipe, int64_t timeOut, UsbRequest &req)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     std::vector<uint8_t> clientData;
     std::vector<uint8_t> bufferData;
@@ -365,6 +400,7 @@ int32_t UsbSrvClient::PipeRequestWait(USBDevicePipe &pipe, int64_t timeOut, UsbR
 
 int32_t UsbSrvClient::RequestInitialize(UsbRequest &request)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     const USBDevicePipe &pipe = request.GetPipe();
     const USBEndpoint &endpoint = request.GetEndpoint();
@@ -373,6 +409,7 @@ int32_t UsbSrvClient::RequestInitialize(UsbRequest &request)
 
 int32_t UsbSrvClient::RequestFree(UsbRequest &request)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     const USBDevicePipe &pipe = request.GetPipe();
     const USBEndpoint &ep = request.GetEndpoint();
@@ -381,6 +418,7 @@ int32_t UsbSrvClient::RequestFree(UsbRequest &request)
 
 int32_t UsbSrvClient::RequestAbort(UsbRequest &request)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     const USBDevicePipe &pipe = request.GetPipe();
     const USBEndpoint &ep = request.GetEndpoint();
@@ -389,6 +427,7 @@ int32_t UsbSrvClient::RequestAbort(UsbRequest &request)
 
 int32_t UsbSrvClient::RequestQueue(UsbRequest &request)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     const USBDevicePipe &pipe = request.GetPipe();
     const USBEndpoint &ep = request.GetEndpoint();
@@ -397,6 +436,7 @@ int32_t UsbSrvClient::RequestQueue(UsbRequest &request)
 
 int32_t UsbSrvClient::UsbCancelTransfer(USBDevicePipe &pipe, int32_t &endpoint)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->UsbCancelTransfer(pipe.GetBusNum(), pipe.GetDevAddr(), endpoint);
     if (ret!= UEC_OK) {
@@ -420,6 +460,7 @@ void UsbSrvClient::UsbTransInfoChange(const HDI::Usb::V1_2::USBTransferInfo &par
 int32_t UsbSrvClient::UsbSubmitTransfer(USBDevicePipe &pipe, HDI::Usb::V1_2::USBTransferInfo &info,
     const TransferCallback &cb, sptr<Ashmem> &ashmem)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     if (cb == nullptr) {
         return PARAM_ERROR;
@@ -438,6 +479,7 @@ int32_t UsbSrvClient::UsbSubmitTransfer(USBDevicePipe &pipe, HDI::Usb::V1_2::USB
 
 int32_t UsbSrvClient::RegBulkCallback(USBDevicePipe &pipe, const USBEndpoint &endpoint, const sptr<IRemoteObject> &cb)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->RegBulkCallback(pipe.GetBusNum(), pipe.GetDevAddr(), endpoint, cb);
     if (ret != UEC_OK) {
@@ -448,6 +490,7 @@ int32_t UsbSrvClient::RegBulkCallback(USBDevicePipe &pipe, const USBEndpoint &en
 
 int32_t UsbSrvClient::UnRegBulkCallback(USBDevicePipe &pipe, const USBEndpoint &endpoint)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->UnRegBulkCallback(pipe.GetBusNum(), pipe.GetDevAddr(), endpoint);
     if (ret != UEC_OK) {
@@ -458,6 +501,7 @@ int32_t UsbSrvClient::UnRegBulkCallback(USBDevicePipe &pipe, const USBEndpoint &
 
 int32_t UsbSrvClient::BulkRead(USBDevicePipe &pipe, const USBEndpoint &endpoint, sptr<Ashmem> &ashmem)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t fd = ashmem->GetAshmemFd();
     int32_t memSize = ashmem->GetAshmemSize();
@@ -470,6 +514,7 @@ int32_t UsbSrvClient::BulkRead(USBDevicePipe &pipe, const USBEndpoint &endpoint,
 
 int32_t UsbSrvClient::BulkWrite(USBDevicePipe &pipe, const USBEndpoint &endpoint, sptr<Ashmem> &ashmem)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t fd = ashmem->GetAshmemFd();
     int32_t memSize = ashmem->GetAshmemSize();
@@ -482,6 +527,7 @@ int32_t UsbSrvClient::BulkWrite(USBDevicePipe &pipe, const USBEndpoint &endpoint
 
 int32_t UsbSrvClient::BulkCancel(USBDevicePipe &pipe, const USBEndpoint &endpoint)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->BulkCancel(pipe.GetBusNum(), pipe.GetDevAddr(), endpoint);
     if (ret != UEC_OK) {
@@ -493,6 +539,8 @@ int32_t UsbSrvClient::BulkCancel(USBDevicePipe &pipe, const USBEndpoint &endpoin
 int32_t UsbSrvClient::AddAccessRight(const std::string &tokenId, const std::string &deviceName)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling AddAccessRight");
     int32_t ret = proxy_->AddAccessRight(tokenId, deviceName);
     if (ret != UEC_OK) {
@@ -504,6 +552,8 @@ int32_t UsbSrvClient::AddAccessRight(const std::string &tokenId, const std::stri
 int32_t UsbSrvClient::ManageGlobalInterface(bool disable)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->ManageGlobalInterface(disable);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "failed width ret = %{public}d !", ret);
@@ -514,6 +564,8 @@ int32_t UsbSrvClient::ManageGlobalInterface(bool disable)
 int32_t UsbSrvClient::ManageDevice(int32_t vendorId, int32_t productId, bool disable)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->ManageDevice(vendorId, productId, disable);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "failed width ret = %{public}d !", ret);
@@ -536,6 +588,8 @@ void UsbSrvClient::UsbDeviceIdChange(const std::vector<UsbDeviceId> &deviceIdLis
 int32_t UsbSrvClient::ManageDevicePolicy(std::vector<UsbDeviceId> &trustList)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     std::vector<UsbDeviceIdInfo> deviceIdInfoList{};
     UsbDeviceIdChange(trustList, deviceIdInfoList);
     int32_t ret = proxy_->ManageDevicePolicy(deviceIdInfoList);
@@ -563,6 +617,8 @@ void UsbSrvClient::UsbDeviceTypeChange(const std::vector<UsbDeviceType> &disable
 int32_t UsbSrvClient::ManageInterfaceType(const std::vector<UsbDeviceType> &disableType, bool disable)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     std::vector<UsbDeviceTypeInfo> disableDevType;
     UsbDeviceTypeChange(disableType, disableDevType);
     int32_t ret = proxy_->ManageInterfaceType(disableDevType, disable);
@@ -575,6 +631,8 @@ int32_t UsbSrvClient::ManageInterfaceType(const std::vector<UsbDeviceType> &disa
 int32_t UsbSrvClient::ManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     std::vector<UsbDeviceTypeInfo> disableDevType;
     UsbDeviceTypeChange(disableType, disableDevType);
     int32_t ret = proxy_->ManageUsbType(disableDevType, disable);
@@ -586,6 +644,7 @@ int32_t UsbSrvClient::ManageUsbType(const std::vector<UsbDeviceType> &disableTyp
 
 int32_t UsbSrvClient::ClearHalt(USBDevicePipe &pipe, const USBEndpoint &ep)
 {
+    std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->ClearHalt(pipe.GetBusNum(), pipe.GetDevAddr(), ep.GetInterfaceId(), ep.GetAddress());
     if (ret != UEC_OK) {
@@ -597,6 +656,8 @@ int32_t UsbSrvClient::ClearHalt(USBDevicePipe &pipe, const USBEndpoint &ep)
 int32_t UsbSrvClient::GetDeviceSpeed(USBDevicePipe &pipe, uint8_t &speed)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->GetDeviceSpeed(pipe.GetBusNum(), pipe.GetDevAddr(), speed);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "failed ret = %{public}d!", ret);
@@ -608,6 +669,8 @@ int32_t UsbSrvClient::GetDeviceSpeed(USBDevicePipe &pipe, uint8_t &speed)
 int32_t UsbSrvClient::GetInterfaceActiveStatus(USBDevicePipe &pipe, const UsbInterface &interface, bool &unactivated)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->GetInterfaceActiveStatus(pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId(), unactivated);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "failed ret = %{public}d!", ret);
@@ -854,6 +917,8 @@ int32_t UsbSrvClient::GetCurrentFunctions(int32_t &funcs)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling GetCurrentFunctions!");
     RETURN_IF_WITH_RET(Connect(true) != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->GetCurrentFunctions(funcs);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "failed ret = %{public}d!", ret);
@@ -867,6 +932,8 @@ int32_t UsbSrvClient::SetCurrentFunctions(int32_t funcs)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "SetCurrentFunctions funcs = %{public}d!", funcs);
     RETURN_IF_WITH_RET(Connect(true) != UEC_OK, false);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, false);
     int32_t ret = proxy_->SetCurrentFunctions(funcs);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "failed ret = %{public}d!", ret);
@@ -879,6 +946,8 @@ int32_t UsbSrvClient::SetCurrentFunctions(int32_t funcs)
 int32_t UsbSrvClient::UsbFunctionsFromString(std::string_view funcs)
 {
     RETURN_IF_WITH_RET(Connect(true) != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t funcResult = 0;
     std::string funcsStr(funcs);
     int32_t ret = proxy_->UsbFunctionsFromString(funcsStr, funcResult);
@@ -894,6 +963,8 @@ std::string UsbSrvClient::UsbFunctionsToString(int32_t funcs)
 {
     std::string result;
     RETURN_IF_WITH_RET(Connect(true) != UEC_OK, result);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, result);
     int32_t ret = proxy_->UsbFunctionsToString(funcs, result);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbFunctionsToString failed ret = %{public}d!", ret);
@@ -906,6 +977,8 @@ std::string UsbSrvClient::UsbFunctionsToString(int32_t funcs)
 int32_t UsbSrvClient::GetAccessoryList(std::vector<USBAccessory> &accessList, const bool isCliTool)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->GetAccessoryList(accessList, isCliTool);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "GetAccessoryList failed ret = %{public}d!", ret);
@@ -918,6 +991,8 @@ int32_t UsbSrvClient::GetAccessoryList(std::vector<USBAccessory> &accessList, co
 int32_t UsbSrvClient::OpenAccessory(const USBAccessory &access, int32_t &fd)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->OpenAccessory(access, fd, accessoryRemote);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "OpenAccessory ret = %{public}d!", ret);
@@ -928,6 +1003,8 @@ int32_t UsbSrvClient::OpenAccessory(const USBAccessory &access, int32_t &fd)
 int32_t UsbSrvClient::AddAccessoryRight(const uint32_t tokenId, const USBAccessory &access)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->AddAccessoryRight(tokenId, access);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "AddAccessoryRight ret = %{public}d!", ret);
@@ -938,12 +1015,16 @@ int32_t UsbSrvClient::AddAccessoryRight(const uint32_t tokenId, const USBAccesso
 int32_t UsbSrvClient::HasAccessoryRight(const USBAccessory &access, bool &result)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     return proxy_->HasAccessoryRight(access, result);
 }
 
 int32_t UsbSrvClient::RequestAccessoryRight(const USBAccessory &access, bool &result)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->RequestAccessoryRight(access, result);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "RequestAccessoryRight ret = %{public}d!", ret);
@@ -954,6 +1035,8 @@ int32_t UsbSrvClient::RequestAccessoryRight(const USBAccessory &access, bool &re
 int32_t UsbSrvClient::CancelAccessoryRight(const USBAccessory &access)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->CancelAccessoryRight(access);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "CancelAccessoryRight ret = %{public}d!", ret);
@@ -964,6 +1047,8 @@ int32_t UsbSrvClient::CancelAccessoryRight(const USBAccessory &access)
 int32_t UsbSrvClient::CloseAccessory(const int32_t fd)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->CloseAccessory(fd);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "CloseAccessory ret = %{public}d!", ret);
@@ -1042,6 +1127,8 @@ int32_t UsbSrvClient::CloseAccessory(const int32_t fd)
 int32_t UsbSrvClient::GetPorts(std::vector<UsbPort> &usbports)
 {
     RETURN_IF_WITH_RET(Connect(true) != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     USB_HILOGI(MODULE_USB_INNERKIT, " Calling GetPorts");
     int32_t ret = proxy_->GetPorts(usbports);
     if (ret != UEC_OK) {
@@ -1053,6 +1140,8 @@ int32_t UsbSrvClient::GetPorts(std::vector<UsbPort> &usbports)
 int32_t UsbSrvClient::GetSupportedModes(int32_t portId, int32_t &result)
 {
     RETURN_IF_WITH_RET(Connect(true) != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     USB_HILOGI(MODULE_USB_INNERKIT, " Calling GetSupportedModes");
     int32_t ret = proxy_->GetSupportedModes(portId, result);
     if (ret != UEC_OK) {
@@ -1064,6 +1153,8 @@ int32_t UsbSrvClient::GetSupportedModes(int32_t portId, int32_t &result)
 int32_t UsbSrvClient::SetPortRole(int32_t portId, int32_t powerRole, int32_t dataRole)
 {
     RETURN_IF_WITH_RET(Connect(true) != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling SetPortRole");
     int32_t ret = proxy_->SetPortRole(portId, powerRole, dataRole);
     if (ret != UEC_OK) {
@@ -1095,6 +1186,8 @@ int32_t UsbSrvClient::SerialOpen(int32_t portId)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling SerialOpen");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->SerialOpen(portId, serialRemote);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbSrvClient::SerialOpen failed ret = %{public}d!", ret);
@@ -1106,6 +1199,8 @@ int32_t UsbSrvClient::SerialClose(int32_t portId)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling SerialClose");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->SerialClose(portId);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbSrvClient::SerialClose failed ret = %{public}d!", ret);
@@ -1118,6 +1213,8 @@ int32_t UsbSrvClient::SerialRead(int32_t portId, std::vector<uint8_t> &data,
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling SerialRead");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->SerialRead(portId, data, bufferSize, actualSize, timeout);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbSrvClient::SerialRead failed ret = %{public}d!", ret);
@@ -1130,6 +1227,8 @@ int32_t UsbSrvClient::SerialWrite(int32_t portId, const std::vector<uint8_t>& da
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling SerialWrite");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->SerialWrite(portId, data, bufferSize, actualSize, timeout);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbSrvClient::SerialWrite failed ret = %{public}d!", ret);
@@ -1141,6 +1240,8 @@ int32_t UsbSrvClient::SerialGetAttribute(int32_t portId, UsbSerialAttr& attribut
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling SerialGetAttribute");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->SerialGetAttribute(portId, attribute);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbSrvClient::SerialGetAttribute failed ret = %{public}d!", ret);
@@ -1153,6 +1254,8 @@ int32_t UsbSrvClient::SerialSetAttribute(int32_t portId,
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling SerialSetAttribute");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->SerialSetAttribute(portId, attribute);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbSrvClient::SerialSetAttribute failed ret = %{public}d!", ret);
@@ -1165,6 +1268,8 @@ int32_t UsbSrvClient::SerialGetPortList(
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling SerialGetPortList");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->SerialGetPortList(serialPortList);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbSrvClient::SerialGetPortList failed ret = %{public}d!", ret);
@@ -1176,6 +1281,8 @@ int32_t UsbSrvClient::HasSerialRight(int32_t portId, bool &hasRight)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling HasSerialRight");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->HasSerialRight(portId, hasRight);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbSrvClient::HasSerialRight failed ret = %{public}d!", ret);
@@ -1188,6 +1295,8 @@ int32_t UsbSrvClient::CancelSerialRight(int32_t portId)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling CancelSerialRight");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->CancelSerialRight(portId);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbSrvClient::CancelSerialRight failed ret = %{public}d !", ret);
@@ -1199,6 +1308,8 @@ int32_t UsbSrvClient::RequestSerialRight(int32_t portId, bool &hasRight)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling RequestSerialRight");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->RequestSerialRight(portId, hasRight);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbSrvClient::RequestSerialRight failed ret = %{public}d !", ret);
@@ -1210,6 +1321,8 @@ int32_t UsbSrvClient::AddSerialRight(uint32_t tokenId, int32_t portId)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling AddSerialRight");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
     int32_t ret = proxy_->AddSerialRight(tokenId, portId);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbSrvClient::AddSerialRight failed ret = %{public}d!", ret);
