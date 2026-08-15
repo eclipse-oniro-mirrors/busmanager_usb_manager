@@ -70,6 +70,7 @@ int32_t UsbSrvClient::ConnectUsbService(bool force)
     if (proxy_ != nullptr) {
         return UEC_OK;
     }
+    USB_HILOGI(MODULE_USB_INNERKIT, "start connecting UsbService.");
     sptr<ISystemAbilityManager> sm = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
     if (sm == nullptr) {
         USB_HILOGE(MODULE_USB_INNERKIT, "fail to get SystemAbilityManager");

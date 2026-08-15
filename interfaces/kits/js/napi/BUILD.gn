@@ -27,6 +27,8 @@ ohos_shared_library("usb") {
     boundary_sanitize = true
   }
 
+  branch_protector_ret = "pac_ret"
+
   sources = [ "src/usb_middle.cpp" ]
   external_deps = [
     "c_utils:utils",
@@ -48,6 +50,8 @@ ohos_shared_library("usbmanager") {
     ubsan = true
     boundary_sanitize = true
   }
+
+  branch_protector_ret = "pac_ret"
 
   sources = [
     "${utils_path}/native/src/struct_parcel.cpp",
@@ -105,6 +109,8 @@ ohos_shared_library("serial") {
     boundary_sanitize = true
     ubsan = true
   }
+  
+  branch_protector_ret = "pac_ret"
 
   defines = [ "SERIAL_NAPI" ]
 

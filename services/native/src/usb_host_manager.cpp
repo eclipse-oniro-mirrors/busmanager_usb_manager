@@ -505,6 +505,12 @@ int32_t UsbHostManager::GetDevices(std::vector<UsbDevice> &deviceList)
     return UEC_OK;
 }
 
+bool UsbHostManager::hasActiveDevice()
+{
+    std::shared_lock lock(devicesMutex_);
+    return !devices_.empty();
+}
+
 int32_t UsbHostManager::CheckDevPathIsExist(uint8_t busNum, uint8_t devAddr)
 {
     char path[USB_PATH_LENGTH] = {"\0"};
