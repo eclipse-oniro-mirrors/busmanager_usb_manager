@@ -1612,8 +1612,8 @@ int32_t UsbHostManager::UsbInterfaceAuthorize(
 int32_t UsbHostManager::ExecuteManageDevicePolicy(std::vector<UsbDeviceId> &trustList)
 {
     int32_t ret = UEC_OK;
-    USB_HILOGI(MODULE_USB_HOST, "list size %{public}zu", devices_.size());
     std::shared_lock lock(devicesMutex_);
+    USB_HILOGI(MODULE_USB_HOST, "list size %{public}zu", devices_.size());
     for (auto it = devices_.begin(); it != devices_.end(); ++it) {
         bool inTrustList = false;
         for (auto dev : trustList) {
@@ -1997,8 +1997,8 @@ void UsbHostManager::FindMatchingTypes(const std::unordered_map<InterfaceType, s
 
 int32_t UsbHostManager::ManageGlobalInterfaceImpl(bool disable)
 {
-    USB_HILOGI(MODULE_USB_HOST, "list size %{public}zu", devices_.size());
     std::shared_lock lock(devicesMutex_);
+    USB_HILOGI(MODULE_USB_HOST, "list size %{public}zu", devices_.size());
     for (auto it = devices_.begin(); it != devices_.end(); ++it) {
         if ((disable && it->second->GetClass() != BASE_CLASS_HUB) ||
             (IsUsbSerialDisable() && IsUsbSerialDevice(*it->second))) {
