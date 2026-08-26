@@ -13,9 +13,9 @@
  * limitations under the License.
  */
 
-const MASK = '***';
+const MASK: string = '***';
 
-const SENSITIVE_KEYS: Set<string> = new Set([
+const SENSITIVE_KEYS: Set<string> = new Set<string>([
   'tokenId',
   'tokenID',
   'deviceId',
@@ -43,46 +43,46 @@ function isSensitiveKey(key: string): boolean {
 }
 
 function deepMask(obj: Object): Object {
-  if (obj === null || obj === undefined) {
-    return obj;
+  if (obj instanceof Array) {
+    const result: Object[] = [];
+    for (let i = 0; i < obj.length; i++) {
+      result.push(deepMask(obj[i] as Object));
+    }
+    return result;
   }
-  if (typeof obj !== 'object') {
-    return obj;
-  }
-  if (Array.isArray(obj)) {
-    return (obj as Array<Object>).map((item: Object) => deepMask(item));
-  }
-  const result: Record<string, Object> = {};
   const record = obj as Record<string, Object>;
-  const keys = Object.keys(record);
-  for (const key of keys) {
+  const result: Record<string, Object> = {};
+  const keys: string[] = Object.keys(record);
+  for (let i = 0; i < keys.length; i++) {
+    const key: string = keys[i];
     if (isSensitiveKey(key)) {
       result[key] = MASK;
     } else {
-      result[key] = deepMask(record[key]);
+      result[key] = deepMask(record[key] as Object);
     }
   }
   return result;
 }
 
 export function maskWant(want: Object): string {
-  if (want === null || want === undefined) {
-    return JSON.stringify(want);
-  }
   try {
     const w = want as Record<string, Object>;
     const sanitized: Record<string, Object> = {};
-    if (w.abilityName !== undefined) {
-      sanitized['abilityName'] = w.abilityName;
+    const abilityName = w['abilityName'];
+    if (abilityName !== undefined) {
+      sanitized['abilityName'] = abilityName;
     }
-    if (w.bundleName !== undefined) {
-      sanitized['bundleName'] = w.bundleName;
+    const bundleName = w['bundleName'];
+    if (bundleName !== undefined) {
+      sanitized['bundleName'] = bundleName;
     }
-    if (w.action !== undefined) {
-      sanitized['action'] = w.action;
+    const action = w['action'];
+    if (action !== undefined) {
+      sanitized['action'] = action;
     }
-    if (w.parameters !== undefined && w.parameters !== null) {
-      sanitized['parameters'] = deepMask(w.parameters);
+    const parameters = w['parameters'];
+    if (parameters !== undefined) {
+      sanitized['parameters'] = deepMask(parameters);
     }
     return JSON.stringify(sanitized);
   } catch (e) {
@@ -91,20 +91,15 @@ export function maskWant(want: Object): string {
 }
 
 export function maskObject(obj: Object): string {
-  if (obj === null || obj === undefined) {
-    return JSON.stringify(obj);
-  }
   try {
     if (obj instanceof Error) {
-      const errInfo: Record<string, Object> = {
-        name: obj.name,
-        message: MASK
-      };
-      const code = (obj as Record<string, Object>)['code'];
+      const err: Record<string, Object> = { 'name': obj.name, 'message': MASK };
+      const errRecord = obj as Record<string, Object>;
+      const code = errRecord['code'];
       if (code !== undefined) {
-        errInfo['code'] = code;
+        err['code'] = code;
       }
-      return JSON.stringify(errInfo);
+      return JSON.stringify(err);
     }
     return JSON.stringify(deepMask(obj));
   } catch (e) {
