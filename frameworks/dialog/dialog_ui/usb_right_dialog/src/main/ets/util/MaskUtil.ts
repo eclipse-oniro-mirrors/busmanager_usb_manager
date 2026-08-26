@@ -38,6 +38,19 @@ const SENSITIVE_KEYS: Set<string> = new Set<string>([
   'vendorName'
 ]);
 
+interface MaskedWant {
+  abilityName?: string;
+  bundleName?: string;
+  action?: string;
+  parameters?: Object;
+}
+
+interface MaskedError {
+  name: string;
+  message: string;
+  code?: Object;
+}
+
 function isSensitiveKey(key: string): boolean {
   return SENSITIVE_KEYS.has(key);
 }
@@ -66,23 +79,20 @@ function deepMask(obj: Object): Object {
 
 export function maskWant(want: Object): string {
   try {
-    const w = want as Record<string, Object>;
-    const sanitized: Record<string, Object> = {};
-    const abilityName = w['abilityName'];
-    if (abilityName !== undefined) {
-      sanitized['abilityName'] = abilityName;
+    const w = want as MaskedWant;
+    const sanitized: MaskedWant = {};
+    if (w.abilityName !== undefined) {
+      sanitized.abilityName = w.abilityName;
     }
-    const bundleName = w['bundleName'];
-    if (bundleName !== undefined) {
-      sanitized['bundleName'] = bundleName;
+    if (w.bundleName !== undefined) {
+      sanitized.bundleName = w.bundleName;
     }
-    const action = w['action'];
-    if (action !== undefined) {
-      sanitized['action'] = action;
+    if (w.action !== undefined) {
+      sanitized.action = w.action;
     }
-    const parameters = w['parameters'];
+    const parameters = w.parameters;
     if (parameters !== undefined) {
-      sanitized['parameters'] = deepMask(parameters);
+      sanitized.parameters = deepMask(parameters as Object);
     }
     return JSON.stringify(sanitized);
   } catch (e) {
@@ -93,13 +103,13 @@ export function maskWant(want: Object): string {
 export function maskObject(obj: Object): string {
   try {
     if (obj instanceof Error) {
-      const err: Record<string, Object> = { 'name': obj.name, 'message': MASK };
-      const errRecord = obj as Record<string, Object>;
-      const code = errRecord['code'];
+      const err = obj as Object as MaskedError;
+      const result: MaskedError = { name: err.name, message: MASK };
+      const code = err.code;
       if (code !== undefined) {
-        err['code'] = code;
+        result.code = code;
       }
-      return JSON.stringify(err);
+      return JSON.stringify(result);
     }
     return JSON.stringify(deepMask(obj));
   } catch (e) {
