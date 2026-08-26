@@ -54,23 +54,37 @@ function isSensitiveKey(key: string): boolean {
   return SENSITIVE_KEYS.has(key);
 }
 
-function deepMask(obj: Object): Object {
+function deepMask(obj: Object): Object | undefined {
+  if (typeof obj !== 'object') {
+    return obj;
+  }
   if (obj instanceof Array) {
     const result: Object[] = [];
     for (let i = 0; i < obj.length; i++) {
-      result.push(deepMask(obj[i] as Object));
+      const item = deepMask(obj[i] as Object);
+      if (item !== undefined) {
+        result.push(item);
+      }
     }
     return result;
   }
   const record = obj as Record<string, Object>;
   const result: Record<string, Object> = {};
   const keys: string[] = Object.keys(record);
+  let hasContent: boolean = false;
   for (let i = 0; i < keys.length; i++) {
     const key: string = keys[i];
     if (isSensitiveKey(key)) {
       continue;
     }
-    result[key] = deepMask(record[key] as Object);
+    const value = deepMask(record[key] as Object);
+    if (value !== undefined) {
+      result[key] = value;
+      hasContent = true;
+    }
+  }
+  if (!hasContent) {
+    return undefined;
   }
   return result;
 }
@@ -90,7 +104,10 @@ export function maskWant(want: Object): string {
     }
     const parameters = w.parameters;
     if (parameters !== undefined) {
-      sanitized.parameters = deepMask(parameters as Object);
+      const masked = deepMask(parameters as Object);
+      if (masked !== undefined) {
+        sanitized.parameters = masked;
+      }
     }
     return JSON.stringify(sanitized);
   } catch (e) {
@@ -109,7 +126,8 @@ export function maskObject(obj: Object): string {
       }
       return JSON.stringify(result);
     }
-    return JSON.stringify(deepMask(obj));
+    const masked = deepMask(obj);
+    return masked === undefined ? '{}' : JSON.stringify(masked);
   } catch (e) {
     return REDACTED;
   }
