@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-const MASK: string = '***';
+const REDACTED: string = '[redacted]';
 
 const SENSITIVE_KEYS: Set<string> = new Set<string>([
   'tokenId',
@@ -47,7 +47,6 @@ interface MaskedWant {
 
 interface MaskedError {
   name: string;
-  message: string;
   code?: Object;
 }
 
@@ -69,10 +68,9 @@ function deepMask(obj: Object): Object {
   for (let i = 0; i < keys.length; i++) {
     const key: string = keys[i];
     if (isSensitiveKey(key)) {
-      result[key] = MASK;
-    } else {
-      result[key] = deepMask(record[key] as Object);
+      continue;
     }
+    result[key] = deepMask(record[key] as Object);
   }
   return result;
 }
@@ -96,7 +94,7 @@ export function maskWant(want: Object): string {
     }
     return JSON.stringify(sanitized);
   } catch (e) {
-    return MASK;
+    return REDACTED;
   }
 }
 
@@ -104,7 +102,7 @@ export function maskObject(obj: Object): string {
   try {
     if (obj instanceof Error) {
       const err = obj as Object as MaskedError;
-      const result: MaskedError = { name: err.name, message: MASK };
+      const result: MaskedError = { name: err.name };
       const code = err.code;
       if (code !== undefined) {
         result.code = code;
@@ -113,6 +111,6 @@ export function maskObject(obj: Object): string {
     }
     return JSON.stringify(deepMask(obj));
   } catch (e) {
-    return MASK;
+    return REDACTED;
   }
 }
