@@ -15,6 +15,7 @@
 
 import { AlertDialog } from '@ohos.arkui.advanced.Dialog'
 import { terminateDialog } from '../util/DialogUtil';
+import { maskWant, maskObject } from '../util/MaskUtil';
 import serial from '@ohos.busManager.serial'
 
 @Entry
@@ -42,10 +43,10 @@ struct SerialDialogComponent {
             serial.addPortAuthorization(tokenId, deviceId).then(() => {
               console.info('SerialRight addPortAuthorization success');
             }).catch((err: Error) => {
-              console.error('SerialRight addPortAuthorization failed: ' + JSON.stringify(err));
+              console.error('SerialRight addPortAuthorization failed: ' + maskObject(err));
             });
           } catch (err) {
-            console.error('SerialRight ConfirmDialog onClick error: ' + JSON.stringify(err));
+            console.error('SerialRight ConfirmDialog onClick error: ' + maskObject(err));
           } finally {
             this.closeDialog()
           }
@@ -65,7 +66,7 @@ struct SerialDialogComponent {
   }
 
   aboutToAppear(): void {
-    console.info('SerialRight show dialog', JSON.stringify(globalThis.want));
+    console.info('SerialRight show dialog', maskWant(globalThis.want as Object));
     setTimeout(() => {
         this.confirmDialogController.open();
     });
