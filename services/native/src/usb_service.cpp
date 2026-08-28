@@ -62,7 +62,7 @@ namespace USB {
 namespace {
 constexpr int32_t COMMEVENT_REGISTER_RETRY_TIMES = 10;
 constexpr int32_t COMMEVENT_REGISTER_WAIT_DELAY_US = 20000;
-constexpr int32_t SERVICE_STARTUP_MAX_TIME = 30;
+constexpr int32_t SERVICE_STARTUP_MAX_TIME = 60;
 constexpr uint32_t UNLOAD_SA_TIMER_INTERVAL = 30 * 1000;
 constexpr uint32_t SERIALREAD_SIZE_MAX = 64 * 1024;
 constexpr uint32_t SERIALWRITE_SIZE_MAX = 200 * 1024;
