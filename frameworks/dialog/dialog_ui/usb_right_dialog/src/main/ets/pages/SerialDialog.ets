@@ -41,11 +41,11 @@ struct SerialDialogComponent {
             console.info('SerialRight allowed');
             serial.addPortAuthorization(tokenId, deviceId).then(() => {
               console.info('SerialRight addPortAuthorization success');
-            }).catch((err: Error) => {
-              console.error('SerialRight addPortAuthorization failed: ' + JSON.stringify(err));
+            }).catch(() => {
+              console.error('SerialRight addPortAuthorization failed');
             });
-          } catch (err) {
-            console.error('SerialRight ConfirmDialog onClick error: ' + JSON.stringify(err));
+          } catch {
+            console.error('SerialRight ConfirmDialog onClick error');
           } finally {
             this.closeDialog()
           }
@@ -65,7 +65,7 @@ struct SerialDialogComponent {
   }
 
   aboutToAppear(): void {
-    console.info('SerialRight show dialog', JSON.stringify(globalThis.want));
+    console.info('SerialRight show dialog');
     setTimeout(() => {
         this.confirmDialogController.open();
     });
