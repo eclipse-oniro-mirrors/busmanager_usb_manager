@@ -15,7 +15,6 @@
 
 import { usbServiceSwitch } from '../util/UsbServiceSwitch';
 import { getUserAuth } from '../util/UserAuth';
-import { maskWant, maskObject } from '../util/MaskUtil';
 import deviceInfo from '@ohos.deviceInfo';
 import common from '@ohos.app.ability.common';
 import commonEventManager from '@ohos.commonEventManager';
@@ -88,7 +87,7 @@ struct SimpleContacts {
     }
     this.initSelectedOption();
 
-    console.info('globalThis.want=' + maskWant(globalThis.want as Object));
+    console.info('globalThis.want');
     let usbSupportedFunctions = USBSERVICESWITCH_ID_XFER_FILE | USBSERVICESWITCH_ID_XFER_PIC;
     if (globalThis.want?.parameters?.usbSupportedFunctions !== undefined) {
       usbSupportedFunctions = globalThis.want?.parameters?.usbSupportedFunctions;
@@ -116,17 +115,17 @@ struct SimpleContacts {
 
     commonEventManager.createSubscriber({ events: eventsToSubscribe }, (err, subscriber) => {
       if (err) {
-        console.error('createSubscriber failed:', maskObject(err));
+        console.error('createSubscriber failed');
         return;
       }
 
       commonEventManager.subscribe(subscriber, (err, data) => {
         if (err) {
-          console.error('subscribe failed:', maskObject(err));
+          console.error('subscribe failed');
           return;
         }
 
-        console.info(maskObject(data));
+        console.info('common event received');
         this.usbPortList = usbServiceSwitch.getPorts()
         if (data.event === commonEventManager.Support.COMMON_EVENT_USB_STATE) {
           if (data.parameters?.connected === false && !this.ignoreDetachEvent) {
@@ -347,7 +346,7 @@ struct SimpleContacts {
       clearTimeout(this.setPortRoleTimeout);
     }
     this.setPortRoleTimeout = setTimeout(() => {
-      console.log('setPortRole start' + maskObject(this.usbPortList))
+      console.log('setPortRole start')
       this.usbPortList = usbServiceSwitch.getPorts();
       if (this.usbPortList?.length > 0 &&
             this.usbPortList[0].status.currentDataRole == usbManagerService.PortModeType.DFP) {
@@ -366,7 +365,7 @@ struct SimpleContacts {
       clearTimeout(this.setPortRoleTimeout);
     }
     this.setPortRoleTimeout = setTimeout(() => {
-      console.log('setPortRole start' + maskObject(this.usbPortList))
+      console.log('setPortRole start')
       this.usbPortList = usbServiceSwitch.getPorts();
       if (this.usbPortList?.length > 0 &&
             this.usbPortList[0].status.currentDataRole == usbManagerService.PortModeType.UFP) {

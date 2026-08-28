@@ -16,7 +16,6 @@
 import { AlertDialog } from '@ohos.arkui.advanced.Dialog'
 import usbMgr from '@ohos.usbManager'
 import { terminateDialog } from '../util/DialogUtil';
-import { maskWant } from '../util/MaskUtil';
 import serialManager from '@ohos.usbManager.serial'
 
 @Entry
@@ -50,7 +49,7 @@ struct IndexHapComponent {
               }
             } else {
               let accessoryInfo: usbMgr.USBAccessory = JSON.parse(globalThis.want.parameters['accessory']);
-              console.info('USB accessory right allowed: accessory info has been granted');
+              console.info('USB accessory right allowed');
               usbMgr.addAccessoryRight(parseInt(globalThis.want.parameters['tokenId']), accessoryInfo)
             }
           } catch {
@@ -74,7 +73,7 @@ struct IndexHapComponent {
   }
 
   aboutToAppear(): void {
-    console.info('USBRight show dialog', maskWant(globalThis.want as Object));
+    console.info('USBRight show dialog');
     setTimeout(() => {
         this.confirmDialogController.open();
     });
