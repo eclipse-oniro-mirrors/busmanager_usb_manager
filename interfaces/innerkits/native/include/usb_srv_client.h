@@ -20,6 +20,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <shared_mutex>
 #include <singleton.h>
 
 #include "iremote_object.h"
@@ -146,11 +147,11 @@ private:
     };
 
     int32_t Connect(bool force = false);
-    int32_t ConnectUnLocked(bool force = false);
+    int32_t ConnectUsbService(bool force = false);
     void ResetProxy(const wptr<IRemoteObject> &remote);
     sptr<IUsbServer> proxy_ = nullptr;
     sptr<IRemoteObject::DeathRecipient> deathRecipient_ = nullptr;
-    std::mutex mutex_;
+    std::shared_mutex mutex_;
     sptr<SerialDeathMonitor> serialRemote = nullptr;
     sptr<AccessoryDeathMonitor> accessoryRemote = nullptr;
 };
