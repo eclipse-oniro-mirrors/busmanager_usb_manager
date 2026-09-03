@@ -2441,7 +2441,22 @@ static int32_t ReadDataToBuffer(USBTransferAsyncContext *asyncContext, const Tra
 {
     uint8_t endpointId = static_cast<uint8_t>(asyncContext->endpoint) & USB_ENDPOINT_DIR_MASK;
     size_t actBufLen = info.actualLength;
-    if (endpointId == USB_ENDPOINT_DIR_IN && asyncContext->bufferLength > 0 && info.actualLength > 0) {
+    if (endpointId == USB_ENDPOINT_DIR_IN && asyncContext->bufferLength > 0 &&
+        asyncContext->type == TRANSFER_TYPE_ISOCHRONOUS && info.status == UEC_OK) {
+        actBufLen = asyncContext->bufferLength;
+        asyncContext->ashmem->MapReadAndWriteAshmem();
+        auto ashmemBuffer = asyncContext->ashmem->ReadFromAshmem(actBufLen, 0);
+        if (ashmemBuffer == nullptr) {
+            asyncContext->ashmem->UnmapAshmem();
+            asyncContext->ashmem->CloseAshmem();
+            return actBufLen;
+        }
+
+        int32_t ret = memcpy_s(asyncContext->buffer, asyncContext->bufferLength, ashmemBuffer, actBufLen);
+        if (ret != EOK) {
+            USB_HILOGE(MODULE_USB_NAPI, "memcpy_s iso failed error: %{public}d", ret);
+        }
+    } else if (endpointId == USB_ENDPOINT_DIR_IN && asyncContext->bufferLength > 0 && info.actualLength > 0) {
         asyncContext->ashmem->MapReadAndWriteAshmem();
         auto ashmemBuffer = asyncContext->ashmem->ReadFromAshmem(info.actualLength, 0);
         if (ashmemBuffer == nullptr) {
