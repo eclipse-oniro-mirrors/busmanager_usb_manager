@@ -583,6 +583,106 @@ ohos_unittest("test_usbdevicemodel") {
   ]
 }
 
+ohos_unittest("test_ohusbmanager_capi_param") {
+  module_out_path = module_output_path
+  sanitize = {
+    integer_overflow = true
+    ubsan = true
+    boundary_sanitize = true
+    cfi = true
+    cfi_cross_dso = true
+    debug = false
+  }
+  branch_protector_ret = "pac_ret"
+
+  sources = [
+    "src/usb_common_test.cpp",
+    "src/ohusb_manager_capi_param_test.cpp",
+  ]
+
+  configs = [
+    "${utils_path}:utils_config",
+    ":module_private_config",
+  ]
+
+  include_dirs = [
+    "${usb_manager_path}/interfaces/kits/capi/include",
+  ]
+
+  deps = [
+    "${usb_manager_path}/interfaces/innerkits:usbsrv_client",
+    "${usb_manager_path}/interfaces/kits/capi:ohusb_manager",
+    "${usb_manager_path}/services:usbservice",
+  ]
+
+  external_deps = [
+    "ability_base:want",
+    "access_token:libaccesstoken_sdk",
+    "access_token:libnativetoken",
+    "access_token:libtoken_setproc",
+    "bundle_framework:appexecfwk_base",
+    "c_utils:utils",
+    "common_event_service:cesfwk_innerkits",
+    "drivers_interface_usb:libusb_proxy_1.0",
+    "eventhandler:libeventhandler",
+    "googletest:gtest_main",
+    "hilog:libhilog",
+    "ipc:ipc_core",
+    "safwk:system_ability_fwk",
+    "samgr:samgr_proxy",
+  ]
+}
+
+ohos_unittest("test_ohusbmanager_capi_device") {
+  module_out_path = module_output_path
+  sanitize = {
+    integer_overflow = true
+    ubsan = true
+    boundary_sanitize = true
+    cfi = true
+    cfi_cross_dso = true
+    debug = false
+  }
+  branch_protector_ret = "pac_ret"
+
+  sources = [
+    "src/usb_common_test.cpp",
+    "src/ohusb_manager_capi_device_test.cpp",
+  ]
+
+  configs = [
+    "${utils_path}:utils_config",
+    ":module_private_config",
+  ]
+
+  include_dirs = [
+    "${usb_manager_path}/interfaces/kits/capi/include",
+  ]
+
+  deps = [
+    "${usb_manager_path}/interfaces/innerkits:usbsrv_client",
+    "${usb_manager_path}/interfaces/kits/capi:ohusb_manager",
+    "${usb_manager_path}/services:usbservice",
+  ]
+
+  external_deps = [
+    "ability_base:want",
+    "access_token:libaccesstoken_sdk",
+    "access_token:libnativetoken",
+    "access_token:libtoken_setproc",
+    "bundle_framework:appexecfwk_base",
+    "c_utils:utils",
+    "common_event_service:cesfwk_innerkits",
+    "drivers_interface_usb:libusb_proxy_1.0",
+    "eventhandler:libeventhandler",
+    "googletest:gtest_main",
+    "hilog:libhilog",
+    "ipc:ipc_core",
+    "safwk:system_ability_fwk",
+    "samgr:samgr_proxy",
+  ]
+}
+
 group("unittest") {
   testonly = true
   deps = [
@@ -591,6 +691,8 @@ group("unittest") {
     ":test_bulkcallback",
     ":test_interrupt_transfer",
     ":test_isochronous_transfer",
+    ":test_ohusbmanager_capi_param",
+    ":test_ohusbmanager_capi_device",
     ":test_usbcore",
     ":test_usbdevicepipe",
     ":test_usbdevicestatus",
