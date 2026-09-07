@@ -1826,11 +1826,11 @@ void UsbHostManager::ReadTypePolicyFromParcel(MessageParcel &reply, int size, st
 {
     for (int32_t i = 0; i < size; i++) {
         UsbDeviceType usbDeviceType;
-        READ_PARCEL_WITH_RET(reply, Int32, usbDeviceType.baseClass, UEC_SERVICE_EDM_SEND_REQUES_FAILED);
-        READ_PARCEL_WITH_RET(reply, Int32, usbDeviceType.subClass, UEC_SERVICE_EDM_SEND_REQUES_FAILED);
-        READ_PARCEL_WITH_RET(reply, Int32, usbDeviceType.protocol, UEC_SERVICE_EDM_SEND_REQUES_FAILED);
-        READ_PARCEL_WITH_RET(reply, Bool, usbDeviceType.isDeviceType, UEC_SERVICE_EDM_SEND_REQUES_FAILED);
-        READ_PARCEL_WITH_RET(reply, Bool, usbDeviceType.isDeviceTypeAllMatch, UEC_SERVICE_EDM_SEND_REQUES_FAILED);
+        READ_PARCEL_WITH_RET(reply, Int32, usbDeviceType.baseClass, UEC_SERVICE_EDM_SEND_REQUEST_FAILED);
+        READ_PARCEL_WITH_RET(reply, Int32, usbDeviceType.subClass, UEC_SERVICE_EDM_SEND_REQUEST_FAILED);
+        READ_PARCEL_WITH_RET(reply, Int32, usbDeviceType.protocol, UEC_SERVICE_EDM_SEND_REQUEST_FAILED);
+        READ_PARCEL_WITH_RET(reply, Bool, usbDeviceType.isDeviceType, UEC_SERVICE_EDM_SEND_REQUEST_FAILED);
+        READ_PARCEL_WITH_RET(reply, Bool, usbDeviceType.isDeviceTypeAllMatch, UEC_SERVICE_EDM_SEND_REQUEST_FAILED);
         disableType.emplace_back(usbDeviceType);
     }
 }
