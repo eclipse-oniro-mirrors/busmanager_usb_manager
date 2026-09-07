@@ -1768,7 +1768,8 @@ int32_t UsbHostManager::GetEdmTypePolicy(sptr<IRemoteObject> remote, std::vector
             __func__, sendRet, ret);
         return UEC_SERVICE_EDM_SEND_REQUEST_FAILED;
     }
-    int32_t size = reply.ReadInt32();
+    int32_t size = 0;
+    READ_PARCEL_WITH_RET(reply, Int32, size, UEC_SERVICE_EDM_SEND_REQUEST_FAILED);
     if (size <= 0 || static_cast<uint32_t>(size) > TRUSTLIST_POLICY_MAX_DEVICES) {
         USB_HILOGE(MODULE_USB_HOST, "EdmTypeList size=[%{public}d] is invalid", size);
         return UEC_SERVICE_EDM_DEVICE_SIZE_EXCEED;
@@ -1814,7 +1815,10 @@ int32_t UsbHostManager::GetEdmPermTypePolicy(sptr<IRemoteObject> remote, std::ve
     }
 
     USB_HILOGI(MODULE_USB_HOST, "%{public}s return size:%{public}d", __func__, size);
-    ReadTypePolicyFromParcel(reply, size, disableType);
+    ret = ReadTypePolicyFromParcel(reply, size, disableType);
+    if (ret != UEC_OK) {
+        return ret;
+    }
     return UEC_OK;
 }
 
@@ -1822,11 +1826,11 @@ void UsbHostManager::ReadTypePolicyFromParcel(MessageParcel &reply, int size, st
 {
     for (int32_t i = 0; i < size; i++) {
         UsbDeviceType usbDeviceType;
-        usbDeviceType.baseClass = reply.ReadInt32();
-        usbDeviceType.subClass = reply.ReadInt32();
-        usbDeviceType.protocol = reply.ReadInt32();
-        usbDeviceType.isDeviceType = reply.ReadBool();
-        usbDeviceType.isDeviceTypeAllMatch = reply.ReadBool();
+        READ_PARCEL_WITH_RET(reply, Int32, usbDeviceType.baseClass, UEC_SERVICE_EDM_SEND_REQUES_FAILED);
+        READ_PARCEL_WITH_RET(reply, Int32, usbDeviceType.subClass, UEC_SERVICE_EDM_SEND_REQUES_FAILED);
+        READ_PARCEL_WITH_RET(reply, Int32, usbDeviceType.protocol, UEC_SERVICE_EDM_SEND_REQUES_FAILED);
+        READ_PARCEL_WITH_RET(reply, Bool, usbDeviceType.isDeviceType, UEC_SERVICE_EDM_SEND_REQUES_FAILED);
+        READ_PARCEL_WITH_RET(reply, Bool, usbDeviceType.isDeviceTypeAllMatch, UEC_SERVICE_EDM_SEND_REQUES_FAILED);
         disableType.emplace_back(usbDeviceType);
     }
 }

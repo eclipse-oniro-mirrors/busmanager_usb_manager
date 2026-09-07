@@ -905,7 +905,11 @@ int32_t bulkTransferSync(::ohos::usbManager::USBDevicePipe const &pipe, ::ohos::
             USB_HILOGE(MODULE_USB_NAPI, "src buffer size larger than dst.");
             return ERROR;
         }
-        ret = memcpy_s(data, size, bufferData.data(), bufferData.size());
+        int32_t memcpyRet = memcpy_s(data, size, bufferData.data(), bufferData.size());
+        if (memcpyRet != 0) {
+            USB_HILOGE(MODULE_USB_NAPI, "bulkTransferSync memcpy_s failed");
+            return ERROR;
+        }
     }
     if (ret == OHOS::USB::UEC_OK) {
         return bufferData.size();

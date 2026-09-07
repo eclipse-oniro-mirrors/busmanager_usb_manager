@@ -29,7 +29,6 @@ export default class UsbDialogAbility extends UIExtensionAbility {
    */
   onSessionCreate(want, session): void {
     console.log(TAG + 'UsbDialogAbility onSessionCreate');
-    console.log(JSON.stringify(want));
 
     globalThis.extensionContext = this.context;
     globalThis.want = want;

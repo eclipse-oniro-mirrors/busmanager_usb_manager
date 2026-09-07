@@ -877,8 +877,8 @@ static napi_value DeviceCancelAccessoryRight(napi_env env, napi_callback_info in
 
     if (g_accFd != 0) {
         close(g_accFd);
-        g_accFd = 0;
         g_usbClient.CloseAccessory(g_accFd);
+        g_accFd = 0;
     }
 
     int32_t ret = g_usbClient.CancelAccessoryRight(accessory);
