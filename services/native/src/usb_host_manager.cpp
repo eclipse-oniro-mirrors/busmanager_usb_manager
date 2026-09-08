@@ -1822,7 +1822,8 @@ int32_t UsbHostManager::GetEdmPermTypePolicy(sptr<IRemoteObject> remote, std::ve
     return UEC_OK;
 }
 
-int32_t UsbHostManager::ReadTypePolicyFromParcel(MessageParcel &reply, int size, std::vector<UsbDeviceType> &disableType)
+int32_t UsbHostManager::ReadTypePolicyFromParcel(MessageParcel &reply, int size,
+    std::vector<UsbDeviceType> &disableType)
 {
     for (int32_t i = 0; i < size; i++) {
         UsbDeviceType usbDeviceType;
