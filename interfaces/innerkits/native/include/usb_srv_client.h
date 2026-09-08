@@ -31,6 +31,7 @@
 #include "usb_request.h"
 #include "usb_interface_type.h"
 #include "serial_death_monitor.h"
+#include "claim_exclusive_callback.h"
 #include "accessory_death_monitor.h"
 #include "usb_server_types.h"
 namespace OHOS {
@@ -61,6 +62,8 @@ public:
     int32_t UsbFunctionsFromString(std::string_view funcs);
     std::string UsbFunctionsToString(int32_t funcs);
     int32_t ClaimInterface(USBDevicePipe &pipe, const UsbInterface &interface, bool force);
+    int32_t ClaimInterfaceExclusive(USBDevicePipe &pipe, const UsbInterface &interface, bool force,
+        std::function<void(uint8_t, uint8_t, uint8_t)> callback);
     int32_t UsbAttachKernelDriver(USBDevicePipe &pipe, const UsbInterface &interface);
     int32_t UsbDetachKernelDriver(USBDevicePipe &pipe, const UsbInterface &interface);
     int32_t ReleaseInterface(USBDevicePipe &pipe, const UsbInterface &interface);
@@ -154,6 +157,7 @@ private:
     std::shared_mutex mutex_;
     sptr<SerialDeathMonitor> serialRemote = nullptr;
     sptr<AccessoryDeathMonitor> accessoryRemote = nullptr;
+    sptr<ClaimExclusiveCallback> claimCallback_ = nullptr;
 };
 } // namespace USB
 } // namespace OHOS

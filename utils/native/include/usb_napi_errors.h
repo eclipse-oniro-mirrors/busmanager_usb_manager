@@ -48,6 +48,7 @@ enum UsbJsErrCode : int32_t {
     USB_SUBMIT_TRANSFER_NOT_FOUND_ERROR = 14400011,
     USB_SUBMIT_TRANSFER_IO_ERROR = 14400012,
     USB_DEVICE_PIPE_CHECK_ERROR = 14400013,
+    USB_INTERFACE_BUSY_ERROR = 14400014,
 };
 
 const std::map<int32_t, std::string_view> ERRCODE_MSG_MAP = {
@@ -83,6 +84,7 @@ const std::map<int32_t, std::string_view> ERRCODE_MSG_MAP = {
     {USB_DEVICE_PIPE_CHECK_ERROR, "BusinessError 14400013:The USBDevicePipe validity check failed. Possible causes:"
                                   "1.The input parameters fail the validation check."
                                   "2.The call chain used to obtain the input parameters is not reasonable."},
+    {USB_INTERFACE_BUSY_ERROR, "BusinessError 14400014:Interface busy. The interface is claimed by another program."},
 };
 
 void ThrowBusinessError(const napi_env &env, int32_t errCode, const std::string &errMsg);

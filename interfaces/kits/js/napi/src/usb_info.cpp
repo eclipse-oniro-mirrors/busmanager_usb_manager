@@ -1618,6 +1618,136 @@ static napi_value PipeClaimInterface(napi_env env, napi_callback_info info)
     return result;
 }
 
+static std::function<void(uint8_t, uint8_t, uint8_t)> CreateClaimConflictCallback(
+    napi_env env, napi_value jsCallback)
+{
+    napi_value workName;
+    napi_create_string_utf8(env, "ClaimConflictCb", NAPI_AUTO_LENGTH, &workName);
+    napi_threadsafe_function tsfn = nullptr;
+    napi_status status = napi_create_threadsafe_function(env, jsCallback, nullptr, workName, 0, 1,
+        nullptr, nullptr, nullptr,
+        [](napi_env env, napi_value jsCb, void *context, void *data) {
+            auto *args = static_cast<std::tuple<uint8_t, uint8_t, uint8_t> *>(data);
+            napi_handle_scope scope;
+            napi_open_handle_scope(env, &scope);
+            napi_value notifyObj;
+            napi_create_object(env, &notifyObj);
+            napi_value busVal;
+            napi_create_uint32(env, std::get<INDEX_0>(*args), &busVal);
+            napi_value devVal;
+            napi_create_uint32(env, std::get<INDEX_1>(*args), &devVal);
+            napi_value ifVal;
+            napi_create_uint32(env, std::get<INDEX_2>(*args), &ifVal);
+            napi_set_named_property(env, notifyObj, "busNum", busVal);
+            napi_set_named_property(env, notifyObj, "devAddr", devVal);
+            napi_set_named_property(env, notifyObj, "interfaceId", ifVal);
+            napi_value argvCb[1] = {notifyObj};
+            napi_value result;
+            napi_call_function(env, nullptr, jsCb, 1, argvCb, &result);
+            napi_close_handle_scope(env, scope);
+            delete args;
+        }, &tsfn);
+    if (status != napi_ok || tsfn == nullptr) {
+        return nullptr;
+    }
+    auto holder = std::shared_ptr<void>(static_cast<void *>(tsfn), [](void *p) {
+        if (p != nullptr) {
+            napi_release_threadsafe_function(static_cast<napi_threadsafe_function>(p), napi_tsfn_release);
+        }
+    });
+    return [holder](uint8_t busNum, uint8_t devAddr, uint8_t interfaceId) {
+        auto *args = new std::tuple<uint8_t, uint8_t, uint8_t>(busNum, devAddr, interfaceId);
+        napi_call_threadsafe_function(static_cast<napi_threadsafe_function>(holder.get()), args,
+            napi_tsfn_nonblocking);
+    };
+}
+
+static void ThrowClaimExclusiveError(napi_env env, int32_t ret)
+{
+    if (ret == UEC_SERVICE_PERMISSION_DENIED) {
+        ThrowBusinessError(env, UEC_COMMON_HAS_NO_RIGHT, "BusinessError 14400001:Permission denied.");
+    } else if (ret == UEC_INTERFACE_BUSY) {
+        ThrowBusinessError(env, USB_SUBMIT_TRANSFER_RESOURCE_BUSY_ERROR,
+            "BusinessError 14400007:Resource busy. The interface is exclusively claimed by another application.");
+    } else if (ret == UEC_SERVICE_INVALID_VALUE) {
+        ThrowBusinessError(env, UEC_COMMON_SERVICE_EXCEPTION,
+            "BusinessError 14400004:Service exception. Possible causes: No device is inserted.");
+    } else {
+        ThrowBusinessError(env, USB_SUBMIT_TRANSFER_OTHER_ERROR,
+            "BusinessError 14400010:Other USB error. The driver returned an error.");
+    }
+}
+
+struct ClaimExclusiveParams {
+    USBDevicePipe pipe;
+    UsbInterface interface;
+    bool isForce = false;
+    std::function<void(uint8_t, uint8_t, uint8_t)> callback = nullptr;
+};
+
+static bool ParseClaimExclusiveParams(napi_env env, size_t argc, napi_value *argv,
+    ClaimExclusiveParams &params)
+{
+    napi_value obj = argv[INDEX_0];
+    napi_valuetype type;
+    napi_typeof(env, obj, &type);
+    USB_ASSERT_RETURN_FALSE(env, type == napi_object, OHEC_COMMON_PARAM_ERROR,
+        "The type of pipe must be USBDevicePipe.");
+    ParseUsbDevicePipe(env, obj, params.pipe);
+
+    napi_value obj2 = argv[INDEX_1];
+    napi_typeof(env, obj2, &type);
+    USB_ASSERT_RETURN_FALSE(env, type == napi_object, OHEC_COMMON_PARAM_ERROR,
+        "The type of iface must be USBInterface.");
+    ParseInterfaceObj(env, obj2, params.interface);
+
+    if (argc >= PARAM_COUNT_3) {
+        napi_typeof(env, argv[INDEX_2], &type);
+        if (type == napi_boolean) {
+            napi_get_value_bool(env, argv[INDEX_2], &params.isForce);
+        } else {
+            USB_HILOGW(MODULE_USB_NAPI, "The type of force must be boolean.");
+        }
+    }
+
+    if (argc >= PARAM_COUNT_4) {
+        napi_typeof(env, argv[INDEX_3], &type);
+        if (type == napi_function) {
+            params.callback = CreateClaimConflictCallback(env, argv[INDEX_3]);
+        } else {
+            USB_HILOGW(MODULE_USB_NAPI, "The type of callback must be function.");
+        }
+    }
+    return true;
+}
+
+static napi_value PipeClaimInterfaceExclusive(napi_env env, napi_callback_info info)
+{
+    if (!HasFeature(FEATURE_HOST)) {
+        ThrowBusinessError(env, CAPABILITY_NOT_SUPPORT, "");
+        return nullptr;
+    }
+    size_t argc = PARAM_COUNT_4;
+    napi_value argv[PARAM_COUNT_4] = {nullptr};
+
+    NAPI_CHECK(env, napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr), "Get call back info failed");
+    USB_ASSERT(env, (argc >= PARAM_COUNT_2), OHEC_COMMON_PARAM_ERROR,
+        "The function at least takes two arguments.");
+
+    ClaimExclusiveParams params;
+    ParseClaimExclusiveParams(env, argc, argv, params);
+
+    int32_t ret = g_usbClient.ClaimInterfaceExclusive(params.pipe, params.interface, params.isForce, params.callback);
+    USB_HILOGD(MODULE_USB_NAPI, "pipe call ClaimInterfaceExclusive ret: %{public}d", ret);
+    if (ret != UEC_OK) {
+        ThrowClaimExclusiveError(env, ret);
+        return nullptr;
+    }
+    napi_value result = nullptr;
+    napi_get_undefined(env, &result);
+    return result;
+}
+
 static napi_value PipeReleaseInterface(napi_env env, napi_callback_info info)
 {
     UsbApiMetrics metrics("BasicServicesKit.UsbManager.ReleaseInterface");
@@ -3062,6 +3192,7 @@ napi_value UsbInit(napi_env env, napi_value exports)
 
         /* usb device pipe */
         DECLARE_NAPI_FUNCTION("claimInterface", PipeClaimInterface),
+        DECLARE_NAPI_FUNCTION("claimInterfaceExclusive", PipeClaimInterfaceExclusive),
         DECLARE_NAPI_FUNCTION("releaseInterface", PipeReleaseInterface),
         DECLARE_NAPI_FUNCTION("bulkTransfer", PipeBulkTransfer),
         DECLARE_NAPI_FUNCTION("controlTransfer", PipeControlTransfer),

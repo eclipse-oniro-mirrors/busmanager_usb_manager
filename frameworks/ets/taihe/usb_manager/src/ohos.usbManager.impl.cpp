@@ -25,6 +25,7 @@
 #include "usb_srv_client.h"
 #include "v1_2/usb_types.h"
 #include "ohos.usbManager.SubmitTransferCallback.ani.1.hpp"
+#include "ohos.usbManager.InterfaceConflictInfo.ani.1.hpp"
 
 using namespace taihe;
 using namespace ohos::usbManager;
@@ -732,6 +733,55 @@ int32_t claimInterface(USBDevicePipe const &pipe, USBInterface const &iface, opt
     return ret;
 }
 
+struct ClaimExclusiveCallbackContext {
+    ani_vm *vm = nullptr;
+    ani_object callbackRef = nullptr;
+};
+
+static std::shared_ptr<ClaimExclusiveCallbackContext> SetupClaimCallback(uintptr_t callbackAddr);
+static void OnClaimConflict(std::shared_ptr<ClaimExclusiveCallbackContext> ctx,
+    uint8_t busNum, uint8_t devAddr, uint8_t interfaceId);
+
+void claimInterfaceExclusive(USBDevicePipe const &pipe, USBInterface const &iface, optional_view<bool> force,
+    optional_view<uintptr_t> onConflict)
+{
+    if (!HasFeature(FEATURE_HOST)) {
+        ThrowBusinessError(CAPABILITY_NOT_SUPPORT, "");
+        return;
+    }
+    OHOS::USB::USBDevicePipe internalPipe = ConvertUSBDevicePipe(pipe);
+    bool forceClaim = force.has_value() ? *force : false;
+    std::function<void(uint8_t, uint8_t, uint8_t)> cb = nullptr;
+    if (onConflict.has_value() && onConflict.value() != 0) {
+        auto ctx = SetupClaimCallback(onConflict.value());
+        if (ctx != nullptr) {
+            cb = [ctx](uint8_t busNum, uint8_t devAddr, uint8_t interfaceId) {
+                OnClaimConflict(ctx, busNum, devAddr, interfaceId);
+            };
+        }
+    }
+    int ret = OHOS::USB::UsbSrvClient::GetInstance().ClaimInterfaceExclusive(
+        internalPipe, ConvertToUsbInterface(iface), forceClaim, cb);
+    USB_HILOGD(MODULE_USB_NAPI, "pipe call claimInterfaceExclusive ret: %{public}d", ret);
+    if (ret == OHOS::USB::UEC_OK) {
+        return;
+    }
+    if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED) {
+        ThrowBusinessError(UEC_COMMON_HAS_NO_RIGHT, "BusinessError 14400001:Permission denied.");
+        return;
+    }
+    if (ret == OHOS::USB::UEC_INTERFACE_BUSY) {
+        ThrowBusinessError(USB_SUBMIT_TRANSFER_RESOURCE_BUSY_ERROR,
+            "BusinessError 14400007:Resource busy. The interface is exclusively claimed by another application.");
+        return;
+    }
+    if (ret == OHOS::USB::UEC_SERVICE_INVALID_VALUE) {
+        ThrowBusinessError(UEC_COMMON_SERVICE_EXCEPTION, "BusinessError 14400004:Service exception.");
+        return;
+    }
+    ThrowBusinessError(USB_SUBMIT_TRANSFER_OTHER_ERROR, "BusinessError 14400010:Other USB error.");
+}
+
 int32_t releaseInterface(USBDevicePipe const &pipe, USBInterface const &iface)
 {
     OHOS::USB::UsbApiMetrics metrics("BasicServicesKit.UsbManager.Static.ReleaseInterface");
@@ -1328,6 +1378,94 @@ static void AniCallBack(USBTransferAsyncContext *asyncContext, const OHOS::USB::
     }
 }
 
+static void DeleteClaimCallback(ClaimExclusiveCallbackContext *ctx)
+{
+    if (ctx == nullptr) {
+        return;
+    }
+    if (ctx->vm != nullptr && ctx->callbackRef != nullptr) {
+        ani_env *env = nullptr;
+        ani_options aniArgs {0, nullptr};
+        if (ctx->vm->AttachCurrentThread(&aniArgs, ANI_VERSION_1, &env) != ANI_OK) {
+            ctx->vm->GetEnv(ANI_VERSION_1, &env);
+        }
+        if (env != nullptr) {
+            env->GlobalReference_Delete(ctx->callbackRef);
+        }
+    }
+    delete ctx;
+}
+
+static std::shared_ptr<ClaimExclusiveCallbackContext> SetupClaimCallback(uintptr_t callbackAddr)
+{
+    ani_env *env = ::taihe::get_env();
+    if (env == nullptr) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: get_env failed, env is nullptr", __func__);
+        return nullptr;
+    }
+    ani_ref callbackRef = nullptr;
+    if (env->GlobalReference_Create(reinterpret_cast<ani_object>(callbackAddr), &callbackRef) != ANI_OK) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: GlobalReference_Create failed", __func__);
+        return nullptr;
+    }
+    ani_vm *vm = nullptr;
+    if (env->GetVM(&vm) != ANI_OK || vm == nullptr) {
+        env->GlobalReference_Delete(reinterpret_cast<ani_object>(callbackRef));
+        return nullptr;
+    }
+    return std::shared_ptr<ClaimExclusiveCallbackContext>(
+        new ClaimExclusiveCallbackContext {vm, reinterpret_cast<ani_object>(callbackRef)},
+        [](ClaimExclusiveCallbackContext *ctx) { DeleteClaimCallback(ctx); });
+}
+
+static void OnClaimConflict(std::shared_ptr<ClaimExclusiveCallbackContext> ctx,
+    uint8_t busNum, uint8_t devAddr, uint8_t interfaceId)
+{
+    if (ctx == nullptr) {
+        return;
+    }
+    ::ohos::usbManager::InterfaceConflictInfo param = {
+        static_cast<int32_t>(busNum), static_cast<int32_t>(devAddr), static_cast<int32_t>(interfaceId)};
+    auto task = [ctx, param]() {
+        ani_env *env = nullptr;
+        ani_options aniArgs {0, nullptr};
+        if (ctx->vm == nullptr
+            || (ANI_ERROR == ctx->vm->AttachCurrentThread(&aniArgs, ANI_VERSION_1, &env)
+                && ANI_OK != ctx->vm->GetEnv(ANI_VERSION_1, &env))) {
+            USB_HILOGE(MODULE_USB_NAPI, "%{public}s: attach env failed", __func__);
+            return;
+        }
+        if (ANI_OK != env->CreateLocalScope(LOCAL_SCOPE_SIZE)) {
+            USB_HILOGE(MODULE_USB_NAPI, "%{public}s: CreateLocalScope failed", __func__);
+            return;
+        }
+        auto aniObj = ::taihe::into_ani<::ohos::usbManager::InterfaceConflictInfo>(env, param);
+        ani_class cls;
+        if (ANI_OK != env->FindClass("std.core.Function1", &cls)) {
+            USB_HILOGE(MODULE_USB_NAPI, "%{public}s: FindClass failed", __func__);
+            env->DestroyLocalScope();
+            return;
+        }
+        ani_boolean result;
+        ani_ref ani_argv[] = {aniObj};
+        ani_ref ani_result;
+        if (ANI_OK != env->Object_InstanceOf(ctx->callbackRef, cls, &result) || !result) {
+            USB_HILOGE(MODULE_USB_NAPI, "%{public}s: callbackRef is not Function1", __func__);
+            env->DestroyLocalScope();
+            return;
+        }
+        auto errCode = env->FunctionalObject_Call(
+            static_cast<ani_fn_object>(ctx->callbackRef), 1, ani_argv, &ani_result);
+        if (errCode != ANI_OK) {
+            USB_HILOGE(MODULE_USB_NAPI, "%{public}s: FunctionalObject_Call returned %{public}d", __func__, errCode);
+        }
+        env->DestroyLocalScope();
+    };
+    if (!SendEventToMainThread(task)) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: SendEventToMainThread failed", __func__);
+    }
+}
+
 USBTransferAsyncContext* CreateTransferContext(const UsbDataTransferParams& transfer)
 {
     auto context = new (std::nothrow) USBTransferAsyncContext();
@@ -1520,6 +1658,7 @@ TH_EXPORT_CPP_API_getPortSupportModes(getPortSupportModes);
 TH_EXPORT_CPP_API_setPortRoleTypesSync(setPortRoleTypesSync);
 TH_EXPORT_CPP_API_addAccessoryRight(addAccessoryRight);
 TH_EXPORT_CPP_API_claimInterface(claimInterface);
+TH_EXPORT_CPP_API_claimInterfaceExclusive(claimInterfaceExclusive);
 TH_EXPORT_CPP_API_releaseInterface(releaseInterface);
 TH_EXPORT_CPP_API_setConfiguration(setConfiguration);
 TH_EXPORT_CPP_API_setInterface(setInterface);

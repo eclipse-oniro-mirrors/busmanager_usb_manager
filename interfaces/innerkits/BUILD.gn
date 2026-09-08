@@ -17,6 +17,7 @@ import("./../../usbmgr.gni")
 idl_gen_interface("usb_server_interface") {
   sources = [ "IUsbServer.idl" ]
   sources_common = [ "UsbServerTypes.idl" ]
+  sources_callback = [ "IClaimExclusiveCallback.idl" ]
   log_domainid = "0xD002A03"
   log_tag = "UsbSrvClient"
 }
@@ -44,11 +45,13 @@ ohos_shared_library("usbsrv_client") {
     "native/src/usb_request.cpp",
     "native/src/usb_srv_client.cpp",
     "native/src/usbd_bulk_callback.cpp",
+    "native/src/claim_exclusive_callback.cpp",
   ]
   sources += filter_include(output_values,
                             [
                               "*_proxy.cpp",
                               "*_types.cpp",
+                              "*callback_stub.cpp",
                             ])
   configs = [
     "${utils_path}:utils_config",
@@ -134,6 +137,7 @@ ohos_source_set("usb_server_stub") {
                            [
                              "*_stub.cpp",
                              "*_types.cpp",
+                             "*callback_proxy.cpp",
                            ])
   deps = [ ":usb_server_interface" ]
   external_deps = [
