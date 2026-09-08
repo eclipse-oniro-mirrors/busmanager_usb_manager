@@ -50,6 +50,7 @@ public:
     int32_t OpenDevice(const UsbDevice &device, USBDevicePipe &pipe);
     int32_t ResetDevice(USBDevicePipe &pipe);
     bool HasRight(std::string deviceName);
+    int32_t HasRightEx(std::string deviceName, bool &result);
     int32_t RequestRight(std::string deviceName);
     int32_t RemoveRight(std::string deviceName);
     int32_t GetDevices(std::vector<UsbDevice> &deviceList);
@@ -75,6 +76,7 @@ public:
     int32_t GetRawDescriptors(USBDevicePipe &pipe, std::vector<uint8_t> &bufferData);
     int32_t GetFileDescriptor(USBDevicePipe &pipe, int32_t &fd);
     bool Close(const USBDevicePipe &pip);
+    int32_t CloseEx(const USBDevicePipe &pip);
     int32_t PipeRequestWait(USBDevicePipe &pipe, int64_t timeOut, UsbRequest &req);
 
     int32_t RequestInitialize(UsbRequest &request);

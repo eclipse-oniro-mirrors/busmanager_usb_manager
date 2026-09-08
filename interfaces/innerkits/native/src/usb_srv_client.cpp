@@ -171,6 +171,20 @@ bool UsbSrvClient::HasRight(std::string deviceName)
     return hasRight;
 }
 
+int32_t UsbSrvClient::HasRightEx(std::string deviceName, bool &result)
+{
+    USB_HILOGI(MODULE_USB_INNERKIT, "Calling HasRightEx Start!");
+    RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
+    result = false;
+    int32_t ret = proxy_->HasRight(deviceName, result);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_INNERKIT, "HasRightEx failed with ret = %{public}d !", ret);
+    }
+    return ret;
+}
+
 int32_t UsbSrvClient::RequestRight(std::string deviceName)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
@@ -379,6 +393,19 @@ bool UsbSrvClient::Close(const USBDevicePipe &pipe)
     RETURN_IF_WITH_RET(proxy_ == nullptr, false);
     int32_t ret = proxy_->Close(pipe.GetBusNum(), pipe.GetDevAddr());
     return (ret == UEC_OK);
+}
+
+int32_t UsbSrvClient::CloseEx(const USBDevicePipe &pipe)
+{
+    USB_HILOGI(MODULE_USB_INNERKIT, "Calling CloseEx Start!");
+    RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
+    int32_t ret = proxy_->Close(pipe.GetBusNum(), pipe.GetDevAddr());
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_INNERKIT, "CloseEx failed with ret = %{public}d !", ret);
+    }
+    return ret;
 }
 
 int32_t UsbSrvClient::PipeRequestWait(USBDevicePipe &pipe, int64_t timeOut, UsbRequest &req)
@@ -697,6 +724,13 @@ bool UsbSrvClient::HasRight(std::string deviceName)
     return false;
 }
 
+int32_t UsbSrvClient::HasRightEx(std::string deviceName, bool &result)
+{
+    result = false;
+    USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
+    return CAPABILITY_NOT_SUPPORT;
+}
+
 int32_t UsbSrvClient::RequestRight(std::string deviceName)
 {
     USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
@@ -788,6 +822,12 @@ bool UsbSrvClient::Close(const USBDevicePipe &pipe)
 {
     USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
     return false;
+}
+
+int32_t UsbSrvClient::CloseEx(const USBDevicePipe &pipe)
+{
+    USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
+    return CAPABILITY_NOT_SUPPORT;
 }
 
 int32_t UsbSrvClient::PipeRequestWait(USBDevicePipe &pipe, int64_t timeOut, UsbRequest &req)

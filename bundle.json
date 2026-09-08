@@ -75,6 +75,7 @@
                     "//base/usb/usb_manager/interfaces/innerkits:usbsrv_client",
                     "//base/usb/usb_manager/interfaces/kits/js/napi:usbmanager",
                     "//base/usb/usb_manager/interfaces/kits/js/napi:usb",
+                    "//base/usb/usb_manager/interfaces/kits/capi:ohusb_manager",
                     "//base/usb/usb_manager/frameworks/dialog/dialog_ui/usb_right_dialog:dialog_hap",
                     "//base/usb/usb_manager/frameworks/ets/taihe:usb_taihe",
                     "//base/usb/usb_manager/interfaces/kits/js/napi:serial",
