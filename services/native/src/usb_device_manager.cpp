@@ -353,6 +353,7 @@ std::string UsbDeviceManager::ConvertToString(uint32_t function)
 
 void UsbDeviceManager::UpdateFunctions(int32_t func)
 {
+    std::lock_guard<std::mutex> guard(deviceMutex_);
     USB_HILOGI(MODULE_USB_DEVICE, "%{public}s: func %{public}d, currentFunctions_ %{public}d", __func__, func,
         currentFunctions_);
     if (func == currentFunctions_) {
@@ -371,6 +372,7 @@ void UsbDeviceManager::UpdateFunctions(int32_t func)
 
 int32_t UsbDeviceManager::GetCurrentFunctions()
 {
+    std::lock_guard<std::mutex> guard(deviceMutex_);
     return currentFunctions_;
 }
 
@@ -408,6 +410,7 @@ void UsbDeviceManager::SetPhyConnectState(bool phyConnect)
 #ifdef USB_MANAGER_V2_0
 void UsbDeviceManager::HandleEvent(int32_t status)
 {
+    std::lock_guard<std::mutex> guard(deviceMutex_);
     if (usbDeviceInterface_ == nullptr) {
         return;
     }
@@ -416,6 +419,7 @@ void UsbDeviceManager::HandleEvent(int32_t status)
     UsbTimerWrapper::GetInstance()->Unregister(delayDisconnTimerId_);
     if (curConnect && (connected_ != curConnect)) {
         auto task = [&]() {
+            std::lock_guard<std::mutex> guard(deviceMutex_);
             USB_HILOGI(MODULE_USB_DEVICE, "execute connect task:%{public}d", currentFunctions_);
             connected_ = true;
             GetCurrentFunctions(currentFunctions_);
@@ -425,6 +429,7 @@ void UsbDeviceManager::HandleEvent(int32_t status)
         USB_HILOGI(MODULE_USB_DEVICE, "register a connect task, id %{public}u", delayDisconnTimerId_);
     } else if (!curConnect && (connected_ != curConnect)) {
         auto task = [&]() {
+            std::lock_guard<std::mutex> guard(deviceMutex_);
             USB_HILOGI(MODULE_USB_DEVICE, "execute disconnect task:%{public}d", currentFunctions_);
             connected_ = false;
             isDisableDialog_ = false;
@@ -457,6 +462,7 @@ void UsbDeviceManager::HandleEvent(int32_t status)
 #else
 void UsbDeviceManager::HandleEvent(int32_t status)
 {
+    std::lock_guard<std::mutex> guard(deviceMutex_);
     if (usbd_ == nullptr) {
         return;
     }
@@ -465,6 +471,7 @@ void UsbDeviceManager::HandleEvent(int32_t status)
     UsbTimerWrapper::GetInstance()->Unregister(delayDisconnTimerId_);
     if (curConnect && (connected_ != curConnect)) {
         auto task = [&]() {
+            std::lock_guard<std::mutex> guard(deviceMutex_);
             USB_HILOGI(MODULE_USB_DEVICE, "execute connect task:%{public}d", currentFunctions_);
             connected_ = true;
             GetCurrentFunctions(currentFunctions_);
@@ -474,6 +481,7 @@ void UsbDeviceManager::HandleEvent(int32_t status)
         USB_HILOGI(MODULE_USB_DEVICE, "register a connect task, id %{public}u", delayDisconnTimerId_,);
     } else if (!curConnect && (connected_ != curConnect)) {
         auto task = [&]() {
+            std::lock_guard<std::mutex> guard(deviceMutex_);
             USB_HILOGI(MODULE_USB_DEVICE, "execute disconnect task:%{public}d", currentFunctions_);
             connected_ = false;
             isDisableDialog_ = false;
@@ -509,6 +517,7 @@ int32_t UsbDeviceManager::UserChangeProcess()
 {
     USB_HILOGI(MODULE_USB_DEVICE, "%{public}s: in", __func__);
     int32_t ret = HDF_FAILURE;
+    std::lock_guard<std::mutex> guard(deviceMutex_);
     if ((static_cast<uint32_t>(currentFunctions_) & USB_FUNCTION_MTP) != 0 ||
         (static_cast<uint32_t>(currentFunctions_) & USB_FUNCTION_PTP) != 0) {
         uint32_t func = static_cast<uint32_t>(currentFunctions_) & (~USB_FUNCTION_MTP) & (~USB_FUNCTION_PTP);
@@ -654,6 +663,7 @@ void UsbDeviceManager::GetDumpHelp(int32_t fd)
 void UsbDeviceManager::DumpGetSupportFunc(int32_t fd)
 {
     dprintf(fd, "Usb Device function list info:\n");
+    std::lock_guard<std::mutex> guard(deviceMutex_);
     dprintf(fd, "current function: %s\n", ConvertToString(currentFunctions_).c_str());
     dprintf(fd, "supported functions list: %s\n", ConvertToString(functionSettable_).c_str());
 }

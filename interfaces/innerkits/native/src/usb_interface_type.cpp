@@ -34,11 +34,11 @@ bool UsbDeviceType::Unmarshalling(MessageParcel &parcel, UsbDeviceType &usbDevic
 
 bool UsbDeviceType::ReadFromParcel(MessageParcel &parcel)
 {
-    baseClass = parcel.ReadInt32();
-    subClass = parcel.ReadInt32();
-    protocol = parcel.ReadInt32();
-    isDeviceType = parcel.ReadBool();
-    isDeviceTypeAllMatch = parcel.ReadBool();
+    READ_PARCEL_WITH_RET(parcel, Int32, baseClass, false);
+    READ_PARCEL_WITH_RET(parcel, Int32, subClass, false);
+    READ_PARCEL_WITH_RET(parcel, Int32, protocol, false);
+    READ_PARCEL_WITH_RET(parcel, Bool, isDeviceType, false);
+    READ_PARCEL_WITH_RET(parcel, Bool, isDeviceTypeAllMatch, false);
     return true;
 }
 } // namespace USB

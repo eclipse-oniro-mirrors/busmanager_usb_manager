@@ -95,6 +95,7 @@ private:
     sptr<HDI::Usb::V1_0::IUsbInterface> usbd_ = nullptr;
     uint32_t delayDisconnTimerId_ {UINT32_MAX};
     std::mutex functionMutex_;
+    std::mutex deviceMutex_;
     bool phyConnect_ {false};
 #ifdef USB_MANAGER_V2_0
     int32_t GetCustomControlRequestData(int32_t id, std::vector<uint8_t> &data);
