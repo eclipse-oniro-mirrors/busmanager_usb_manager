@@ -31,6 +31,7 @@
 #include "if_system_ability_manager.h"
 #include "iproxy_broker.h"
 #include "iservice_registry.h"
+#include "iclaim_exclusive_callback.h"
 #include "iusb_srv.h"
 #include "securec.h"
 #include "system_ability_definition.h"
@@ -529,6 +530,9 @@ int32_t UsbService::Close(uint8_t busNum, uint8_t devAddr)
         return UEC_SERVICE_PERMISSION_DENIED;
     }
 
+    uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
+    RemoveExclusiveClaimByDevice(busNum, devAddr, tokenId);
+
     // LCOV_EXCL_START
     if (usbHostManager_ == nullptr) {
         USB_HILOGE(MODULE_USB_HOST, "UsbService::usbHostManager_ is nullptr");
@@ -569,6 +573,8 @@ int32_t UsbService::ResetDevice(uint8_t busNum, uint8_t devAddr)
 
 int32_t UsbService::ClaimInterface(uint8_t busNum, uint8_t devAddr, uint8_t interface, uint8_t force)
 {
+    USB_HILOGD(MODULE_USB_HOST, "ClaimInterface enter bus=%{public}hhu dev=%{public}hhu"
+        " if=%{public}hhu force=%{public}hhu", busNum, devAddr, interface, force);
     if (!UsbService::CheckDevicePermission(busNum, devAddr)) {
         return UEC_SERVICE_PERMISSION_DENIED;
     }
@@ -580,10 +586,146 @@ int32_t UsbService::ClaimInterface(uint8_t busNum, uint8_t devAddr, uint8_t inte
     }
     int32_t ret = usbHostManager_->ClaimInterface(busNum, devAddr, interface, force);
     if (ret != UEC_OK) {
-        USB_HILOGE(MODULE_USB_HOST, "claim interface false.");
+        return ret;
     }
+    NotifyExclusiveOwner(busNum, devAddr, interface, IPCSkeleton::GetCallingTokenID());
     return ret;
     // LCOV_EXCL_STOP
+}
+
+void UsbService::NotifyExclusiveOwner(uint8_t busNum, uint8_t devAddr, uint8_t interface, uint32_t tokenId)
+{
+    sptr<IClaimExclusiveCallback> notifyCb = nullptr;
+    {
+        std::string key = MakeClaimKey(busNum, devAddr, interface);
+        std::lock_guard<std::mutex> guard(claimMutex_);
+        auto it = claimStateMap_.find(key);
+        if (it == claimStateMap_.end()) {
+            it = claimStateMap_.emplace(key, ClaimInterfaceState{}).first;
+        }
+        it->second.normalClaimed = true;
+        if (it->second.exclusiveOwner != 0 && it->second.exclusiveOwner != tokenId) {
+            notifyCb = it->second.notifyCallback;
+        }
+    }
+    if (notifyCb != nullptr) {
+        notifyCb->onConflict(busNum, devAddr, interface);
+    }
+}
+
+std::string UsbService::MakeClaimKey(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid)
+{
+    return std::to_string(busNum) + "-" + std::to_string(devAddr) + "-" + std::to_string(interfaceid);
+}
+
+int32_t UsbService::CheckExclusiveTransfer(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid)
+{
+    uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
+    std::string key = MakeClaimKey(busNum, devAddr, interfaceid);
+    std::lock_guard<std::mutex> guard(claimMutex_);
+    auto it = claimStateMap_.find(key);
+    if (it == claimStateMap_.end()) {
+        return UEC_OK;
+    }
+    if (it->second.exclusiveOwner != 0 && !it->second.normalClaimed && it->second.exclusiveOwner != tokenId) {
+        USB_HILOGE(MODULE_USB_HOST, "interface exclusively claimed, transfer denied");
+        return UEC_SERVICE_IO_EXCEPTION;
+    }
+    return UEC_OK;
+}
+
+void UsbService::RemoveExclusiveClaimByDevice(uint8_t busNum, uint8_t devAddr, uint32_t tokenId)
+{
+    std::string prefix = std::to_string(busNum) + "-" + std::to_string(devAddr) + "-";
+    std::lock_guard<std::mutex> guard(claimMutex_);
+    for (auto it = claimStateMap_.begin(); it != claimStateMap_.end();) {
+        if (it->first.compare(0, prefix.size(), prefix) == 0 && it->second.exclusiveOwner == tokenId) {
+            if (it->second.notifyCallback != nullptr && it->second.claimRecipient != nullptr) {
+                it->second.notifyCallback->AsObject()->RemoveDeathRecipient(it->second.claimRecipient);
+            }
+            it->second.exclusiveOwner = 0;
+            it->second.notifyCallback = nullptr;
+            it->second.claimRecipient = nullptr;
+            if (!it->second.normalClaimed) {
+                it = claimStateMap_.erase(it);
+                continue;
+            }
+        }
+        ++it;
+    }
+}
+
+void UsbService::RemoveAllClaimByDevice(uint8_t busNum, uint8_t devAddr)
+{
+    std::string prefix = std::to_string(busNum) + "-" + std::to_string(devAddr) + "-";
+    std::lock_guard<std::mutex> guard(claimMutex_);
+    for (auto it = claimStateMap_.begin(); it != claimStateMap_.end();) {
+        if (it->first.compare(0, prefix.size(), prefix) == 0) {
+            if (it->second.notifyCallback != nullptr && it->second.claimRecipient != nullptr) {
+                it->second.notifyCallback->AsObject()->RemoveDeathRecipient(it->second.claimRecipient);
+            }
+            it = claimStateMap_.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
+int32_t UsbService::ClaimInterfaceExclusive(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid,
+    uint8_t force, const sptr<IClaimExclusiveCallback> &cb)
+{
+    if (!UsbService::CheckDevicePermission(busNum, devAddr)) {
+        return UEC_SERVICE_PERMISSION_DENIED;
+    }
+    if (usbHostManager_ == nullptr) {
+        return UEC_SERVICE_INVALID_VALUE;
+    }
+    uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
+    std::string key = MakeClaimKey(busNum, devAddr, interfaceid);
+    bool isRepeat = false;
+    {
+        std::lock_guard<std::mutex> guard(claimMutex_);
+        auto it = claimStateMap_.find(key);
+        if (it != claimStateMap_.end()) {
+            if (it->second.exclusiveOwner == tokenId) {
+                isRepeat = true;
+            } else if (it->second.exclusiveOwner != 0) {
+                return UEC_INTERFACE_BUSY;
+            } else if (it->second.normalClaimed) {
+                return UEC_INTERFACE_BUSY;
+            }
+        }
+    }
+    int32_t ret = usbHostManager_->ClaimInterface(busNum, devAddr, interfaceid, force);
+    if (ret != UEC_OK) {
+        return ret;
+    }
+    RegisterExclusiveCallback(key, busNum, devAddr, interfaceid, tokenId, cb, isRepeat);
+    return UEC_OK;
+}
+
+void UsbService::RegisterExclusiveCallback(const std::string &key, uint8_t busNum, uint8_t devAddr,
+    uint8_t interfaceid, uint32_t tokenId, const sptr<IClaimExclusiveCallback> &cb, bool isRepeat)
+{
+    if (cb == nullptr) {
+        return;
+    }
+    sptr<ClaimDeathRecipient> recipient =
+        new ClaimDeathRecipient(this, busNum, devAddr, interfaceid, tokenId);
+    if (recipient == nullptr || !cb->AsObject()->AddDeathRecipient(recipient)) {
+        USB_HILOGE(MODULE_USB_HOST, "ClaimInterfaceExclusive add DeathRecipient failed");
+        return;
+    }
+    std::lock_guard<std::mutex> guard(claimMutex_);
+    auto &state = claimStateMap_[key];
+    if (!isRepeat) {
+        state.exclusiveOwner = tokenId;
+    }
+    if (state.notifyCallback != nullptr && state.claimRecipient != nullptr) {
+        state.notifyCallback->AsObject()->RemoveDeathRecipient(state.claimRecipient);
+    }
+    state.notifyCallback = cb;
+    state.claimRecipient = recipient;
 }
 
 int32_t UsbService::SetInterface(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid, uint8_t altIndex)
@@ -601,10 +743,62 @@ int32_t UsbService::SetInterface(uint8_t busNum, uint8_t devAddr, uint8_t interf
     // LCOV_EXCL_STOP
 }
 
+int32_t UsbService::ReleaseClaimState(uint8_t busNum, uint8_t devAddr, uint8_t interface,
+    uint32_t tokenId, bool &releaseToHdi)
+{
+    releaseToHdi = true;
+    std::string key = MakeClaimKey(busNum, devAddr, interface);
+    std::lock_guard<std::mutex> guard(claimMutex_);
+    auto it = claimStateMap_.find(key);
+    if (it == claimStateMap_.end()) {
+        return UEC_OK;
+    }
+    if (it->second.exclusiveOwner == tokenId) {
+        if (it->second.notifyCallback != nullptr && it->second.claimRecipient != nullptr) {
+            it->second.notifyCallback->AsObject()->RemoveDeathRecipient(it->second.claimRecipient);
+        }
+        it->second.exclusiveOwner = 0;
+        it->second.notifyCallback = nullptr;
+        it->second.claimRecipient = nullptr;
+        if (it->second.normalClaimed) {
+            USB_HILOGI(MODULE_USB_HOST, "ReleaseInterface: exclusive owner release, normal still claimed, skip HDI");
+            releaseToHdi = false;
+            return UEC_OK;
+        }
+        claimStateMap_.erase(it);
+        return UEC_OK;
+    }
+    if (it->second.exclusiveOwner != 0) {
+        if (it->second.normalClaimed) {
+            it->second.normalClaimed = false;
+            USB_HILOGI(MODULE_USB_HOST, "ReleaseInterface: normal claimed, cleared, skip HDI");
+            releaseToHdi = false;
+            return UEC_OK;
+        }
+        USB_HILOGE(MODULE_USB_HOST, "ReleaseInterface: exclusively claimed by another app, denied");
+        return UEC_INTERFACE_INVALID_OPERATION;
+    }
+    if (it->second.normalClaimed) {
+        it->second.normalClaimed = false;
+        claimStateMap_.erase(it);
+    }
+    return UEC_OK;
+}
+
 int32_t UsbService::ReleaseInterface(uint8_t busNum, uint8_t devAddr, uint8_t interface)
 {
     if (!UsbService::CheckDevicePermission(busNum, devAddr)) {
         return UEC_SERVICE_PERMISSION_DENIED;
+    }
+
+    uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
+    bool releaseToHdi = false;
+    int32_t stateRet = ReleaseClaimState(busNum, devAddr, interface, tokenId, releaseToHdi);
+    if (stateRet != UEC_OK) {
+        return stateRet;
+    }
+    if (!releaseToHdi) {
+        return UEC_OK;
     }
 
     // LCOV_EXCL_START
@@ -824,6 +1018,7 @@ bool UsbService::AddDevice(uint8_t busNum, uint8_t devAddr)
 bool UsbService::DelDevice(uint8_t busNum, uint8_t devAddr)
 {
     USB_HILOGI(MODULE_USB_HOST, "entry");
+    RemoveAllClaimByDevice(busNum, devAddr);
     int32_t ret = Close(busNum, devAddr);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_HOST, "Close device failed width ret = %{public}d", ret);
@@ -1012,6 +1207,11 @@ int32_t UsbService::BulkTransferRead(
         }
         return UEC_SERVICE_PERMISSION_DENIED;
     }
+    int32_t claimRet = CheckExclusiveTransfer(busNum, devAddr, ep.GetInterfaceId());
+    if (claimRet != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "BulkTransferRead denied by exclusive claim");
+        return claimRet;
+    }
     int32_t ret = usbHostManager_->BulkTransferRead(devInfo, pipe, bufferData.data_, timeOut);
     if (ret != UEC_OK) {
         UsbDevice usbDev;
@@ -1044,6 +1244,11 @@ int32_t UsbService::BulkTransferReadwithLength(uint8_t busNum, uint8_t devAddr, 
         }
         return UEC_SERVICE_PERMISSION_DENIED;
     }
+    int32_t claimRet = CheckExclusiveTransfer(busNum, devAddr, ep.GetInterfaceId());
+    if (claimRet != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "BulkTransferReadwithLength denied by exclusive claim");
+        return claimRet;
+    }
     int32_t ret = usbHostManager_->BulkTransferReadwithLength(devInfo, pipe, length, bufferData.data_, timeOut);
     if (ret != UEC_OK) {
         UsbDevice usbDev;
@@ -1074,6 +1279,11 @@ int32_t UsbService::BulkTransferWrite(
                 UEC_SERVICE_PERMISSION_DENIED, "CheckDevicePermission failed");
         }
         return UEC_SERVICE_PERMISSION_DENIED;
+    }
+    int32_t claimRet = CheckExclusiveTransfer(busNum, devAddr, ep.GetInterfaceId());
+    if (claimRet != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "BulkTransferWrite denied by exclusive claim");
+        return claimRet;
     }
     int32_t ret = usbHostManager_->BulkTransferWrite(dev, pipe, bufferData.data_, timeOut);
     if (ret != UEC_OK) {
@@ -1340,6 +1550,18 @@ int32_t UsbService::UsbSubmitTransfer(uint8_t busNum, uint8_t devAddr, const Usb
                 {ep.GetInterfaceId(), param.endpoint}, UEC_SERVICE_PERMISSION_DENIED, "CheckDevicePermission failed");
         }
         return UEC_SERVICE_PERMISSION_DENIED;
+    }
+    {
+        UsbDevice usbDevForEp;
+        USBEndpoint epForIf;
+        if (usbHostManager_->GetTargetDevice(busNum, devAddr, usbDevForEp) &&
+            usbHostManager_->GetEndpointFromId(usbDevForEp, param.endpoint, epForIf)) {
+            int32_t claimRet = CheckExclusiveTransfer(busNum, devAddr, epForIf.GetInterfaceId());
+            if (claimRet != UEC_OK) {
+                USB_HILOGE(MODULE_USB_HOST, "UsbSubmitTransfer denied by exclusive claim");
+                return claimRet;
+            }
+        }
     }
     int32_t ret = usbHostManager_->UsbSubmitTransfer(devInfo, info, cb, ashmem);
     if (ret != UEC_OK) {
@@ -2598,6 +2820,38 @@ void UsbService::FreeTokenId(int32_t portId, uint32_t tokenId)
 {
     usbSerialManager_->FreeTokenId(portId, tokenId);
 }
+// LCOV_EXCL_STOP
+
+#ifdef USB_MANAGER_FEATURE_HOST
+void UsbService::ClaimDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &object)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "ClaimDeathRecipient enter busNum=%{public}hhu devAddr=%{public}hhu "
+        "interfaceid=%{public}hhu tokenId=%{public}u", busNum_, devAddr_, interfaceid_, tokenId_);
+    std::string key = service_->MakeClaimKey(busNum_, devAddr_, interfaceid_);
+    bool needReleaseHdi = false;
+    {
+        std::lock_guard<std::mutex> guard(service_->claimMutex_);
+        auto it = service_->claimStateMap_.find(key);
+        if (it == service_->claimStateMap_.end()) {
+            return;
+        }
+        if (it->second.exclusiveOwner != tokenId_) {
+            return;
+        }
+        it->second.exclusiveOwner = 0;
+        it->second.notifyCallback = nullptr;
+        it->second.claimRecipient = nullptr;
+        if (!it->second.normalClaimed) {
+            needReleaseHdi = true;
+            service_->claimStateMap_.erase(it);
+        }
+    }
+    if (needReleaseHdi && service_->usbHostManager_ != nullptr) {
+        service_->usbHostManager_->ReleaseInterface(busNum_, devAddr_, interfaceid_);
+    }
+    USB_HILOGI(MODULE_USB_SERVICE, "ClaimDeathRecipient exit");
+}
+#endif // USB_MANAGER_FEATURE_HOST
 // LCOV_EXCL_STOP
 
 // LCOV_EXCL_START

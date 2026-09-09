@@ -14,6 +14,7 @@
  */
 
 @!sts_inject_into_module("import { AsyncCallback } from '@ohos.base';")
+@!sts_inject_into_module("import { Callback } from '@ohos.base';")
 
 @!namespace("@ohos.usbManager", "usbManager")
 @!sts_inject("""
@@ -52,6 +53,9 @@ function setPortRoleTypesSync(portId: i32, powerRole: PowerRoleType, dataRole: D
 function addAccessoryRight(tokenId: i32, accessory: USBAccessory): void;
 
 function claimInterface(pipe: USBDevicePipe, iface: USBInterface, force: Optional<bool>): i32;
+
+function claimInterfaceExclusive(pipe: USBDevicePipe, iface: USBInterface, force: Optional<bool>,
+    onConflict: Optional<@sts_type("Callback<InterfaceConflictInfo>") Opaque>): void;
 
 function releaseInterface(pipe: USBDevicePipe, iface: USBInterface): i32;
 
@@ -384,3 +388,11 @@ function usbSubmitTransfer(transfer: UsbDataTransferParams): void;
 function usbCancelTransfer(transfer: UsbDataTransferParams): void;
 
 function resetUsbDevice(pipe: USBDevicePipe): bool;
+
+struct InterfaceConflictInfo {
+  busNum: i32;
+
+  devAddr: i32;
+
+  interfaceId: i32;
+}

@@ -45,6 +45,7 @@
 #include "v1_0/iusbd_subscriber.h"
 #include "v1_1/usb_types.h"
 #include "serial_manager.h"
+#include "iclaim_exclusive_callback.h"
 #include "v1_2/usb_types.h"
 #include "usbd_bulkcallback_impl.h"
 #include "usb_bulk_trans_data.h"
@@ -97,6 +98,8 @@ public:
     int32_t Close(uint8_t busNum, uint8_t devAddr) override;
     int32_t ResetDevice(uint8_t busNum, uint8_t devAddr) override;
     int32_t ClaimInterface(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid, uint8_t force) override;
+    int32_t ClaimInterfaceExclusive(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid,
+        uint8_t force, const sptr<IClaimExclusiveCallback> &cb) override;
     int32_t SetInterface(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid, uint8_t altIndex) override;
     int32_t ReleaseInterface(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid) override;
     int32_t SetActiveConfig(uint8_t busNum, uint8_t devAddr, uint8_t configIndex) override;
@@ -259,6 +262,22 @@ private:
     };
 #endif // USB_MANAGER_FEATURE_DEVICE
 
+    class ClaimDeathRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        ClaimDeathRecipient(UsbService *service, uint8_t busNum, uint8_t devAddr, uint8_t interfaceid,
+            uint32_t tokenId)
+            : service_(service), busNum_(busNum), devAddr_(devAddr),
+              interfaceid_(interfaceid), tokenId_(tokenId) {};
+        ~ClaimDeathRecipient() {};
+        void OnRemoteDied(const wptr<IRemoteObject> &object) override;
+    private:
+        UsbService *service_;
+        uint8_t busNum_;
+        uint8_t devAddr_;
+        uint8_t interfaceid_;
+        uint32_t tokenId_;
+    };
+
 private:
     bool Init();
     bool InitUsbd();
@@ -294,6 +313,23 @@ private:
     void UsbTransInfoChange(HDI::Usb::V1_2::USBTransferInfo &info, const UsbTransInfo &param);
     std::string GetDeviceVidPidSerialNumber(const std::string &deviceName);
     int32_t GetDeviceVidPidSerialNumber(const std::string &deviceName, std::string& strDesc);
+    struct ClaimInterfaceState {
+        uint32_t exclusiveOwner = 0;
+        bool normalClaimed = false;
+        sptr<IClaimExclusiveCallback> notifyCallback;
+        sptr<ClaimDeathRecipient> claimRecipient;
+    };
+    std::string MakeClaimKey(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid);
+    int32_t ReleaseClaimState(uint8_t busNum, uint8_t devAddr, uint8_t interface, uint32_t tokenId,
+        bool &releaseToHdi);
+    int32_t CheckExclusiveTransfer(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid);
+    void RemoveExclusiveClaimByDevice(uint8_t busNum, uint8_t devAddr, uint32_t tokenId);
+    void RemoveAllClaimByDevice(uint8_t busNum, uint8_t devAddr);
+    void NotifyExclusiveOwner(uint8_t busNum, uint8_t devAddr, uint8_t interface, uint32_t tokenId);
+    void RegisterExclusiveCallback(const std::string &key, uint8_t busNum, uint8_t devAddr, uint8_t interfaceid,
+        uint32_t tokenId, const sptr<IClaimExclusiveCallback> &cb, bool isRepeat);
+    std::mutex claimMutex_;
+    std::map<std::string, ClaimInterfaceState> claimStateMap_;
 #endif // USB_MANAGER_FEATURE_HOST
 #ifdef USB_MANAGER_FEATURE_DEVICE
     void RemoveAccessoryClientInfo(int32_t fd, uint32_t tokenId);

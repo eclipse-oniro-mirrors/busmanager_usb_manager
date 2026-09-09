@@ -41,6 +41,7 @@ UsbSrvClient::UsbSrvClient()
     Connect();
     serialRemote = new SerialDeathMonitor();
     accessoryRemote = new AccessoryDeathMonitor();
+    claimCallback_ = new ClaimExclusiveCallback();
 }
 UsbSrvClient::~UsbSrvClient()
 {
@@ -227,9 +228,34 @@ int32_t UsbSrvClient::ClaimInterface(USBDevicePipe &pipe, const UsbInterface &in
 {
     std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
+    USB_HILOGI(MODULE_USB_INNERKIT, "ClaimInterface bus=%{public}hhu dev=%{public}hhu if=%{public}d force=%{public}d",
+        pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId(), force);
     int32_t ret = proxy_->ClaimInterface(pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId(), force);
     if (ret != UEC_OK) {
-        USB_HILOGE(MODULE_USB_INNERKIT, "failed width ret = %{public}d !", ret);
+        USB_HILOGE(MODULE_USB_INNERKIT, "ClaimInterface failed ret=%{public}d", ret);
+    }
+    return ret;
+}
+
+int32_t UsbSrvClient::ClaimInterfaceExclusive(USBDevicePipe &pipe, const UsbInterface &interface, bool force,
+    std::function<void(uint8_t, uint8_t, uint8_t)> callback)
+{
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
+    USB_HILOGI(MODULE_USB_INNERKIT,
+        "ClaimInterfaceExclusive bus=%{public}hhu dev=%{public}hhu if=%{public}d force=%{public}d",
+        pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId(), force);
+    if (claimCallback_ == nullptr) {
+        USB_HILOGE(MODULE_USB_INNERKIT, "ClaimInterfaceExclusive claimCallback_ is nullptr");
+        return UEC_SERVICE_INVALID_VALUE;
+    }
+    if (callback != nullptr) {
+        claimCallback_->AddListener(pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId(), std::move(callback));
+    }
+    int32_t ret = proxy_->ClaimInterfaceExclusive(
+        pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId(), force, claimCallback_);
+    if (ret != UEC_OK) {
+        claimCallback_->RemoveListener(pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId());
+        USB_HILOGE(MODULE_USB_INNERKIT, "ClaimInterfaceExclusive failed ret=%{public}d", ret);
     }
     return ret;
 }
@@ -260,9 +286,14 @@ int32_t UsbSrvClient::ReleaseInterface(USBDevicePipe &pipe, const UsbInterface &
 {
     std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
+    USB_HILOGI(MODULE_USB_INNERKIT, "ReleaseInterface bus=%{public}hhu dev=%{public}hhu if=%{public}d",
+        pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId());
     int32_t ret = proxy_->ReleaseInterface(pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId());
     if (ret != UEC_OK) {
-        USB_HILOGE(MODULE_USB_INNERKIT, "failed width ret = %{public}d !", ret);
+        USB_HILOGE(MODULE_USB_INNERKIT, "ReleaseInterface failed ret=%{public}d", ret);
+    }
+    if (claimCallback_ != nullptr) {
+        claimCallback_->RemoveListener(pipe.GetBusNum(), pipe.GetDevAddr(), interface.GetId());
     }
     return ret;
 }
@@ -392,6 +423,9 @@ bool UsbSrvClient::Close(const USBDevicePipe &pipe)
     std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, false);
     int32_t ret = proxy_->Close(pipe.GetBusNum(), pipe.GetDevAddr());
+    if (claimCallback_ != nullptr) {
+        claimCallback_->RemoveListenersByDevice(pipe.GetBusNum(), pipe.GetDevAddr());
+    }
     return (ret == UEC_OK);
 }
 

@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 import UsbServerTypes;
+import IClaimExclusiveCallback;
 sequenceable OHOS.IRemoteObject;
 sequenceable UsbDevice..OHOS.USB.UsbDevice;
 sequenceable UsbAccessory..OHOS.USB.USBAccessory;
@@ -29,6 +30,7 @@ interface OHOS.USB.IUsbServer {
     [macrodef USB_MANAGER_FEATURE_HOST] void Close([in]unsigned char busNum, [in]unsigned char devAddr);
     [macrodef USB_MANAGER_FEATURE_HOST] void ResetDevice([in]unsigned char busNum, [in]unsigned char devAddr);
     [macrodef USB_MANAGER_FEATURE_HOST] void ClaimInterface([in]unsigned char busNum, [in]unsigned char devAddr, [in]unsigned char interfaceid, [in]unsigned char force);
+    [macrodef USB_MANAGER_FEATURE_HOST] void ClaimInterfaceExclusive([in]unsigned char busNum, [in]unsigned char devAddr, [in]unsigned char interfaceid, [in]unsigned char force, [in]IClaimExclusiveCallback cb);
     [macrodef USB_MANAGER_FEATURE_HOST] void SetInterface([in]unsigned char busNum, [in]unsigned char devAddr, [in]unsigned char interfaceid, [in]unsigned char altIndex);
     [macrodef USB_MANAGER_FEATURE_HOST] void ReleaseInterface([in]unsigned char busNum, [in]unsigned char devAddr, [in]unsigned char interfaceid);
     [macrodef USB_MANAGER_FEATURE_HOST] void SetActiveConfig([in]unsigned char busNum, [in]unsigned char devAddr, [in]unsigned char configId);
