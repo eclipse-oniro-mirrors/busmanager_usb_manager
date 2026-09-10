@@ -29,7 +29,6 @@ namespace CapiTest {
 
 static constexpr OH_UsbManager_ErrorCode ERR_SUCCESS = OH_USBMANAGER_SUCCESS;
 static constexpr OH_UsbManager_ErrorCode ERR_PERM = OH_USBMANAGER_ERROR_PERMISSION_DENIED;
-static constexpr OH_UsbManager_ErrorCode ERR_SERVICE = OH_USBMANAGER_ERROR_SERVICE_EXCEPTION;
 
 static bool GetFirstDevice(OH_UsbManager_UsbDevice &outDevice)
 {
@@ -123,7 +122,7 @@ HWTEST_F(OHUsbManagerDeviceTest, ClosePipeNoPermission001, TestSize.Level2)
     pipe.busNum = device.busNum;
     pipe.devAddress = device.devAddress;
     OH_UsbManager_ErrorCode ret = OH_UsbManager_ClosePipe(&pipe);
-    EXPECT_EQ(ret, ERR_SERVICE);
+    EXPECT_EQ(ret, ERR_PERM);
     UsbCommonTest::GrantPermissionSysNative();
     UsbCommonTest::DeleteAllocHapToken(hapTokenId);
 }

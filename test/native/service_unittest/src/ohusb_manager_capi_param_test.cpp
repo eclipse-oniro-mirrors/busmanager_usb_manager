@@ -44,7 +44,6 @@ void OHUsbManagerParamTest::SetUp(void) {}
 void OHUsbManagerParamTest::TearDown(void) {}
 
 static constexpr OH_UsbManager_ErrorCode ERR_INVALID = OH_USBMANAGER_ERROR_INVALID_PARAMETER;
-static constexpr OH_UsbManager_ErrorCode ERR_SERVICE = OH_USBMANAGER_ERROR_SERVICE_EXCEPTION;
 static constexpr OH_UsbManager_ErrorCode ERR_PERM = OH_USBMANAGER_ERROR_PERMISSION_DENIED;
 static constexpr OH_UsbManager_ErrorCode ERR_SUCCESS = OH_USBMANAGER_SUCCESS;
 
@@ -185,7 +184,7 @@ HWTEST_F(OHUsbManagerParamTest, ClosePipeInvalidBusNum001, TestSize.Level1)
     pipe.busNum = 255;
     pipe.devAddress = 255;
     OH_UsbManager_ErrorCode ret = OH_UsbManager_ClosePipe(&pipe);
-    EXPECT_EQ(ret, ERR_SERVICE);
+    EXPECT_EQ(ret, ERR_PERM);
 }
 
 HWTEST_F(OHUsbManagerParamTest, HasPermissionNormalToken001, TestSize.Level1)
