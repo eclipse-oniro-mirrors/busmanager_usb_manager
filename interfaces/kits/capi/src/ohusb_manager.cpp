@@ -35,20 +35,20 @@ using namespace OHOS::USB;
 namespace {
 constexpr const char *EMPTY_STRING = "";
 
-UsbManager_ErrorCode ConvertErrCode(int32_t cppRet)
+OH_UsbManager_ErrorCode ConvertErrCode(int32_t cppRet)
 {
     if (cppRet == OHOS::USB::UEC_OK) {
-        return USB_MANAGER_SUCCESS;
+        return OH_USBMANAGER_SUCCESS;
     }
     if (cppRet == OHOS::USB::UEC_INTERFACE_NO_MEMORY ||
         cppRet == OHOS::USB::UEC_SERVICE_NO_MEMORY) {
-        return USB_MANAGER_ERROR_NO_MEMORY;
+        return OH_USBMANAGER_ERROR_NO_MEMORY;
     }
     if (cppRet == OHOS::USB::UEC_INTERFACE_PERMISSION_DENIED ||
         cppRet == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED) {
-        return USB_MANAGER_ERROR_PERMISSION_DENIED;
+        return OH_USBMANAGER_ERROR_PERMISSION_DENIED;
     }
-    return USB_MANAGER_ERROR_SERVICE_EXCEPTION;
+    return OH_USBMANAGER_ERROR_SERVICE_EXCEPTION;
 }
 
 char *StrdupSafe(const char *src)
@@ -65,34 +65,39 @@ char *StrdupFromStd(const std::string &src)
     return StrdupSafe(src.c_str());
 }
 
-UsbManager_ErrorCode CopyEndpoints(UsbInterface &cppIface, UsbManager_Interface *out)
+OH_UsbManager_ErrorCode CopyEndpoints(UsbInterface &cppIface, OH_UsbManager_UsbInterface *out)
 {
     auto &cppEps = cppIface.GetEndpoints();
     uint32_t eCount = static_cast<uint32_t>(cppEps.size());
     if (eCount == 0) {
         out->endpoints = nullptr;
         out->endpointCount = 0;
-        return USB_MANAGER_SUCCESS;
+        return OH_USBMANAGER_SUCCESS;
     }
 
-    UsbManager_Endpoint *eps = static_cast<UsbManager_Endpoint *>(calloc(eCount, sizeof(UsbManager_Endpoint)));
+    OH_UsbManager_UsbEndpoint *eps =
+        static_cast<OH_UsbManager_UsbEndpoint *>(calloc(eCount, sizeof(OH_UsbManager_UsbEndpoint)));
     if (eps == nullptr) {
-        return USB_MANAGER_ERROR_NO_MEMORY;
+        return OH_USBMANAGER_ERROR_NO_MEMORY;
     }
 
     for (uint32_t e = 0; e < eCount; ++e) {
         const USBEndpoint &cppEp = cppEps[e];
-        eps[e].address = cppEp.GetAddress();
-        eps[e].attributes = cppEp.GetAttributes();
-        eps[e].interval = cppEp.GetInterval();
-        eps[e].maxPacketSize = cppEp.GetMaxPacketSize();
+        eps[e].address = static_cast<uint8_t>(cppEp.GetAddress());
+        eps[e].attributes = static_cast<uint8_t>(cppEp.GetAttributes());
+        eps[e].interval = static_cast<uint8_t>(cppEp.GetInterval());
+        eps[e].maxPacketSize = static_cast<uint16_t>(cppEp.GetMaxPacketSize());
+        eps[e].direction = static_cast<OH_UsbManager_RequestDirection>(cppEp.GetDirection());
+        eps[e].number = cppEp.GetNumber();
+        eps[e].type = static_cast<uint8_t>(cppEp.GetType());
+        eps[e].interfaceId = static_cast<uint8_t>(cppEp.GetInterfaceId());
     }
     out->endpoints = eps;
     out->endpointCount = eCount;
-    return USB_MANAGER_SUCCESS;
+    return OH_USBMANAGER_SUCCESS;
 }
 
-void FreeInterfaces(UsbManager_Interface *ifaces, uint32_t count)
+void FreeInterfaces(OH_UsbManager_UsbInterface *ifaces, uint32_t count)
 {
     if (ifaces == nullptr) {
         return;
@@ -106,42 +111,43 @@ void FreeInterfaces(UsbManager_Interface *ifaces, uint32_t count)
     free(ifaces);
 }
 
-UsbManager_ErrorCode CopyInterfaces(USBConfig &cppCfg, UsbManager_Config *out)
+OH_UsbManager_ErrorCode CopyInterfaces(USBConfig &cppCfg, OH_UsbManager_UsbConfig *out)
 {
     auto &cppIfaces = cppCfg.GetInterfaces();
     uint32_t iCount = static_cast<uint32_t>(cppIfaces.size());
     if (iCount == 0) {
         out->interfaces = nullptr;
         out->interfaceCount = 0;
-        return USB_MANAGER_SUCCESS;
+        return OH_USBMANAGER_SUCCESS;
     }
 
-    UsbManager_Interface *ifaces = static_cast<UsbManager_Interface *>(calloc(iCount, sizeof(UsbManager_Interface)));
+    OH_UsbManager_UsbInterface *ifaces =
+        static_cast<OH_UsbManager_UsbInterface *>(calloc(iCount, sizeof(OH_UsbManager_UsbInterface)));
     if (ifaces == nullptr) {
-        return USB_MANAGER_ERROR_NO_MEMORY;
+        return OH_USBMANAGER_ERROR_NO_MEMORY;
     }
 
     for (uint32_t i = 0; i < iCount; ++i) {
         UsbInterface &cppIface = cppIfaces[i];
+        ifaces[i].id = static_cast<uint8_t>(cppIface.GetId());
+        ifaces[i].protocol = static_cast<uint8_t>(cppIface.GetProtocol());
+        ifaces[i].clazz = static_cast<uint8_t>(cppIface.GetClass());
+        ifaces[i].subClass = static_cast<uint8_t>(cppIface.GetSubClass());
+        ifaces[i].alternateSetting = static_cast<uint8_t>(cppIface.GetAlternateSetting());
         ifaces[i].name = StrdupFromStd(cppIface.GetName());
-        ifaces[i].id = cppIface.GetId();
-        ifaces[i].clazz = cppIface.GetClass();
-        ifaces[i].subClass = cppIface.GetSubClass();
-        ifaces[i].alternateSetting = cppIface.GetAlternateSetting();
-        ifaces[i].protocol = cppIface.GetProtocol();
 
-        UsbManager_ErrorCode epRet = CopyEndpoints(cppIface, &ifaces[i]);
-        if (epRet != USB_MANAGER_SUCCESS) {
+        OH_UsbManager_ErrorCode epRet = CopyEndpoints(cppIface, &ifaces[i]);
+        if (epRet != OH_USBMANAGER_SUCCESS) {
             FreeInterfaces(ifaces, i + 1);
             return epRet;
         }
     }
     out->interfaces = ifaces;
     out->interfaceCount = iCount;
-    return USB_MANAGER_SUCCESS;
+    return OH_USBMANAGER_SUCCESS;
 }
 
-void FreeConfigsArray(UsbManager_Config *cfgs, uint32_t count)
+void FreeConfigsArray(OH_UsbManager_UsbConfig *cfgs, uint32_t count)
 {
     if (cfgs == nullptr) {
         return;
@@ -155,30 +161,33 @@ void FreeConfigsArray(UsbManager_Config *cfgs, uint32_t count)
     free(cfgs);
 }
 
-UsbManager_ErrorCode CopyConfigs(OHOS::USB::UsbDevice &cppDev, UsbManager_Device *out)
+OH_UsbManager_ErrorCode CopyConfigs(OHOS::USB::UsbDevice &cppDev, OH_UsbManager_UsbDevice *out)
 {
     auto &cppConfigs = cppDev.GetConfigs();
     uint32_t cCount = static_cast<uint32_t>(cppConfigs.size());
     if (cCount == 0) {
         out->configs = nullptr;
         out->configCount = 0;
-        return USB_MANAGER_SUCCESS;
+        return OH_USBMANAGER_SUCCESS;
     }
 
-    UsbManager_Config *cfgs = static_cast<UsbManager_Config *>(calloc(cCount, sizeof(UsbManager_Config)));
+    OH_UsbManager_UsbConfig *cfgs =
+        static_cast<OH_UsbManager_UsbConfig *>(calloc(cCount, sizeof(OH_UsbManager_UsbConfig)));
     if (cfgs == nullptr) {
-        return USB_MANAGER_ERROR_NO_MEMORY;
+        return OH_USBMANAGER_ERROR_NO_MEMORY;
     }
 
     for (uint32_t c = 0; c < cCount; ++c) {
         USBConfig &cppCfg = cppConfigs[c];
+        cfgs[c].id = static_cast<uint8_t>(cppCfg.GetId());
+        cfgs[c].attributes = static_cast<uint8_t>(cppCfg.GetAttributes());
+        cfgs[c].maxPower = static_cast<uint8_t>(cppCfg.GetMaxPower());
         cfgs[c].name = StrdupFromStd(cppCfg.GetName());
-        cfgs[c].id = cppCfg.GetId();
-        cfgs[c].attributes = cppCfg.GetAttributes();
-        cfgs[c].maxPower = cppCfg.GetMaxPower();
+        cfgs[c].isRemoteWakeup = cppCfg.IsRemoteWakeup();
+        cfgs[c].isSelfPowered = cppCfg.IsSelfPowered();
 
-        UsbManager_ErrorCode ifaceRet = CopyInterfaces(cppCfg, &cfgs[c]);
-        if (ifaceRet != USB_MANAGER_SUCCESS) {
+        OH_UsbManager_ErrorCode ifaceRet = CopyInterfaces(cppCfg, &cfgs[c]);
+        if (ifaceRet != OH_USBMANAGER_SUCCESS) {
             FreeConfigsArray(cfgs, c + 1);
             return ifaceRet;
         }
@@ -186,7 +195,7 @@ UsbManager_ErrorCode CopyConfigs(OHOS::USB::UsbDevice &cppDev, UsbManager_Device
 
     out->configs = cfgs;
     out->configCount = cCount;
-    return USB_MANAGER_SUCCESS;
+    return OH_USBMANAGER_SUCCESS;
 }
 }
 
@@ -194,11 +203,11 @@ UsbManager_ErrorCode CopyConfigs(OHOS::USB::UsbDevice &cppDev, UsbManager_Device
 extern "C" {
 #endif
 
-UsbManager_ErrorCode OH_UsbManager_GetUsbDeviceList(UsbManager_Device **devices, uint32_t *deviceCount)
+OH_UsbManager_ErrorCode OH_UsbManager_GetUsbDeviceList(OH_UsbManager_UsbDevice **devices, uint32_t *deviceCount)
 {
     if (devices == nullptr || deviceCount == nullptr) {
         USB_HILOGE(MODULE_USB_INNERKIT, "devices or deviceCount is null");
-        return USB_MANAGER_ERROR_INVALID_PARAMETER;
+        return OH_USBMANAGER_ERROR_INVALID_PARAMETER;
     }
     *devices = nullptr;
     *deviceCount = 0;
@@ -211,53 +220,50 @@ UsbManager_ErrorCode OH_UsbManager_GetUsbDeviceList(UsbManager_Device **devices,
     }
     if (deviceList.empty()) {
         USB_HILOGI(MODULE_USB_INNERKIT, "No USB devices found");
-        return USB_MANAGER_SUCCESS;
+        return OH_USBMANAGER_SUCCESS;
     }
 
     uint32_t count = static_cast<uint32_t>(deviceList.size());
-    UsbManager_Device *arr = static_cast<UsbManager_Device *>(calloc(count, sizeof(UsbManager_Device)));
+    OH_UsbManager_UsbDevice *arr =
+        static_cast<OH_UsbManager_UsbDevice *>(calloc(count, sizeof(OH_UsbManager_UsbDevice)));
     if (arr == nullptr) {
         USB_HILOGE(MODULE_USB_INNERKIT, "calloc failed for device array");
-        return USB_MANAGER_ERROR_NO_MEMORY;
+        return OH_USBMANAGER_ERROR_NO_MEMORY;
     }
 
     for (uint32_t i = 0; i < count; ++i) {
         OHOS::USB::UsbDevice &cppDev = deviceList[i];
         arr[i].busNum = cppDev.GetBusNum();
         arr[i].devAddress = cppDev.GetDevAddr();
-        arr[i].serial = StrdupFromStd(cppDev.GetmSerial());
         arr[i].name = StrdupFromStd(cppDev.GetName());
         arr[i].manufacturerName = StrdupFromStd(cppDev.GetManufacturerName());
         arr[i].productName = StrdupFromStd(cppDev.GetProductName());
         arr[i].version = StrdupFromStd(cppDev.GetVersion());
-        arr[i].vendorId = cppDev.GetVendorId();
-        arr[i].productId = cppDev.GetProductId();
-        arr[i].clazz = cppDev.GetClass();
-        arr[i].subClass = cppDev.GetSubclass();
-        arr[i].protocol = cppDev.GetProtocol();
+        arr[i].vendorId = static_cast<uint16_t>(cppDev.GetVendorId());
+        arr[i].productId = static_cast<uint16_t>(cppDev.GetProductId());
+        arr[i].clazz = static_cast<uint8_t>(cppDev.GetClass());
+        arr[i].subClass = static_cast<uint8_t>(cppDev.GetSubclass());
+        arr[i].protocol = static_cast<uint8_t>(cppDev.GetProtocol());
 
-        UsbManager_ErrorCode cfgRet = CopyConfigs(cppDev, &arr[i]);
-        if (cfgRet != USB_MANAGER_SUCCESS) {
+        OH_UsbManager_ErrorCode cfgRet = CopyConfigs(cppDev, &arr[i]);
+        if (cfgRet != OH_USBMANAGER_SUCCESS) {
             USB_HILOGE(MODULE_USB_INNERKIT, "CopyConfigs failed for device %{public}d", i);
-            OH_UsbManager_FreeDeviceList(arr, i + 1);
+            OH_UsbManager_FreeUsbDeviceList(arr, i + 1);
             return cfgRet;
         }
     }
 
     *devices = arr;
     *deviceCount = count;
-    return USB_MANAGER_SUCCESS;
+    return OH_USBMANAGER_SUCCESS;
 }
 
-void OH_UsbManager_FreeDeviceList(UsbManager_Device *devices, uint32_t deviceCount)
+void OH_UsbManager_FreeUsbDeviceList(OH_UsbManager_UsbDevice *devices, uint32_t deviceCount)
 {
     if (devices == nullptr || deviceCount == 0) {
         return;
     }
     for (uint32_t i = 0; i < deviceCount; ++i) {
-        if (devices[i].serial != nullptr && devices[i].serial != EMPTY_STRING) {
-            free(const_cast<char *>(devices[i].serial));
-        }
         if (devices[i].name != nullptr && devices[i].name != EMPTY_STRING) {
             free(const_cast<char *>(devices[i].name));
         }
@@ -275,11 +281,12 @@ void OH_UsbManager_FreeDeviceList(UsbManager_Device *devices, uint32_t deviceCou
     free(devices);
 }
 
-UsbManager_ErrorCode OH_UsbManager_ConnectDevice(const UsbManager_Device *device, UsbManager_DevicePipe *pipe)
+OH_UsbManager_ErrorCode OH_UsbManager_ConnectDevice(const OH_UsbManager_UsbDevice *device,
+    OH_UsbManager_UsbPipe *pipe)
 {
     if (device == nullptr || pipe == nullptr) {
         USB_HILOGE(MODULE_USB_INNERKIT, "device or pipe is null");
-        return USB_MANAGER_ERROR_INVALID_PARAMETER;
+        return OH_USBMANAGER_ERROR_INVALID_PARAMETER;
     }
 
     OHOS::USB::UsbDevice cppDevice;
@@ -295,59 +302,59 @@ UsbManager_ErrorCode OH_UsbManager_ConnectDevice(const UsbManager_Device *device
 
     pipe->busNum = cppPipe.GetBusNum();
     pipe->devAddress = cppPipe.GetDevAddr();
-    return USB_MANAGER_SUCCESS;
+    return OH_USBMANAGER_SUCCESS;
 }
 
-UsbManager_ErrorCode OH_UsbManager_HasPermission(const char *deviceName, bool *result)
+OH_UsbManager_ErrorCode OH_UsbManager_HasPermission(const char *deviceName, bool *result)
 {
     if (deviceName == nullptr || result == nullptr) {
         USB_HILOGE(MODULE_USB_INNERKIT, "deviceName or result is null");
-        return USB_MANAGER_ERROR_INVALID_PARAMETER;
+        return OH_USBMANAGER_ERROR_INVALID_PARAMETER;
     }
     *result = false;
     bool hasRight = false;
     int32_t ret = OHOS::USB::UsbSrvClient::GetInstance().HasRightEx(std::string(deviceName), hasRight);
     if (ret != OHOS::USB::UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "HasRight service exception, ret=%{public}d", ret);
-        return USB_MANAGER_ERROR_SERVICE_EXCEPTION;
+        return OH_USBMANAGER_ERROR_SERVICE_EXCEPTION;
     }
     *result = hasRight;
-    return USB_MANAGER_SUCCESS;
+    return OH_USBMANAGER_SUCCESS;
 }
 
-UsbManager_ErrorCode OH_UsbManager_RequestPermission(const char *deviceName,
-    UsbManager_PermissionCallback callback, void *userData)
+OH_UsbManager_ErrorCode OH_UsbManager_RequestPermission(const char *deviceName,
+    OH_UsbManager_PermissionCallback callback, void *userContext)
 {
     if (deviceName == nullptr || callback == nullptr) {
         USB_HILOGE(MODULE_USB_INNERKIT, "deviceName or callback is null");
-        return USB_MANAGER_ERROR_INVALID_PARAMETER;
+        return OH_USBMANAGER_ERROR_INVALID_PARAMETER;
     }
     std::string name(deviceName);
-    std::thread([callback, userData, name = std::move(name)]() {
+    std::thread([callback, userContext, name = std::move(name)]() {
         int32_t ret = OHOS::USB::UsbSrvClient::GetInstance().RequestRight(name);
-        UsbManager_ErrorCode errCode;
+        OH_UsbManager_ErrorCode errCode;
         bool result = false;
         if (ret == OHOS::USB::UEC_OK) {
-            errCode = USB_MANAGER_SUCCESS;
+            errCode = OH_USBMANAGER_SUCCESS;
             result = true;
         } else if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED) {
-            errCode = USB_MANAGER_SUCCESS;
+            errCode = OH_USBMANAGER_SUCCESS;
             result = false;
         } else {
             USB_HILOGE(MODULE_USB_INNERKIT, "RequestRight failed, ret=%{public}d", ret);
-            errCode = USB_MANAGER_ERROR_SERVICE_EXCEPTION;
+            errCode = OH_USBMANAGER_ERROR_SERVICE_EXCEPTION;
             result = false;
         }
-        callback(errCode, result, userData);
+        callback(errCode, result, userContext);
     }).detach();
-    return USB_MANAGER_SUCCESS;
+    return OH_USBMANAGER_SUCCESS;
 }
 
-UsbManager_ErrorCode OH_UsbManager_GetFileDescriptor(const UsbManager_DevicePipe *pipe, int32_t *fd)
+OH_UsbManager_ErrorCode OH_UsbManager_GetFileDescriptor(const OH_UsbManager_UsbPipe *pipe, int32_t *fd)
 {
     if (pipe == nullptr || fd == nullptr) {
         USB_HILOGE(MODULE_USB_INNERKIT, "pipe or fd is null");
-        return USB_MANAGER_ERROR_INVALID_PARAMETER;
+        return OH_USBMANAGER_ERROR_INVALID_PARAMETER;
     }
 
     OHOS::USB::USBDevicePipe cppPipe(pipe->busNum, pipe->devAddress);
@@ -358,23 +365,23 @@ UsbManager_ErrorCode OH_UsbManager_GetFileDescriptor(const UsbManager_DevicePipe
         return ConvertErrCode(ret);
     }
     *fd = cppFd;
-    return USB_MANAGER_SUCCESS;
+    return OH_USBMANAGER_SUCCESS;
 }
 
-UsbManager_ErrorCode OH_UsbManager_ClosePipe(const UsbManager_DevicePipe *pipe)
+OH_UsbManager_ErrorCode OH_UsbManager_ClosePipe(const OH_UsbManager_UsbPipe *pipe)
 {
     if (pipe == nullptr) {
         USB_HILOGE(MODULE_USB_INNERKIT, "pipe is null");
-        return USB_MANAGER_ERROR_INVALID_PARAMETER;
+        return OH_USBMANAGER_ERROR_INVALID_PARAMETER;
     }
 
     OHOS::USB::USBDevicePipe cppPipe(pipe->busNum, pipe->devAddress);
     int32_t ret = OHOS::USB::UsbSrvClient::GetInstance().CloseEx(cppPipe);
     if (ret != OHOS::USB::UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "Close pipe service exception, ret=%{public}d", ret);
-        return USB_MANAGER_ERROR_SERVICE_EXCEPTION;
+        return ConvertErrCode(ret);
     }
-    return USB_MANAGER_SUCCESS;
+    return OH_USBMANAGER_SUCCESS;
 }
 
 #ifdef __cplusplus
