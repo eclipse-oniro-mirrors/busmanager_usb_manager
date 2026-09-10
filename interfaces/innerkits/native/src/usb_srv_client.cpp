@@ -739,8 +739,35 @@ int32_t UsbSrvClient::GetInterfaceActiveStatus(USBDevicePipe &pipe, const UsbInt
     }
     return ret;
 }
+
+int32_t UsbSrvClient::RegisterConnectionListener(const sptr<IUsbConnectionCallback> &cb)
+{
+    RETURN_IF_WITH_RET(cb == nullptr, UEC_INTERFACE_INVALID_VALUE);
+    RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    return proxy_->RegisterConnectionListener(cb);
+}
+
+int32_t UsbSrvClient::UnRegisterConnectionListener(const sptr<IUsbConnectionCallback> &cb)
+{
+    RETURN_IF_WITH_RET(cb == nullptr, UEC_INTERFACE_INVALID_VALUE);
+    RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    return proxy_->UnRegisterConnectionListener(cb);
+}
+
 #else
 int32_t UsbSrvClient::OpenDevice(const UsbDevice &device, USBDevicePipe &pipe)
+{
+    USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
+    return CAPABILITY_NOT_SUPPORT;
+}
+
+int32_t UsbSrvClient::RegisterConnectionListener(const sptr<IUsbConnectionCallback> &cb)
+{
+    USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
+    return CAPABILITY_NOT_SUPPORT;
+}
+
+int32_t UsbSrvClient::UnRegisterConnectionListener(const sptr<IUsbConnectionCallback> &cb)
 {
     USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
     return CAPABILITY_NOT_SUPPORT;

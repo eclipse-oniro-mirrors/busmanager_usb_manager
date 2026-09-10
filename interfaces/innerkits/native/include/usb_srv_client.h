@@ -25,6 +25,7 @@
 
 #include "iremote_object.h"
 #include "iusb_server.h"
+#include "iusb_connection_callback.h"
 #include "usb_device.h"
 #include "usb_device_pipe.h"
 #include "usb_port.h"
@@ -109,6 +110,8 @@ public:
     int32_t ManageInterfaceType(const std::vector<UsbDeviceType> &disableType, bool disable);
     int32_t ManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable);
     int32_t ClearHalt(USBDevicePipe &pipe, const USBEndpoint &endpoint);
+    int32_t RegisterConnectionListener(const sptr<IUsbConnectionCallback> &cb);
+    int32_t UnRegisterConnectionListener(const sptr<IUsbConnectionCallback> &cb);
     int32_t AddAccessoryRight(const uint32_t tokenId, const USBAccessory &access);
     int32_t HasAccessoryRight(const USBAccessory &access, bool &result);
     int32_t RequestAccessoryRight(const USBAccessory &access, bool &result);

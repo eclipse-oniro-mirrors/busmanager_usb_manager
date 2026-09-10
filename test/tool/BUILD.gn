@@ -50,3 +50,36 @@ ohos_executable("usb_function_test") {
   subsystem_name = "usb"
   part_name = "usb_manager"
 }
+
+ohos_executable("usb_listener_test") {
+  sanitize = {
+    cfi = true
+    cfi_cross_dso = true
+    debug = false
+  }
+  branch_protector_ret = "pac_ret"
+  sources = [
+    "${usb_manager_path}/test/native/service_unittest/src/usb_common_test.cpp",
+    "usb_listener_test.cpp",
+  ]
+  configs = [
+    "${utils_path}:utils_config",
+    ":usbsrv_private_config",
+  ]
+  deps = [ "${usb_manager_path}/interfaces/innerkits:usbsrv_client" ]
+  external_deps = [
+    "ability_base:want",
+    "access_token:libaccesstoken_sdk",
+    "access_token:libnativetoken",
+    "access_token:libtoken_setproc",
+    "cJSON:cjson",
+    "c_utils:utils",
+    "common_event_service:cesfwk_innerkits",
+    "drivers_interface_usb:libusb_proxy_1.0",
+    "hilog:libhilog",
+    "ipc:ipc_core",
+  ]
+  install_enable = false
+  subsystem_name = "usb"
+  part_name = "usb_manager"
+}
