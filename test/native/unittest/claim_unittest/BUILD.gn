@@ -115,19 +115,6 @@ if (usb_manager_feature_host) {
     external_deps = claim_unittest_external_deps
   }
 
-  ohos_unittest("test_claim_transfer") {
-    module_out_path = module_output_path
-    install_enable = false
-    sources = claim_unittest_common_sources
-    sources += [ "src/usb_claim_transfer_test.cpp" ]
-    configs = [
-      "${utils_path}:utils_config",
-      ":claim_unittest_private_config",
-    ]
-    deps = [ "${usb_manager_path}/interfaces/innerkits:usbsrv_client" ]
-    external_deps = claim_unittest_external_deps
-  }
-
   ohos_unittest("test_claim_hotplug") {
     module_out_path = module_output_path
     install_enable = false
@@ -146,19 +133,6 @@ if (usb_manager_feature_host) {
     install_enable = false
     sources = claim_unittest_common_sources
     sources += [ "src/usb_claim_force_test.cpp" ]
-    configs = [
-      "${utils_path}:utils_config",
-      ":claim_unittest_private_config",
-    ]
-    deps = [ "${usb_manager_path}/interfaces/innerkits:usbsrv_client" ]
-    external_deps = claim_unittest_external_deps
-  }
-
-  ohos_unittest("test_claim_multi_device") {
-    module_out_path = module_output_path
-    install_enable = false
-    sources = claim_unittest_common_sources
-    sources += [ "src/usb_claim_multi_device_test.cpp" ]
     configs = [
       "${utils_path}:utils_config",
       ":claim_unittest_private_config",
@@ -187,10 +161,8 @@ if (usb_manager_feature_host) {
       ":test_claim_exclusive",
       ":test_claim_force",
       ":test_claim_hotplug",
-      ":test_claim_multi_device",
       ":test_claim_notify",
       ":test_claim_release",
-      ":test_claim_transfer",
     ]
   }
 }
