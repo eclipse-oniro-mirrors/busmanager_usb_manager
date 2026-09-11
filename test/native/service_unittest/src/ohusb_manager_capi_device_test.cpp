@@ -27,21 +27,20 @@ namespace OHOS {
 namespace USB {
 namespace CapiTest {
 
-static constexpr UsbManager_ErrorCode ERR_SUCCESS = USB_MANAGER_SUCCESS;
-static constexpr UsbManager_ErrorCode ERR_PERM = USB_MANAGER_ERROR_PERMISSION_DENIED;
-static constexpr UsbManager_ErrorCode ERR_SERVICE = USB_MANAGER_ERROR_SERVICE_EXCEPTION;
+static constexpr OH_UsbManager_ErrorCode ERR_SUCCESS = OH_USBMANAGER_SUCCESS;
+static constexpr OH_UsbManager_ErrorCode ERR_PERM = OH_USBMANAGER_ERROR_PERMISSION_DENIED;
 
-static bool GetFirstDevice(UsbManager_Device &outDevice)
+static bool GetFirstDevice(OH_UsbManager_UsbDevice &outDevice)
 {
-    UsbManager_Device *devices = nullptr;
+    OH_UsbManager_UsbDevice *devices = nullptr;
     uint32_t count = 0;
-    UsbManager_ErrorCode ret = OH_UsbManager_GetUsbDeviceList(&devices, &count);
+    OH_UsbManager_ErrorCode ret = OH_UsbManager_GetUsbDeviceList(&devices, &count);
     if (ret != ERR_SUCCESS || devices == nullptr || count == 0) {
-        OH_UsbManager_FreeDeviceList(devices, count);
+        OH_UsbManager_FreeUsbDeviceList(devices, count);
         return false;
     }
     outDevice = devices[0];
-    OH_UsbManager_FreeDeviceList(devices, count);
+    OH_UsbManager_FreeUsbDeviceList(devices, count);
     return true;
 }
 
@@ -68,14 +67,14 @@ HWTEST_F(OHUsbManagerDeviceTest, ConnectDeviceNoPermission001, TestSize.Level2)
         GTEST_SKIP() << "AllocHapToken failed, skip";
     }
     UsbCommonTest::SetSelfToken(hapTokenId);
-    UsbManager_Device device = {};
+    OH_UsbManager_UsbDevice device = {};
     if (!GetFirstDevice(device)) {
         UsbCommonTest::GrantPermissionSysNative();
         UsbCommonTest::DeleteAllocHapToken(hapTokenId);
         GTEST_SKIP() << "No USB device, skip";
     }
-    UsbManager_DevicePipe pipe = {};
-    UsbManager_ErrorCode ret = OH_UsbManager_ConnectDevice(&device, &pipe);
+    OH_UsbManager_UsbPipe pipe = {};
+    OH_UsbManager_ErrorCode ret = OH_UsbManager_ConnectDevice(&device, &pipe);
     EXPECT_EQ(ret, ERR_PERM);
     UsbCommonTest::GrantPermissionSysNative();
     UsbCommonTest::DeleteAllocHapToken(hapTokenId);
@@ -89,17 +88,17 @@ HWTEST_F(OHUsbManagerDeviceTest, GetFileDescriptorNoPermission001, TestSize.Leve
         GTEST_SKIP() << "AllocHapToken failed, skip";
     }
     UsbCommonTest::SetSelfToken(hapTokenId);
-    UsbManager_Device device = {};
+    OH_UsbManager_UsbDevice device = {};
     if (!GetFirstDevice(device)) {
         UsbCommonTest::GrantPermissionSysNative();
         UsbCommonTest::DeleteAllocHapToken(hapTokenId);
         GTEST_SKIP() << "No USB device, skip";
     }
-    UsbManager_DevicePipe pipe = {};
+    OH_UsbManager_UsbPipe pipe = {};
     pipe.busNum = device.busNum;
     pipe.devAddress = device.devAddress;
     int32_t fd = -1;
-    UsbManager_ErrorCode ret = OH_UsbManager_GetFileDescriptor(&pipe, &fd);
+    OH_UsbManager_ErrorCode ret = OH_UsbManager_GetFileDescriptor(&pipe, &fd);
     EXPECT_EQ(ret, ERR_PERM);
     UsbCommonTest::GrantPermissionSysNative();
     UsbCommonTest::DeleteAllocHapToken(hapTokenId);
@@ -113,17 +112,17 @@ HWTEST_F(OHUsbManagerDeviceTest, ClosePipeNoPermission001, TestSize.Level2)
         GTEST_SKIP() << "AllocHapToken failed, skip";
     }
     UsbCommonTest::SetSelfToken(hapTokenId);
-    UsbManager_Device device = {};
+    OH_UsbManager_UsbDevice device = {};
     if (!GetFirstDevice(device)) {
         UsbCommonTest::GrantPermissionSysNative();
         UsbCommonTest::DeleteAllocHapToken(hapTokenId);
         GTEST_SKIP() << "No USB device, skip";
     }
-    UsbManager_DevicePipe pipe = {};
+    OH_UsbManager_UsbPipe pipe = {};
     pipe.busNum = device.busNum;
     pipe.devAddress = device.devAddress;
-    UsbManager_ErrorCode ret = OH_UsbManager_ClosePipe(&pipe);
-    EXPECT_EQ(ret, ERR_SERVICE);
+    OH_UsbManager_ErrorCode ret = OH_UsbManager_ClosePipe(&pipe);
+    EXPECT_EQ(ret, ERR_PERM);
     UsbCommonTest::GrantPermissionSysNative();
     UsbCommonTest::DeleteAllocHapToken(hapTokenId);
 }
@@ -131,12 +130,12 @@ HWTEST_F(OHUsbManagerDeviceTest, ClosePipeNoPermission001, TestSize.Level2)
 HWTEST_F(OHUsbManagerDeviceTest, ConnectDeviceSysPermission001, TestSize.Level2)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "ConnectDeviceSysPermission001 start");
-    UsbManager_Device device = {};
+    OH_UsbManager_UsbDevice device = {};
     if (!GetFirstDevice(device)) {
         GTEST_SKIP() << "No USB device, skip";
     }
-    UsbManager_DevicePipe pipe = {};
-    UsbManager_ErrorCode ret = OH_UsbManager_ConnectDevice(&device, &pipe);
+    OH_UsbManager_UsbPipe pipe = {};
+    OH_UsbManager_ErrorCode ret = OH_UsbManager_ConnectDevice(&device, &pipe);
     EXPECT_EQ(ret, ERR_SUCCESS);
     OH_UsbManager_ClosePipe(&pipe);
 }
@@ -144,15 +143,15 @@ HWTEST_F(OHUsbManagerDeviceTest, ConnectDeviceSysPermission001, TestSize.Level2)
 HWTEST_F(OHUsbManagerDeviceTest, GetFileDescriptorSysPermission001, TestSize.Level2)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "GetFileDescriptorSysPermission001 start");
-    UsbManager_Device device = {};
+    OH_UsbManager_UsbDevice device = {};
     if (!GetFirstDevice(device)) {
         GTEST_SKIP() << "No USB device, skip";
     }
-    UsbManager_DevicePipe pipe = {};
-    UsbManager_ErrorCode ret = OH_UsbManager_ConnectDevice(&device, &pipe);
+    OH_UsbManager_UsbPipe pipe = {};
+    OH_UsbManager_ErrorCode ret = OH_UsbManager_ConnectDevice(&device, &pipe);
     ASSERT_EQ(ret, ERR_SUCCESS);
     int32_t fd = -1;
-    UsbManager_ErrorCode fdRet = OH_UsbManager_GetFileDescriptor(&pipe, &fd);
+    OH_UsbManager_ErrorCode fdRet = OH_UsbManager_GetFileDescriptor(&pipe, &fd);
     EXPECT_EQ(fdRet, ERR_SUCCESS);
     EXPECT_GE(fd, 0);
     OH_UsbManager_ClosePipe(&pipe);
@@ -161,26 +160,26 @@ HWTEST_F(OHUsbManagerDeviceTest, GetFileDescriptorSysPermission001, TestSize.Lev
 HWTEST_F(OHUsbManagerDeviceTest, ClosePipeSysPermission001, TestSize.Level2)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "ClosePipeSysPermission001 start");
-    UsbManager_Device device = {};
+    OH_UsbManager_UsbDevice device = {};
     if (!GetFirstDevice(device)) {
         GTEST_SKIP() << "No USB device, skip";
     }
-    UsbManager_DevicePipe pipe = {};
-    UsbManager_ErrorCode ret = OH_UsbManager_ConnectDevice(&device, &pipe);
+    OH_UsbManager_UsbPipe pipe = {};
+    OH_UsbManager_ErrorCode ret = OH_UsbManager_ConnectDevice(&device, &pipe);
     ASSERT_EQ(ret, ERR_SUCCESS);
-    UsbManager_ErrorCode closeRet = OH_UsbManager_ClosePipe(&pipe);
+    OH_UsbManager_ErrorCode closeRet = OH_UsbManager_ClosePipe(&pipe);
     EXPECT_EQ(closeRet, ERR_SUCCESS);
 }
 
 HWTEST_F(OHUsbManagerDeviceTest, HasPermissionSysPermission001, TestSize.Level2)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "HasPermissionSysPermission001 start");
-    UsbManager_Device device = {};
+    OH_UsbManager_UsbDevice device = {};
     if (!GetFirstDevice(device)) {
         GTEST_SKIP() << "No USB device, skip";
     }
     bool result = false;
-    UsbManager_ErrorCode ret = OH_UsbManager_HasPermission(device.name, &result);
+    OH_UsbManager_ErrorCode ret = OH_UsbManager_HasPermission(device.name, &result);
     EXPECT_EQ(ret, ERR_SUCCESS);
     EXPECT_TRUE(result);
 }
@@ -193,14 +192,14 @@ HWTEST_F(OHUsbManagerDeviceTest, HasPermissionNoPermission001, TestSize.Level2)
         GTEST_SKIP() << "AllocHapToken failed, skip";
     }
     UsbCommonTest::SetSelfToken(hapTokenId);
-    UsbManager_Device device = {};
+    OH_UsbManager_UsbDevice device = {};
     if (!GetFirstDevice(device)) {
         UsbCommonTest::GrantPermissionSysNative();
         UsbCommonTest::DeleteAllocHapToken(hapTokenId);
         GTEST_SKIP() << "No USB device, skip";
     }
     bool result = true;
-    UsbManager_ErrorCode ret = OH_UsbManager_HasPermission(device.name, &result);
+    OH_UsbManager_ErrorCode ret = OH_UsbManager_HasPermission(device.name, &result);
     EXPECT_EQ(ret, ERR_SUCCESS);
     EXPECT_FALSE(result);
     UsbCommonTest::GrantPermissionSysNative();
