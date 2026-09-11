@@ -2293,12 +2293,12 @@ void UsbHostManager::ReportManageDeviceInfo(const std::string &operationType, Us
         "PROTOCOL", protocol);
     json reportContenJson = {
         {"content", {
-            {"CLASS", baseClass},
-            {"PID", pid},
-            {"PROTOCOL", protocol},
-            {"SECURITY_POLICY_TYPE", operationType},
+            {"class", baseClass},
+            {"pid", pid},
+            {"protocol", protocol},
+            {"security_policy_type", operationType},
             {"timestamp_utc", UsbSecurityReport::GetCurrentTime()},
-            {"VID", vid},
+            {"vid", vid},
             {"manufactureName", device->GetManufacturerName()},
             {"productName", device->GetProductName()},
             {"interfaces", isInterfaceType ? json::array() : preInterfacesJson}
