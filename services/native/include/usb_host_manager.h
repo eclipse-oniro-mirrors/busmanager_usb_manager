@@ -170,7 +170,7 @@ private:
     void ReportManageDeviceInfo(const std::string &operationType, UsbDevice* device,
         const UsbInterface* interface, bool isInterfaceType,
         const nlohmann::json &preInterfacesJson = nlohmann::json::array());
-    nlohmann::json GetActiveInterfacesJson(UsbDevice* device);
+    void GetActiveInterfacesJson(UsbDevice* device, nlohmann::json &interfacesJson);
     int32_t CheckDevPathIsExist(uint8_t busNum, uint8_t devAddr);
     void LoadEdmService();
     MAP_STR_DEVICE devices_;

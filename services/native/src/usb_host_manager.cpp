@@ -1572,7 +1572,7 @@ int32_t UsbHostManager::UsbDeviceAuthorize(
 
     json preInterfacesJson = json::array();
     if (!authorized) {
-        preInterfacesJson = GetActiveInterfacesJson(iterDev->second);
+        GetActiveInterfacesJson(iterDev->second, preInterfacesJson);
         USB_HILOGI(MODULE_USB_HOST, "UsbDeviceAuthorize: preInterfacesJson size=%{public}zu",
             preInterfacesJson.size());
     }
@@ -2230,9 +2230,9 @@ bool UsbHostManager::IsUsbSerialDisable()
     return IsEdmEnabled() && (isSerialDisable == "1");
 }
 
-nlohmann::json UsbHostManager::GetActiveInterfacesJson(UsbDevice* device)
+void UsbHostManager::GetActiveInterfacesJson(UsbDevice* device, nlohmann::json &interfacesJson)
 {
-    json interfacesJson = json::array();
+    interfacesJson = json::array();
     uint8_t configIndex = 0;
     uint8_t index = 0;
     bool useFallback = false;
@@ -2249,7 +2249,7 @@ nlohmann::json UsbHostManager::GetActiveInterfacesJson(UsbDevice* device)
     if (index >= device->GetConfigs().size()) {
         USB_HILOGW(MODULE_USB_HOST, "GetActiveInterfacesJson: config index=%{public}d out of range "
             "(configs size=%{public}zu)", index, device->GetConfigs().size());
-        return interfacesJson;
+        return;
     }
     auto &interfaces = device->GetConfigs()[index].GetInterfaces();
     USB_HILOGI(MODULE_USB_HOST, "GetActiveInterfacesJson: source=%{public}s configIndex=%{public}d "
@@ -2263,7 +2263,6 @@ nlohmann::json UsbHostManager::GetActiveInterfacesJson(UsbDevice* device)
             {"protocol", intf.GetProtocol()}
         });
     }
-    return interfacesJson;
 }
 
 void UsbHostManager::ReportManageDeviceInfo(const std::string &operationType, UsbDevice* device,
