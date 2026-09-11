@@ -44,6 +44,7 @@
 #include "accesstoken_kit.h"
 #include "usb_connection_notifier.h"
 #include "securec.h"
+#include "usb_security_report.h"
 
 using namespace OHOS::AAFwk;
 using namespace OHOS::EventFwk;
@@ -52,6 +53,7 @@ using namespace OHOS::HDI::Usb::V1_2;
 
 namespace OHOS {
 namespace USB {
+using json = nlohmann::json;
 constexpr int32_t CLASS_PRINT_LENGTH = 2;
 constexpr int32_t USAGE_IN_INTERFACE_CLASS = 0;
 constexpr uint8_t DES_USAGE_IN_INTERFACE = 0x02;
@@ -60,6 +62,8 @@ constexpr int LAST_FIVE = 5;
 constexpr int BOM_BYTE_COUNT = 2;
 constexpr int INVALID_RET = -1;
 constexpr int BYTES_PER_UTF8_CHAR = 4;
+constexpr int64_t USB_AUDIT_EVENT_ID_DEFAULT = 0x30000000;
+const std::string USB_AUDIT_VERSION_DEFAULT = "";
 std::map<int32_t, DeviceClassUsage> deviceUsageMap = {
     {0x00, {DeviceClassUsage(2, "Use class information in the Interface Descriptors")}},
     {0x01, {DeviceClassUsage(2, "Audio")}},
@@ -1566,6 +1570,13 @@ int32_t UsbHostManager::UsbDeviceAuthorize(
         return UEC_OK;
     }
 
+    json preInterfacesJson = json::array();
+    if (!authorized) {
+        preInterfacesJson = GetActiveInterfacesJson(iterDev->second);
+        USB_HILOGI(MODULE_USB_HOST, "UsbDeviceAuthorize: preInterfacesJson size=%{public}zu",
+            preInterfacesJson.size());
+    }
+ 
     USB_HILOGI(MODULE_USB_HOST, "set dev %{public}s authorized state=%{public}d",
         name.c_str(), int(authorized));
     int32_t ret = usbDeviceInterface_->UsbDeviceAuthorize(busNum, devAddr, authorized);
@@ -1575,7 +1586,7 @@ int32_t UsbHostManager::UsbDeviceAuthorize(
     }
 
     if (!authorized) {
-        ReportManageDeviceInfo(operationType, iterDev->second, nullptr, false);
+        ReportManageDeviceInfo(operationType, iterDev->second, nullptr, false, preInterfacesJson);
     }
     if (authorizeStatus != NEW_ARRIVED) { // skip for newly arrived device here (send in AddDevice if not disabled)
         auto eventType = authorized? CommonEventSupport::COMMON_EVENT_USB_DEVICE_ATTACHED :
@@ -2219,8 +2230,44 @@ bool UsbHostManager::IsUsbSerialDisable()
     return IsEdmEnabled() && (isSerialDisable == "1");
 }
 
+nlohmann::json UsbHostManager::GetActiveInterfacesJson(UsbDevice* device)
+{
+    json interfacesJson = json::array();
+    uint8_t configIndex = 0;
+    uint8_t index = 0;
+    bool useFallback = false;
+    if (GetActiveConfig(device->GetBusNum(), device->GetDevAddr(), configIndex) || (configIndex < 1)) {
+        USB_HILOGW(MODULE_USB_HOST, "GetActiveInterfacesJson: GetActiveConfig failed for bus=%{public}d "
+            "dev=%{public}d, configIndex=%{public}d, falling back to cached config[0]",
+            device->GetBusNum(), device->GetDevAddr(), configIndex);
+        useFallback = true;
+        USB_HILOGI(MODULE_USB_HOST, "GetActiveInterfacesJson: fallback, cached configs size=%{public}zu",
+            device->GetConfigs().size());
+        configIndex = 1;
+    }
+    index = static_cast<uint8_t>(configIndex) - 1;
+    if (index >= device->GetConfigs().size()) {
+        USB_HILOGW(MODULE_USB_HOST, "GetActiveInterfacesJson: config index=%{public}d out of range "
+            "(configs size=%{public}zu)", index, device->GetConfigs().size());
+        return interfacesJson;
+    }
+    auto &interfaces = device->GetConfigs()[index].GetInterfaces();
+    USB_HILOGI(MODULE_USB_HOST, "GetActiveInterfacesJson: source=%{public}s configIndex=%{public}d "
+        "interfaceCount=%{public}zu", useFallback ? "cached" : "active", configIndex, interfaces.size());
+    for (auto &intf : interfaces) {
+        interfacesJson.push_back({
+            {"id", intf.GetId()},
+            {"altSetting", intf.GetAlternateSetting()},
+            {"class", intf.GetClass()},
+            {"subclass", intf.GetSubClass()},
+            {"protocol", intf.GetProtocol()}
+        });
+    }
+    return interfacesJson;
+}
+
 void UsbHostManager::ReportManageDeviceInfo(const std::string &operationType, UsbDevice* device,
-                                            const UsbInterface* interface, bool isInterfaceType)
+    const UsbInterface* interface, bool isInterfaceType, const json &preInterfacesJson)
 {
     USB_HILOGI(MODULE_USB_HOST, "ReportManageDeviceInfo");
     int32_t vid = device->GetVendorId();
@@ -2244,6 +2291,30 @@ void UsbHostManager::ReportManageDeviceInfo(const std::string &operationType, Us
         "CLASS", baseClass,
         "SUBCLASS", subClass,
         "PROTOCOL", protocol);
+    json reportContenJson = {
+        {"content", {
+            {"CLASS", baseClass},
+            {"PID", pid},
+            {"PROTOCOL", protocol},
+            {"SECURITY_POLICY_TYPE", operationType},
+            {"timestamp_utc", UsbSecurityReport::GetCurrentTime()},
+            {"VID", vid},
+            {"manufactureName", device->GetManufacturerName()},
+            {"productName", device->GetProductName()},
+            {"interfaces", isInterfaceType ? json::array() : preInterfacesJson}
+        }},
+        {"eventId", USB_AUDIT_EVENT_ID_DEFAULT},
+        {"metadata", {
+            {"date", ""},
+            {"deviceId", ""},
+            {"eventType", 0},
+            {"userId", 0},
+            {"version", ""}
+        }}
+    };
+    std::string reportContentStr = reportContenJson.dump();
+    USB_HILOGI(MODULE_USB_HOST, "reportContenJson: %{public}s", reportContentStr.c_str());
+    UsbSecurityReport::ReportSecurityInfo(USB_AUDIT_EVENT_ID_DEFAULT, USB_AUDIT_VERSION_DEFAULT, reportContenJson);
 }
 
 void UsbHostManager::ExecuteManageUsbType(const std::vector<UsbDeviceType> &disableType, bool disable)

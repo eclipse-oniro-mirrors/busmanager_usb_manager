@@ -28,6 +28,7 @@
 #include "v1_2/iusb_interface.h"
 #include "iremote_object.h"
 #include "system_ability_load_callback_stub.h"
+#include "nlohmann/json.hpp"
 #ifdef USB_MANAGER_PASS_THROUGH
 #include "mem_mgr_proxy.h"
 #include "mem_mgr_client.h"
@@ -167,7 +168,9 @@ private:
     bool IsUsbSerialDevice(UsbDevice &dev);
     bool IsUsbSerialDisable();
     void ReportManageDeviceInfo(const std::string &operationType, UsbDevice* device,
-        const UsbInterface* interface, bool isInterfaceType);
+        const UsbInterface* interface, bool isInterfaceType,
+        const nlohmann::json &preInterfacesJson = nlohmann::json::array());
+    nlohmann::json GetActiveInterfacesJson(UsbDevice* device);
     int32_t CheckDevPathIsExist(uint8_t busNum, uint8_t devAddr);
     void LoadEdmService();
     MAP_STR_DEVICE devices_;
