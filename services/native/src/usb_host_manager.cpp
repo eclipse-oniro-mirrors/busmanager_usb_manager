@@ -2232,7 +2232,6 @@ bool UsbHostManager::IsUsbSerialDisable()
 
 void UsbHostManager::GetActiveInterfacesJson(UsbDevice* device, nlohmann::json &interfacesJson)
 {
-    interfacesJson = json::array();
     uint8_t configIndex = 0;
     uint8_t index = 0;
     bool useFallback = false;
@@ -2249,11 +2248,13 @@ void UsbHostManager::GetActiveInterfacesJson(UsbDevice* device, nlohmann::json &
     if (index >= device->GetConfigs().size()) {
         USB_HILOGW(MODULE_USB_HOST, "GetActiveInterfacesJson: config index=%{public}d out of range "
             "(configs size=%{public}zu)", index, device->GetConfigs().size());
+        interfacesJson.clear();
         return;
     }
     auto &interfaces = device->GetConfigs()[index].GetInterfaces();
     USB_HILOGI(MODULE_USB_HOST, "GetActiveInterfacesJson: source=%{public}s configIndex=%{public}d "
         "interfaceCount=%{public}zu", useFallback ? "cached" : "active", configIndex, interfaces.size());
+    interfacesJson.clear();
     for (auto &intf : interfaces) {
         interfacesJson.push_back({
             {"id", intf.GetId()},
