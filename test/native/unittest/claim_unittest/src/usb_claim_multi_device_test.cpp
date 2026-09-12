@@ -64,6 +64,24 @@ bool FindBulkEndpoints(UsbInterface &interface, USBEndpoint &bulkIn, USBEndpoint
 }
 
 /*
+ * Scan the configurations of one device and return the first interface that
+ * exposes both bulk IN and bulk OUT endpoints. Returns true and fills the
+ * out parameters on success.
+ */
+bool FindBulkInterface(UsbDevice &dev, UsbInterface &iface, USBEndpoint &bulkIn, USBEndpoint &bulkOut)
+{
+    for (auto &config : dev.GetConfigs()) {
+        for (auto &interface : config.GetInterfaces()) {
+            if (FindBulkEndpoints(interface, bulkIn, bulkOut)) {
+                iface = interface;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/*
  * Submit an asynchronous bulk transfer on the bulk OUT endpoint of the
  * serial device: the request is queued to the HDI layer and the submission
  * itself must succeed.
@@ -121,19 +139,14 @@ bool UsbClaimMultiDeviceTest::PickSerialDevice()
         if (dev.GetClass() == USB_DEVICE_CLASS_HUB || dev.GetConfigs().empty()) {
             continue;
         }
-        for (auto &config : dev.GetConfigs()) {
-            for (auto &interface : config.GetInterfaces()) {
-                if (!FindBulkEndpoints(interface, bulkInEp_, bulkOutEp_)) {
-                    continue;
-                }
-                deviceB_ = dev;
-                ifaceB_ = interface;
-                ifaceIdB_ = static_cast<uint8_t>(interface.GetId());
-                pipeB_.SetBusNum(dev.GetBusNum());
-                pipeB_.SetDevAddr(dev.GetDevAddr());
-                return true;
-            }
+        if (!FindBulkInterface(dev, ifaceB_, bulkInEp_, bulkOutEp_)) {
+            continue;
         }
+        deviceB_ = dev;
+        ifaceIdB_ = static_cast<uint8_t>(ifaceB_.GetId());
+        pipeB_.SetBusNum(dev.GetBusNum());
+        pipeB_.SetDevAddr(dev.GetDevAddr());
+        return true;
     }
     return false;
 }
