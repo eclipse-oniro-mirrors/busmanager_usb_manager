@@ -494,6 +494,31 @@ ohos_fuzztest("UsbMgrClaimInterfaceFuzzTest") {
   sources = [ "usbmgrclaiminterface_fuzzer/usbmgrclaiminterface_fuzzer.cpp" ]
 }
 
+ohos_fuzztest("UsbMgrClaimInterfaceExclusiveFuzzTest") {
+  module_out_path = module_output_path
+
+  fuzz_config_file =
+      "${usb_manager_path}/test/fuzztest/usbmgrclaiminterfaceexclusive_fuzzer"
+
+  configs = [ ":module_private_config" ]
+
+  defines = [ "USB_MANAGER_FEATURE_HOST" ]
+
+  deps = [
+    "${usb_manager_path}/interfaces/innerkits:usbsrv_client",
+    "${usb_manager_path}/services:usbservice",
+  ]
+
+  external_deps = [
+    "c_utils:utils",
+    "drivers_interface_usb:libusb_proxy_1.0",
+    "hilog:libhilog",
+    "ipc:ipc_core",
+  ]
+
+  sources = [ "usbmgrclaiminterfaceexclusive_fuzzer/usbmgrclaiminterfaceexclusive_fuzzer.cpp" ]
+}
+
 ohos_fuzztest("UsbMgrReleaseInterfaceFuzzTest") {
   module_out_path = module_output_path
 
@@ -2263,7 +2288,9 @@ group("fuzztest") {
       ":UsbMgrBulkWriteFuzzTest",
       ":UsbMgrCancelSerialRightFuzzTest",
       ":UsbMgrCancelTransferFuzzTest",
+      ":UsbMgrCapiFuzzTest",
       ":UsbMgrClaimInterfaceFuzzTest",
+      ":UsbMgrClaimInterfaceExclusiveFuzzTest",
       ":UsbMgrClearHaltFuzzTest",
       ":UsbMgrCloseFuzzTest",
       ":UsbMgrControlTransferFuzzTest",
