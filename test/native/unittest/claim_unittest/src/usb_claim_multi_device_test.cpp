@@ -33,10 +33,34 @@ namespace {
 constexpr int32_t TRANSFER_BUFFER_SIZE = 8;
 constexpr int32_t TRANSFER_TIMEOUT_MS = 300;
 constexpr uint32_t ENDPOINT_TYPE_BULK = 2;
+constexpr int32_t USB_DEVICE_CLASS_HUB = 9;
 
 bool IsBulkEndpoint(const USBEndpoint &endpoint)
 {
     return (endpoint.GetAttributes() & USB_ENDPOINT_XFERTYPE_MASK) == ENDPOINT_TYPE_BULK;
+}
+
+/*
+ * Scan the endpoints of one interface and record the bulk IN / bulk OUT
+ * endpoints when present. Returns true only when the interface exposes both.
+ */
+bool FindBulkEndpoints(UsbInterface &interface, USBEndpoint &bulkIn, USBEndpoint &bulkOut)
+{
+    bool hasIn = false;
+    bool hasOut = false;
+    for (auto &endpoint : interface.GetEndpoints()) {
+        if (!IsBulkEndpoint(endpoint)) {
+            continue;
+        }
+        if (endpoint.GetDirection() == USB_ENDPOINT_DIR_IN) {
+            bulkIn = endpoint;
+            hasIn = true;
+        } else if (endpoint.GetDirection() == USB_ENDPOINT_DIR_OUT) {
+            bulkOut = endpoint;
+            hasOut = true;
+        }
+    }
+    return hasIn && hasOut;
 }
 
 /*
@@ -94,33 +118,20 @@ bool UsbClaimMultiDeviceTest::PickSerialDevice()
         return false;
     }
     for (auto &dev : deviceList) {
-        if (dev.GetClass() == 9 || dev.GetConfigs().empty()) {
+        if (dev.GetClass() == USB_DEVICE_CLASS_HUB || dev.GetConfigs().empty()) {
             continue;
         }
         for (auto &config : dev.GetConfigs()) {
             for (auto &interface : config.GetInterfaces()) {
-                bool hasIn = false;
-                bool hasOut = false;
-                for (auto &endpoint : interface.GetEndpoints()) {
-                    if (!IsBulkEndpoint(endpoint)) {
-                        continue;
-                    }
-                    if (endpoint.GetDirection() == USB_ENDPOINT_DIR_IN) {
-                        bulkInEp_ = endpoint;
-                        hasIn = true;
-                    } else if (endpoint.GetDirection() == USB_ENDPOINT_DIR_OUT) {
-                        bulkOutEp_ = endpoint;
-                        hasOut = true;
-                    }
+                if (!FindBulkEndpoints(interface, bulkInEp_, bulkOutEp_)) {
+                    continue;
                 }
-                if (hasIn && hasOut) {
-                    deviceB_ = dev;
-                    ifaceB_ = interface;
-                    ifaceIdB_ = static_cast<uint8_t>(interface.GetId());
-                    pipeB_.SetBusNum(dev.GetBusNum());
-                    pipeB_.SetDevAddr(dev.GetDevAddr());
-                    return true;
-                }
+                deviceB_ = dev;
+                ifaceB_ = interface;
+                ifaceIdB_ = static_cast<uint8_t>(interface.GetId());
+                pipeB_.SetBusNum(dev.GetBusNum());
+                pipeB_.SetDevAddr(dev.GetDevAddr());
+                return true;
             }
         }
     }
@@ -138,7 +149,7 @@ bool UsbClaimMultiDeviceTest::PickSecondDevice()
         return false;
     }
     for (auto &dev : deviceList) {
-        if (dev.GetClass() == 9 || dev.GetConfigs().empty()) {
+        if (dev.GetClass() == USB_DEVICE_CLASS_HUB || dev.GetConfigs().empty()) {
             continue;
         }
         if (dev.GetBusNum() == deviceB_.GetBusNum() && dev.GetDevAddr() == deviceB_.GetDevAddr()) {
