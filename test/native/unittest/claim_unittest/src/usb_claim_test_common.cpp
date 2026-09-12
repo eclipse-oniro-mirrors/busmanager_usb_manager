@@ -35,20 +35,6 @@ const char *APP_C_PROCESS_NAME = "usb_claim_test_app_c";
 const char *APP_SYS_PROCESS_NAME = "usb_claim_test_sys";
 const char *USB_SYSFS_ROOT = "/sys/bus/usb/devices/";
 
-bool IsNonHubDevicePresent(UsbSrvClient &client)
-{
-    std::vector<UsbDevice> deviceList;
-    if (client.GetDevices(deviceList) != UEC_OK) {
-        return false;
-    }
-    for (auto &dev : deviceList) {
-        if (dev.GetClass() != HUB_DEVICE_CLASS) {
-            return true;
-        }
-    }
-    return false;
-}
-
 uint64_t AllocNativeToken(const char *processName)
 {
     TokenInfoParams infoInstance = {
@@ -289,14 +275,26 @@ bool UsbClaimTestBase::WaitForDevicePresent(bool present, int32_t timeoutMs)
 {
     auto &client = UsbSrvClient::GetInstance();
     int32_t waitedMs = 0;
-    while (waitedMs < timeoutMs) {
-        if (IsNonHubDevicePresent(client) == present) {
+    while (true) {
+        std::vector<UsbDevice> deviceList;
+        bool found = false;
+        if (client.GetDevices(deviceList) == UEC_OK) {
+            for (auto &dev : deviceList) {
+                if (dev.GetClass() != HUB_DEVICE_CLASS) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (found == present) {
             return true;
+        }
+        if (waitedMs >= timeoutMs) {
+            return false;
         }
         usleep(DEVICE_WAIT_INTERVAL_MS * MS_TO_US);
         waitedMs += DEVICE_WAIT_INTERVAL_MS;
     }
-    return false;
 }
 
 bool UsbClaimTestBase::IsKernelDriverBound()
