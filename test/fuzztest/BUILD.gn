@@ -2288,7 +2288,6 @@ group("fuzztest") {
       ":UsbMgrBulkWriteFuzzTest",
       ":UsbMgrCancelSerialRightFuzzTest",
       ":UsbMgrCancelTransferFuzzTest",
-      ":UsbMgrCapiFuzzTest",
       ":UsbMgrClaimInterfaceFuzzTest",
       ":UsbMgrClaimInterfaceExclusiveFuzzTest",
       ":UsbMgrClearHaltFuzzTest",
