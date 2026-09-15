@@ -16,7 +16,7 @@
 sequenceable UsbDevice..OHOS.USB.UsbDevice;
 
 [callback] interface OHOS.USB.IUsbConnectionCallback {
-    [oneway] void OnDeviceConnected([in] UsbDevice device, [in] String tokenId, [in] String bundleName);
+    [oneway] void OnDeviceConnected([in] UsbDevice device, [in] int uid, [in] String bundleName);
 
-    [oneway] void OnDeviceDisconnected([in] UsbDevice device, [in] String tokenId, [in] String bundleName);
+    [oneway] void OnDeviceDisconnected([in] UsbDevice device, [in] int uid, [in] String bundleName);
 }

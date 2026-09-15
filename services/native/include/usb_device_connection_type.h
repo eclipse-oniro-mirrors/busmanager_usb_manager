@@ -34,7 +34,7 @@ enum UsbDeviceConnectionType : int32_t {
 struct UsbDeviceConnectionInfo {
     UsbDeviceConnectionType type = USB_DEVICE_CONNECTION_CONNECT;
     UsbDevice device;
-    std::string tokenId;
+    int32_t uid = 0;
     std::string bundleName;
 };
 
@@ -43,13 +43,9 @@ struct DeviceListenerEntry {
     sptr<IRemoteObject::DeathRecipient> deathRecipient;
 };
 
-struct AppConnectionInfo {
-    std::string bundleName;
-};
-
 struct DeviceConnectionRecord {
     UsbDevice device;
-    std::map<std::string, AppConnectionInfo> apps;
+    std::map<int32_t, std::string> apps;
 };
 
 } // namespace USB

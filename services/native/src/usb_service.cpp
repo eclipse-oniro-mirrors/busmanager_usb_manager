@@ -548,7 +548,6 @@ int32_t UsbService::Close(uint8_t busNum, uint8_t devAddr)
     // LCOV_EXCL_STOP
 }
 
-
 // LCOV_EXCL_START
 int32_t UsbService::RegisterConnectionListener(const sptr<IUsbConnectionCallback> &cb)
 {
@@ -596,14 +595,14 @@ int32_t UsbService::RegisterConnectionListener(const sptr<IUsbConnectionCallback
                 UsbDeviceConnectionInfo info;
                 info.type = USB_DEVICE_CONNECTION_CONNECT;
                 info.device = deviceIt.second.device;
-                info.tokenId = appIt.first;
-                info.bundleName = appIt.second.bundleName;
+                info.uid = appIt.first;
+                info.bundleName = appIt.second;
                 pending.push_back(info);
             }
         }
     }
     for (const auto &info : pending) {
-        cb->OnDeviceConnected(info.device, info.tokenId, info.bundleName);
+        cb->OnDeviceConnected(info.device, info.uid, info.bundleName);
     }
     return UEC_OK;
 }
@@ -677,9 +676,9 @@ void UsbService::NotifyDeviceConnection(const UsbDeviceConnectionInfo &info)
     }
     for (const auto &cb : listeners) {
         if (info.type == USB_DEVICE_CONNECTION_CONNECT) {
-            cb->OnDeviceConnected(info.device, info.tokenId, info.bundleName);
+            cb->OnDeviceConnected(info.device, info.uid, info.bundleName);
         } else {
-            cb->OnDeviceDisconnected(info.device, info.tokenId, info.bundleName);
+            cb->OnDeviceDisconnected(info.device, info.uid, info.bundleName);
         }
     }
 }
@@ -700,6 +699,7 @@ void UsbService::AddDeviceConnection(uint8_t busNum, uint8_t devAddr)
         USB_HILOGE(MODULE_USB_HOST, "%{public}s: GetDeviceInfo failed", __func__);
         return;
     }
+    int32_t uid = IPCSkeleton::GetCallingUid();
     std::string bundleName;
     std::string tokenId;
     int32_t userId = 0;
@@ -713,13 +713,13 @@ void UsbService::AddDeviceConnection(uint8_t busNum, uint8_t devAddr)
         std::lock_guard<std::mutex> lock(deviceConnectionMutex_);
         auto &record = deviceConnectionMap_[key];
         record.device = dev;
-        record.apps[tokenId] = { bundleName };
+        record.apps[uid] = bundleName;
     }
 
     UsbDeviceConnectionInfo info;
     info.type = USB_DEVICE_CONNECTION_CONNECT;
     info.device = dev;
-    info.tokenId = tokenId;
+    info.uid = uid;
     info.bundleName = bundleName;
     NotifyDeviceConnection(info);
 }
@@ -728,6 +728,7 @@ void UsbService::AddDeviceConnection(uint8_t busNum, uint8_t devAddr)
 // LCOV_EXCL_START
 void UsbService::RemoveDeviceConnection(uint8_t busNum, uint8_t devAddr)
 {
+    int32_t uid = IPCSkeleton::GetCallingUid();
     std::string bundleName;
     std::string tokenId;
     int32_t userId = 0;
@@ -745,7 +746,7 @@ void UsbService::RemoveDeviceConnection(uint8_t busNum, uint8_t devAddr)
         if (it == deviceConnectionMap_.end()) {
             return;
         }
-        auto appIt = it->second.apps.find(tokenId);
+        auto appIt = it->second.apps.find(uid);
         if (appIt == it->second.apps.end()) {
             return;
         }
@@ -761,7 +762,7 @@ void UsbService::RemoveDeviceConnection(uint8_t busNum, uint8_t devAddr)
         UsbDeviceConnectionInfo info;
         info.type = USB_DEVICE_CONNECTION_DISCONNECT;
         info.device = device;
-        info.tokenId = tokenId;
+        info.uid = uid;
         info.bundleName = bundleName;
         NotifyDeviceConnection(info);
     }
@@ -783,8 +784,8 @@ void UsbService::RemoveAllDeviceConnections(uint8_t busNum, uint8_t devAddr)
             UsbDeviceConnectionInfo info;
             info.type = USB_DEVICE_CONNECTION_DISCONNECT;
             info.device = it->second.device;
-            info.tokenId = appIt.first;
-            info.bundleName = appIt.second.bundleName;
+            info.uid = appIt.first;
+            info.bundleName = appIt.second;
             infos.push_back(info);
         }
         deviceConnectionMap_.erase(it);
@@ -1271,6 +1272,7 @@ bool UsbService::AddDevice(uint8_t busNum, uint8_t devAddr)
 bool UsbService::DelDevice(uint8_t busNum, uint8_t devAddr)
 {
     USB_HILOGI(MODULE_USB_HOST, "entry");
+    RemoveAllDeviceConnections(busNum, devAddr);
     RemoveAllClaimByDevice(busNum, devAddr);
     int32_t ret = Close(busNum, devAddr);
     if (ret != UEC_OK) {

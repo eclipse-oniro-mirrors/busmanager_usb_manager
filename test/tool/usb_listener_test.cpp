@@ -44,22 +44,20 @@ public:
     UsbListenerCallback() = default;
     ~UsbListenerCallback() override = default;
 
-    int32_t OnDeviceConnected(const UsbDevice &device, const std::string &tokenId,
-        const std::string &bundleName) override
+    int32_t OnDeviceConnected(const UsbDevice &device, int32_t uid, const std::string &bundleName) override
     {
         printf("\n[<<< listener callback >>>] type=CONNECT\n");
         DumpDevice(device);
-        printf("  [app] tokenId=%s bundleName=%s\n\n", tokenId.c_str(), bundleName.c_str());
+        printf("  [app] uid=%d bundleName=%s\n\n", uid, bundleName.c_str());
         fflush(stdout);
         return 0;
     }
 
-    int32_t OnDeviceDisconnected(const UsbDevice &device, const std::string &tokenId,
-        const std::string &bundleName) override
+    int32_t OnDeviceDisconnected(const UsbDevice &device, int32_t uid, const std::string &bundleName) override
     {
         printf("\n[<<< listener callback >>>] type=DISCONNECT\n");
         DumpDevice(device);
-        printf("  [app] tokenId=%s bundleName=%s\n\n", tokenId.c_str(), bundleName.c_str());
+        printf("  [app] uid=%d bundleName=%s\n\n", uid, bundleName.c_str());
         fflush(stdout);
         return 0;
     }
@@ -95,7 +93,6 @@ int main(int argc, char *argv[])
     string line;
     PrintHelp();
     while (true) {
-        PrintHelp();
         printf("input> ");
         fflush(stdout);
         if (!std::getline(std::cin, line)) {
