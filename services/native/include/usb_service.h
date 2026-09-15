@@ -257,11 +257,9 @@ private:
 
     class DeviceListenerDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
-        explicit DeviceListenerDeathRecipient(UsbService *service) : service_(service) {}
+        DeviceListenerDeathRecipient() = default;
         ~DeviceListenerDeathRecipient() {}
         void OnRemoteDied(const wptr<IRemoteObject> &object) override;
-    private:
-        UsbService *service_;
     };
 
 #ifdef USB_MANAGER_FEATURE_DEVICE

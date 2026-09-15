@@ -572,7 +572,7 @@ int32_t UsbService::RegisterConnectionListener(const sptr<IUsbConnectionCallback
         }
     }
 
-    sptr<DeviceListenerDeathRecipient> deathRecipient = new (std::nothrow) DeviceListenerDeathRecipient(this);
+    sptr<DeviceListenerDeathRecipient> deathRecipient = new (std::nothrow) DeviceListenerDeathRecipient();
     if (deathRecipient == nullptr) {
         USB_HILOGE(MODULE_USB_HOST, "%{public}s: new DeviceListenerDeathRecipient failed", __func__);
         return UEC_SERVICE_INVALID_VALUE;
@@ -638,8 +638,9 @@ int32_t UsbService::UnRegisterConnectionListener(const sptr<IUsbConnectionCallba
 void UsbService::DeviceListenerDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &object)
 {
     USB_HILOGI(MODULE_USB_HOST, "UsbService DeviceListenerDeathRecipient enter");
-    if (service_ != nullptr) {
-        service_->RemoveDeviceListener(object);
+    auto service = UsbService::GetGlobalInstance();
+    if (service != nullptr) {
+        service->RemoveDeviceListener(object);
     }
 }
 // LCOV_EXCL_STOP
