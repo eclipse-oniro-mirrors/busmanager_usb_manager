@@ -1271,6 +1271,7 @@ bool UsbService::AddDevice(uint8_t busNum, uint8_t devAddr)
 bool UsbService::DelDevice(uint8_t busNum, uint8_t devAddr)
 {
     USB_HILOGI(MODULE_USB_HOST, "entry");
+    RemoveAllDeviceConnections(busNum, devAddr);
     RemoveAllClaimByDevice(busNum, devAddr);
     int32_t ret = Close(busNum, devAddr);
     if (ret != UEC_OK) {
