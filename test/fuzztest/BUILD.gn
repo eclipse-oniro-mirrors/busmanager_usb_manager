@@ -2273,6 +2273,92 @@ ohos_fuzztest("UsbMgrCloseAccessoryFuzzTest") {
   sources = [ "usbmgrcloseaccessory_fuzzer/usbmgrcloseaccessory_fuzzer.cpp" ]
 }
 
+ohos_fuzztest("UsbMgrRegConnectionListenerFuzzTest") {
+  module_out_path = module_output_path
+
+  fuzz_config_file =
+      "${usb_manager_path}/test/fuzztest/usbmgrregconnectionlistener_fuzzer"
+
+  configs = [ ":module_private_config" ]
+
+  deps = [
+    "${usb_manager_path}/interfaces/innerkits:usbsrv_client",
+    "${usb_manager_path}/services:usbservice",
+  ]
+
+  defines = [
+    "USB_MANAGER_FEATURE_HOST",
+    "USB_MANAGER_FEATURE_DEVICE",
+    "USB_MANAGER_FEATURE_PORT",
+  ]
+
+  external_deps = [
+    "ability_base:want",
+    "ability_runtime:ability_manager",
+    "access_token:libaccesstoken_sdk",
+    "access_token:libnativetoken",
+    "access_token:libtoken_setproc",
+    "bundle_framework:appexecfwk_base",
+    "c_utils:utils",
+    "common_event_service:cesfwk_innerkits",
+    "drivers_interface_usb:libusb_proxy_1.2",
+    "drivers_interface_usb:usb_idl_headers_1.2",
+    "eventhandler:libeventhandler",
+    "hilog:libhilog",
+    "ipc:ipc_core",
+    "safwk:system_ability_fwk",
+    "samgr:samgr_proxy",
+    "selinux_adapter:librestorecon",
+  ]
+
+  sources = [
+    "usbmgrregconnectionlistener_fuzzer/usbmgrregconnectionlistener_fuzzer.cpp",
+  ]
+}
+
+ohos_fuzztest("UsbMgrUnRegConnectionListenerFuzzTest") {
+  module_out_path = module_output_path
+
+  fuzz_config_file =
+      "${usb_manager_path}/test/fuzztest/usbmgrunregconnectionlistener_fuzzer"
+
+  configs = [ ":module_private_config" ]
+
+  deps = [
+    "${usb_manager_path}/interfaces/innerkits:usbsrv_client",
+    "${usb_manager_path}/services:usbservice",
+  ]
+
+  defines = [
+    "USB_MANAGER_FEATURE_HOST",
+    "USB_MANAGER_FEATURE_DEVICE",
+    "USB_MANAGER_FEATURE_PORT",
+  ]
+
+  external_deps = [
+    "ability_base:want",
+    "ability_runtime:ability_manager",
+    "access_token:libaccesstoken_sdk",
+    "access_token:libnativetoken",
+    "access_token:libtoken_setproc",
+    "bundle_framework:appexecfwk_base",
+    "c_utils:utils",
+    "common_event_service:cesfwk_innerkits",
+    "drivers_interface_usb:libusb_proxy_1.2",
+    "drivers_interface_usb:usb_idl_headers_1.2",
+    "eventhandler:libeventhandler",
+    "hilog:libhilog",
+    "ipc:ipc_core",
+    "safwk:system_ability_fwk",
+    "samgr:samgr_proxy",
+    "selinux_adapter:librestorecon",
+  ]
+
+  sources = [
+    "usbmgrunregconnectionlistener_fuzzer/usbmgrunregconnectionlistener_fuzzer.cpp",
+  ]
+}
+
 group("fuzztest") {
   testonly = true
   deps = []
@@ -2313,6 +2399,7 @@ group("fuzztest") {
       ":UsbMgrPrivateFuzzTest",
       ":UsbMgrPrivateGetTransferTypeStringFuzzTest",
       ":UsbMgrRegBulkCallbackFuzzTest",
+      ":UsbMgrRegConnectionListenerFuzzTest",
       ":UsbMgrReleaseInterfaceFuzzTest",
       ":UsbMgrRemoveRightFuzzTest",
       ":UsbMgrRequestFreeFuzzTest",
@@ -2332,6 +2419,7 @@ group("fuzztest") {
       ":UsbMgrSetInterfaceFuzzTest",
       ":UsbMgrSubmitTransferFuzzTest",
       ":UsbMgrUnRegBulkCallbackFuzzTest",
+      ":UsbMgrUnRegConnectionListenerFuzzTest",
       ":UsbMgrUsbControlTransferFuzzTest",
     ]
   }

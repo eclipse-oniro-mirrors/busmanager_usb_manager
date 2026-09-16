@@ -518,6 +518,8 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr)
     int32_t ret = usbHostManager_->OpenDevice(busNum, devAddr);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_HOST, "OpenDevice failed ret:%{public}d", ret);
+    } else {
+        AddDeviceConnection(busNum, devAddr);
     }
 
     return ret;
@@ -538,9 +540,262 @@ int32_t UsbService::Close(uint8_t busNum, uint8_t devAddr)
         USB_HILOGE(MODULE_USB_HOST, "UsbService::usbHostManager_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
-    return usbHostManager_->Close(busNum, devAddr);
+    int32_t ret = usbHostManager_->Close(busNum, devAddr);
+    if (ret == UEC_OK) {
+        RemoveDeviceConnection(busNum, devAddr);
+    }
+    return ret;
     // LCOV_EXCL_STOP
 }
+
+// LCOV_EXCL_START
+int32_t UsbService::RegisterConnectionListener(const sptr<IUsbConnectionCallback> &cb)
+{
+    if (cb == nullptr) {
+        USB_HILOGE(MODULE_USB_HOST, "%{public}s: cb is nullptr", __func__);
+        return UEC_SERVICE_INVALID_VALUE;
+    }
+    int32_t ret = CheckSysApiPermission();
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "%{public}s: CheckSysApiPermission failed ret = %{public}d", __func__, ret);
+        return ret;
+    }
+
+    sptr<IRemoteObject> remote = cb->AsObject();
+    {
+        std::lock_guard<std::mutex> lock(deviceListenerMutex_);
+        for (const auto &entry : deviceListeners_) {
+            if (entry.listener != nullptr && entry.listener->AsObject() == remote) {
+                USB_HILOGW(MODULE_USB_HOST, "%{public}s: listener already registered", __func__);
+                return UEC_SERVICE_ALREADY_EXISTS;
+            }
+        }
+    }
+
+    sptr<DeviceListenerDeathRecipient> deathRecipient = new (std::nothrow) DeviceListenerDeathRecipient();
+    if (deathRecipient == nullptr) {
+        USB_HILOGE(MODULE_USB_HOST, "%{public}s: new DeviceListenerDeathRecipient failed", __func__);
+        return UEC_SERVICE_INVALID_VALUE;
+    }
+    if (!remote->AddDeathRecipient(deathRecipient)) {
+        USB_HILOGE(MODULE_USB_HOST, "%{public}s: AddDeathRecipient failed", __func__);
+        return UEC_SERVICE_ADD_DEATH_RECIPIENT_FAILED;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(deviceListenerMutex_);
+        deviceListeners_.push_back({ cb, deathRecipient });
+    }
+
+    std::vector<UsbDeviceConnectionInfo> pending;
+    {
+        std::lock_guard<std::mutex> lock(deviceConnectionMutex_);
+        for (const auto &deviceIt : deviceConnectionMap_) {
+            for (const auto &appIt : deviceIt.second.apps) {
+                UsbDeviceConnectionInfo info;
+                info.type = USB_DEVICE_CONNECTION_CONNECT;
+                info.device = deviceIt.second.device;
+                info.uid = appIt.first;
+                info.bundleName = appIt.second;
+                pending.push_back(info);
+            }
+        }
+    }
+    for (const auto &info : pending) {
+        cb->OnDeviceConnected(info.device, info.uid, info.bundleName);
+    }
+    return UEC_OK;
+}
+// LCOV_EXCL_STOP
+
+// LCOV_EXCL_START
+int32_t UsbService::UnRegisterConnectionListener(const sptr<IUsbConnectionCallback> &cb)
+{
+    if (cb == nullptr) {
+        USB_HILOGE(MODULE_USB_HOST, "%{public}s: cb is nullptr", __func__);
+        return UEC_SERVICE_INVALID_VALUE;
+    }
+    int32_t ret = CheckSysApiPermission();
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "%{public}s: CheckSysApiPermission failed ret = %{public}d", __func__, ret);
+        return ret;
+    }
+
+    sptr<IRemoteObject> remote = cb->AsObject();
+    std::lock_guard<std::mutex> lock(deviceListenerMutex_);
+    for (auto it = deviceListeners_.begin(); it != deviceListeners_.end(); ++it) {
+        if (it->listener != nullptr && it->listener->AsObject() == remote) {
+            remote->RemoveDeathRecipient(it->deathRecipient);
+            deviceListeners_.erase(it);
+            break;
+        }
+    }
+    return UEC_OK;
+}
+// LCOV_EXCL_STOP
+
+// LCOV_EXCL_START
+void UsbService::DeviceListenerDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &object)
+{
+    USB_HILOGI(MODULE_USB_HOST, "UsbService DeviceListenerDeathRecipient enter");
+    auto service = UsbService::GetGlobalInstance();
+    if (service != nullptr) {
+        service->RemoveDeviceListener(object);
+    }
+}
+// LCOV_EXCL_STOP
+
+// LCOV_EXCL_START
+void UsbService::RemoveDeviceListener(const wptr<IRemoteObject> &object)
+{
+    sptr<IRemoteObject> remote = object.promote();
+    if (remote == nullptr) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(deviceListenerMutex_);
+    for (auto it = deviceListeners_.begin(); it != deviceListeners_.end(); ++it) {
+        if (it->listener != nullptr && it->listener->AsObject() == remote) {
+            remote->RemoveDeathRecipient(it->deathRecipient);
+            deviceListeners_.erase(it);
+            break;
+        }
+    }
+}
+// LCOV_EXCL_STOP
+
+// LCOV_EXCL_START
+void UsbService::NotifyDeviceConnection(const UsbDeviceConnectionInfo &info)
+{
+    std::vector<sptr<IUsbConnectionCallback>> listeners;
+    {
+        std::lock_guard<std::mutex> lock(deviceListenerMutex_);
+        for (const auto &entry : deviceListeners_) {
+            if (entry.listener != nullptr) {
+                listeners.push_back(entry.listener);
+            }
+        }
+    }
+    for (const auto &cb : listeners) {
+        if (info.type == USB_DEVICE_CONNECTION_CONNECT) {
+            cb->OnDeviceConnected(info.device, info.uid, info.bundleName);
+        } else {
+            cb->OnDeviceDisconnected(info.device, info.uid, info.bundleName);
+        }
+    }
+}
+// LCOV_EXCL_STOP
+
+// LCOV_EXCL_START
+std::string UsbService::GetDeviceKey(uint8_t busNum, uint8_t devAddr)
+{
+    return std::to_string(busNum) + "-" + std::to_string(devAddr);
+}
+// LCOV_EXCL_STOP
+
+// LCOV_EXCL_START
+void UsbService::AddDeviceConnection(uint8_t busNum, uint8_t devAddr)
+{
+    UsbDevice dev;
+    if (usbHostManager_ == nullptr || usbHostManager_->GetDeviceInfo(busNum, devAddr, dev) != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "%{public}s: GetDeviceInfo failed", __func__);
+        return;
+    }
+    int32_t uid = IPCSkeleton::GetCallingUid();
+    std::string bundleName;
+    std::string tokenId;
+    int32_t userId = 0;
+    if (!GetCallingInfo(bundleName, tokenId, userId)) {
+        USB_HILOGW(MODULE_USB_HOST, "%{public}s: GetCallingInfo failed, skip record", __func__);
+        return;
+    }
+
+    std::string key = GetDeviceKey(busNum, devAddr);
+    {
+        std::lock_guard<std::mutex> lock(deviceConnectionMutex_);
+        auto &record = deviceConnectionMap_[key];
+        record.device = dev;
+        record.apps[uid] = bundleName;
+    }
+
+    UsbDeviceConnectionInfo info;
+    info.type = USB_DEVICE_CONNECTION_CONNECT;
+    info.device = dev;
+    info.uid = uid;
+    info.bundleName = bundleName;
+    NotifyDeviceConnection(info);
+}
+// LCOV_EXCL_STOP
+
+// LCOV_EXCL_START
+void UsbService::RemoveDeviceConnection(uint8_t busNum, uint8_t devAddr)
+{
+    int32_t uid = IPCSkeleton::GetCallingUid();
+    std::string bundleName;
+    std::string tokenId;
+    int32_t userId = 0;
+    if (!GetCallingInfo(bundleName, tokenId, userId)) {
+        USB_HILOGW(MODULE_USB_HOST, "%{public}s: GetCallingInfo failed, skip disconnect notify", __func__);
+        return;
+    }
+
+    std::string key = GetDeviceKey(busNum, devAddr);
+    UsbDevice device;
+    bool notified = false;
+    {
+        std::lock_guard<std::mutex> lock(deviceConnectionMutex_);
+        auto it = deviceConnectionMap_.find(key);
+        if (it == deviceConnectionMap_.end()) {
+            return;
+        }
+        auto appIt = it->second.apps.find(uid);
+        if (appIt == it->second.apps.end()) {
+            return;
+        }
+        device = it->second.device;
+        it->second.apps.erase(appIt);
+        if (it->second.apps.empty()) {
+            deviceConnectionMap_.erase(it);
+        }
+        notified = true;
+    }
+
+    if (notified) {
+        UsbDeviceConnectionInfo info;
+        info.type = USB_DEVICE_CONNECTION_DISCONNECT;
+        info.device = device;
+        info.uid = uid;
+        info.bundleName = bundleName;
+        NotifyDeviceConnection(info);
+    }
+}
+// LCOV_EXCL_STOP
+
+// LCOV_EXCL_START
+void UsbService::RemoveAllDeviceConnections(uint8_t busNum, uint8_t devAddr)
+{
+    std::string key = GetDeviceKey(busNum, devAddr);
+    std::vector<UsbDeviceConnectionInfo> infos;
+    {
+        std::lock_guard<std::mutex> lock(deviceConnectionMutex_);
+        auto it = deviceConnectionMap_.find(key);
+        if (it == deviceConnectionMap_.end()) {
+            return;
+        }
+        for (const auto &appIt : it->second.apps) {
+            UsbDeviceConnectionInfo info;
+            info.type = USB_DEVICE_CONNECTION_DISCONNECT;
+            info.device = it->second.device;
+            info.uid = appIt.first;
+            info.bundleName = appIt.second;
+            infos.push_back(info);
+        }
+        deviceConnectionMap_.erase(it);
+    }
+    for (const auto &info : infos) {
+        NotifyDeviceConnection(info);
+    }
+}
+// LCOV_EXCL_STOP
 
 // LCOV_EXCL_START
 int32_t UsbService::ResetDevice(uint8_t busNum, uint8_t devAddr)
@@ -1018,6 +1273,7 @@ bool UsbService::AddDevice(uint8_t busNum, uint8_t devAddr)
 bool UsbService::DelDevice(uint8_t busNum, uint8_t devAddr)
 {
     USB_HILOGI(MODULE_USB_HOST, "entry");
+    RemoveAllDeviceConnections(busNum, devAddr);
     RemoveAllClaimByDevice(busNum, devAddr);
     int32_t ret = Close(busNum, devAddr);
     if (ret != UEC_OK) {

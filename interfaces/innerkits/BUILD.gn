@@ -17,7 +17,10 @@ import("./../../usbmgr.gni")
 idl_gen_interface("usb_server_interface") {
   sources = [ "IUsbServer.idl" ]
   sources_common = [ "UsbServerTypes.idl" ]
-  sources_callback = [ "IClaimExclusiveCallback.idl" ]
+  sources_callback = [
+    "IClaimExclusiveCallback.idl",
+    "IUsbConnectionCallback.idl",
+  ]
   log_domainid = "0xD002A03"
   log_tag = "UsbSrvClient"
 }

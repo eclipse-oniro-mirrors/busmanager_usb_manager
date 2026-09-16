@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <chrono>
+#include <list>
 #include <mutex>
 #include <thread>
 
@@ -49,6 +50,9 @@
 #include "v1_2/usb_types.h"
 #include "usbd_bulkcallback_impl.h"
 #include "usb_bulk_trans_data.h"
+#include "iusb_connection_callback.h"
+#include "usb_server_types.h"
+#include "usb_device_connection_type.h"
 #ifdef USB_MANAGER_PASS_THROUGH
 #include "v2_0/iusb_host_interface.h"
 #endif // USB_MANAGER_PASS_THROUGH
@@ -160,6 +164,8 @@ public:
     int32_t RequestRight(const std::string &deviceName) override;
     int32_t RemoveRight(const std::string &deviceName) override;
     int32_t AddAccessRight(const std::string &tokenId, const std::string &deviceName) override;
+    int32_t RegisterConnectionListener(const sptr<IUsbConnectionCallback> &cb) override;
+    int32_t UnRegisterConnectionListener(const sptr<IUsbConnectionCallback> &cb) override;
 #endif // USB_MANAGER_FEATURE_HOST
 #ifdef USB_MANAGER_FEATURE_DEVICE
     int32_t GetCurrentFunctions(int32_t &funcs) override;
@@ -249,6 +255,13 @@ private:
         uint32_t tokenId_;
     };
 
+    class DeviceListenerDeathRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        DeviceListenerDeathRecipient() = default;
+        ~DeviceListenerDeathRecipient() {}
+        void OnRemoteDied(const wptr<IRemoteObject> &object) override;
+    };
+
 #ifdef USB_MANAGER_FEATURE_DEVICE
     class AccessoryDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
@@ -313,6 +326,12 @@ private:
     void UsbTransInfoChange(HDI::Usb::V1_2::USBTransferInfo &info, const UsbTransInfo &param);
     std::string GetDeviceVidPidSerialNumber(const std::string &deviceName);
     int32_t GetDeviceVidPidSerialNumber(const std::string &deviceName, std::string& strDesc);
+    void RemoveDeviceListener(const wptr<IRemoteObject> &object);
+    void NotifyDeviceConnection(const UsbDeviceConnectionInfo &info);
+    void AddDeviceConnection(uint8_t busNum, uint8_t devAddr);
+    void RemoveDeviceConnection(uint8_t busNum, uint8_t devAddr);
+    void RemoveAllDeviceConnections(uint8_t busNum, uint8_t devAddr);
+    std::string GetDeviceKey(uint8_t busNum, uint8_t devAddr);
     struct ClaimInterfaceState {
         uint32_t exclusiveOwner = 0;
         bool normalClaimed = false;
@@ -345,6 +364,10 @@ private:
     std::mutex unloadSelfTimerMutex_;
 #ifdef USB_MANAGER_FEATURE_HOST
     std::shared_ptr<UsbHostManager> usbHostManager_;
+    std::list<DeviceListenerEntry> deviceListeners_;
+    std::mutex deviceListenerMutex_;
+    std::map<std::string, DeviceConnectionRecord> deviceConnectionMap_;
+    std::mutex deviceConnectionMutex_;
 #endif // USB_MANAGER_FEATURE_HOST
 #ifdef USB_MANAGER_FEATURE_DEVICE
     std::shared_ptr<UsbDeviceManager> usbDeviceManager_;
