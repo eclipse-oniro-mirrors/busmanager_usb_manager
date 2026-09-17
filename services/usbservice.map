@@ -15,7 +15,7 @@
   global:
     extern "C++" {
         *UsbService::UsbService*;
-        *GetGlobalInstance*;
+        *UsbService::GetGlobalInstance*;
     };
   local:
     *;

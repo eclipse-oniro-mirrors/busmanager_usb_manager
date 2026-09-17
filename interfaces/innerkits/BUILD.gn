@@ -98,6 +98,7 @@ ohos_shared_library("usbsrv_client") {
   ]
   subsystem_name = "usb"
   innerapi_tags = [ "platformsdk" ]
+  version_script = "usbsrv_client.map"
   part_name = "usb_manager"
 }
 
