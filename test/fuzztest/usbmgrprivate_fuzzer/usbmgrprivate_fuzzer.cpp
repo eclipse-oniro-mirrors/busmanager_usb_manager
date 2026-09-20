@@ -14,6 +14,8 @@
  */
 
 #include "usb_service.h"
+#include "usb_device.h"
+#include "nlohmann/json.hpp"
 #include "accesstoken_kit.h"
 #include "nativetoken_kit.h"
 #include "token_setproc.h"
@@ -25,6 +27,9 @@ using namespace OHOS::HDI::Usb::V1_0;
 using namespace OHOS::HDI::Usb::V1_2;
 namespace OHOS {
 const uint32_t OFFSET = 2;
+const uint32_t MAX_CONFIG_COUNT = 3;
+const uint32_t MAX_INTERFACE_COUNT = 3;
+const uint32_t INTERFACE_FIELD_BYTES = 5;
 namespace USB {
     void GetDeviceVidPidSerialNumberFuzzTest(const uint8_t* rawData, size_t size)
     {
@@ -142,6 +147,53 @@ namespace USB {
         serviceInstance->UsbCtrlTransferChange(transferParams, ctlSetup);
     }
 
+    void GetActiveInterfacesJsonFuzzTest(const uint8_t* rawData, size_t size)
+    {
+        if (rawData == nullptr || size < OFFSET) {
+            return;
+        }
+        auto serviceInstance = UsbService::GetGlobalInstance();
+        if (serviceInstance == nullptr || serviceInstance->usbHostManager_ == nullptr) {
+            return;
+        }
+
+        size_t offset = 0;
+        uint8_t busNum = rawData[offset++];
+        uint8_t devAddr = rawData[offset++];
+        UsbDevice device;
+        device.SetBusNum(busNum);
+        device.SetDevAddr(devAddr);
+
+        std::vector<USBConfig> configs;
+        uint8_t configCount = offset < size ? rawData[offset++] % MAX_CONFIG_COUNT : 0;
+        for (uint8_t i = 0; i < configCount; ++i) {
+            USBConfig config;
+            config.SetId(static_cast<int32_t>(i));
+            config.SetName("fuzz_cfg");
+
+            std::vector<UsbInterface> interfaces;
+            uint8_t interfaceCount = offset < size ? rawData[offset++] % MAX_INTERFACE_COUNT : 0;
+            for (uint8_t j = 0; j < interfaceCount; ++j) {
+                if (offset + sizeof(uint8_t) * INTERFACE_FIELD_BYTES > size) {
+                    break;
+                }
+                UsbInterface intf;
+                intf.SetId(static_cast<int32_t>(rawData[offset++]));
+                intf.SetClass(static_cast<int32_t>(rawData[offset++]));
+                intf.SetSubClass(static_cast<int32_t>(rawData[offset++]));
+                intf.SetProtocol(static_cast<int32_t>(rawData[offset++]));
+                intf.SetAlternateSetting(static_cast<int32_t>(rawData[offset++]));
+                interfaces.push_back(intf);
+            }
+            config.SetInterfaces(interfaces);
+            configs.push_back(config);
+        }
+        device.SetConfigs(configs);
+
+        nlohmann::json interfacesJson;
+        serviceInstance->usbHostManager_->GetActiveInterfacesJson(&device, interfacesJson);
+    }
+
     bool UsbMgrPrivateFuzzTest(const uint8_t* rawData, size_t size)
     {
         if (rawData == nullptr) {
@@ -154,6 +206,7 @@ namespace USB {
         SerialPortChangeFuzzTest(rawData, size);
         UsbTransInfoChangeFuzzTest(rawData, size);
         UsbCtrlTransferChangeFuzzTest(rawData, size);
+        GetActiveInterfacesJsonFuzzTest(rawData, size);
 
         return true;
     }
