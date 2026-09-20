@@ -179,7 +179,6 @@ bool UsbRightManager::HasRight(const std::string &deviceName, const std::string 
         return true;
     }
     uint64_t nowTime = GetCurrentTimestamp();
-    (void)TidyUpRight(TIGHT_UP_USB_RIGHT_RECORD_EXPIRED);
     std::shared_ptr<UsbRightDbHelper> helper = UsbRightDbHelper::GetInstance();
     // no record or expired record: expired true, has right false, add right next time
     // valid record: expired false, has right true, no need add right
