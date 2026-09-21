@@ -38,7 +38,6 @@
 #include "usb_srv_support.h"
 #include "common_event_manager.h"
 #include "common_event_support.h"
-
 #include "usb_host_manager.h"
 #include "usb_device.h"
 #include "usb_config.h"
