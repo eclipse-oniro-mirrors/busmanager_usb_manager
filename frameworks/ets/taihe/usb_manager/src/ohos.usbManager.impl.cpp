@@ -45,6 +45,7 @@ const int32_t NO_MEM = -11;
 const int32_t ERROR = -1;
 const int32_t HDF_DEV_ERR_NO_DEVICE = -202;
 const int32_t USB_DEVICE_PIPE_CHECK_ERROR = 14400013;
+const int32_t TRANSFER_TYPE_ISOCHRONOUS = 1;
 
 static OHOS::USB::UsbSrvClient &g_usbClient = OHOS::USB::UsbSrvClient::GetInstance();
 
@@ -1226,7 +1227,23 @@ static void ReadDataToBuffer(USBTransferAsyncContext *asyncContext, const OHOS::
 {
     uint8_t endpointId = static_cast<uint8_t>(asyncContext->endpoint) & OHOS::USB::USB_ENDPOINT_DIR_MASK;
     size_t actBufLen = info.actualLength;
-    if (endpointId == OHOS::USB::USB_ENDPOINT_DIR_IN) {
+    if (endpointId == OHOS::USB::USB_ENDPOINT_DIR_IN &&
+        asyncContext->type == TRANSFER_TYPE_ISOCHRONOUS && info.status == OHOS::USB::UEC_OK &&
+        asyncContext->bufferLength > 0) {
+        actBufLen = asyncContext->bufferLength;
+        asyncContext->ashmem->MapReadAndWriteAshmem();
+        auto ashmemBuffer = asyncContext->ashmem->ReadFromAshmem(actBufLen, 0);
+        if (ashmemBuffer == nullptr) {
+            asyncContext->ashmem->UnmapAshmem();
+            asyncContext->ashmem->CloseAshmem();
+            return;
+        }
+        int32_t ret = memcpy_s(asyncContext->buffer, asyncContext->bufferLength, ashmemBuffer, actBufLen);
+        if (ret != EOK) {
+            USB_HILOGE(MODULE_USB_NAPI, "memcpy_s fatal failed error: %{public}d", ret);
+        }
+    } else if (endpointId == OHOS::USB::USB_ENDPOINT_DIR_IN &&
+        asyncContext->bufferLength > 0 && info.actualLength > 0) {
         asyncContext->ashmem->MapReadAndWriteAshmem();
         auto ashmemBuffer = asyncContext->ashmem->ReadFromAshmem(info.actualLength, 0);
         if (ashmemBuffer == nullptr) {
