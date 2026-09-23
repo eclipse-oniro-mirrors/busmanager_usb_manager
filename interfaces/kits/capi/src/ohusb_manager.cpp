@@ -35,6 +35,12 @@ using namespace OHOS::USB;
 namespace {
 constexpr const char *EMPTY_STRING = "";
 
+// HDF status codes from the driver layer (drivers/peripheral/usb). Defined locally because the
+// CAPI does not depend on hdf_core.
+constexpr int32_t HDF_FAILURE_CODE = -1;
+constexpr int32_t HDF_ERR_IO_CODE = -17;
+constexpr int32_t HDF_DEV_ERR_NO_DEVICE_CODE = -202;
+
 OH_UsbManager_ErrorCode ConvertErrCode(int32_t cppRet)
 {
     if (cppRet == OHOS::USB::UEC_OK) {
@@ -49,6 +55,27 @@ OH_UsbManager_ErrorCode ConvertErrCode(int32_t cppRet)
         return OH_USBMANAGER_ERROR_PERMISSION_DENIED;
     }
     return OH_USBMANAGER_ERROR_SERVICE_EXCEPTION;
+}
+
+// Driver-layer errors for ConnectDevice: HDF_FAILURE/HDF_ERR_IO/HDF_DEV_ERR_NO_DEVICE all
+// indicate the device cannot be opened (disconnected or an I/O error on the USB bus).
+OH_UsbManager_ErrorCode ConvertErrCodeForConnect(int32_t cppRet)
+{
+    if (cppRet == HDF_DEV_ERR_NO_DEVICE_CODE || cppRet == HDF_FAILURE_CODE || cppRet == HDF_ERR_IO_CODE) {
+        return OH_USBMANAGER_ERROR_IO_ERROR;
+    }
+    return ConvertErrCode(cppRet);
+}
+
+// Driver-layer errors for GetFileDescriptor: HDF_DEV_ERR_NO_DEVICE is returned by the HAL
+// driver, while the pass-through driver returns HDF_FAILURE when the device is gone or no
+// device handle exists (never connected or disconnected); both mean no fd is available.
+OH_UsbManager_ErrorCode ConvertErrCodeForGetFd(int32_t cppRet)
+{
+    if (cppRet == HDF_DEV_ERR_NO_DEVICE_CODE || cppRet == HDF_FAILURE_CODE) {
+        return OH_USBMANAGER_ERROR_NO_DEVICE;
+    }
+    return ConvertErrCode(cppRet);
 }
 
 char *StrdupSafe(const char *src)
@@ -297,7 +324,7 @@ OH_UsbManager_ErrorCode OH_UsbManager_ConnectDevice(const OH_UsbManager_UsbDevic
     int32_t ret = OHOS::USB::UsbSrvClient::GetInstance().OpenDevice(cppDevice, cppPipe);
     if (ret != OHOS::USB::UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "OpenDevice failed, ret=%{public}d", ret);
-        return ConvertErrCode(ret);
+        return ConvertErrCodeForConnect(ret);
     }
 
     pipe->busNum = cppPipe.GetBusNum();
@@ -362,7 +389,7 @@ OH_UsbManager_ErrorCode OH_UsbManager_GetFileDescriptor(const OH_UsbManager_UsbP
     int32_t ret = OHOS::USB::UsbSrvClient::GetInstance().GetFileDescriptor(cppPipe, cppFd);
     if (ret != OHOS::USB::UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "GetFileDescriptor failed, ret=%{public}d", ret);
-        return ConvertErrCode(ret);
+        return ConvertErrCodeForGetFd(ret);
     }
     *fd = cppFd;
     return OH_USBMANAGER_SUCCESS;
