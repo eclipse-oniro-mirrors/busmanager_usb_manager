@@ -2232,6 +2232,8 @@ bool UsbHostManager::IsUsbSerialDisable()
 
 void UsbHostManager::GetActiveInterfacesJson(UsbDevice* device, nlohmann::json &interfacesJson)
 {
+    USB_HILOGI(MODULE_USB_HOST, "GetActiveInterfacesJson: enter bus=%{public}d dev=%{public}d",
+        device->GetBusNum(), device->GetDevAddr());
     uint8_t configIndex = 0;
     uint8_t index = 0;
     bool useFallback = false;
