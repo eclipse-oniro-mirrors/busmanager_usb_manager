@@ -14,25 +14,24 @@
  */
 
 import usbMgr from '@ohos.usbManager';
-import { BusinessError } from '@ohos.base'
-import { describe, beforeAll, beforeEach, afterEach, afterAll, it, expect, TestType, Size, Level } from '@ohos/hypium';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, Level, Size, TestType } from '@ohos/hypium';
 
 const TAG = "[UsbApiInputParaTest]";
 
-let USBDeviceFeature:usbMgr.USBDevice;
-let USBDeviceFeature1:usbMgr.USBDevice;
-let USBDeviceFeature2:usbMgr.USBDevice;
-let USBDeviceFeature3:usbMgr.USBDevice;
-let USBDeviceFeature4:usbMgr.USBDevice;
-let USBConfigurationFeature:usbMgr.USBConfiguration;
-let USBConfigurationFeature1:usbMgr.USBConfiguration;
-let USBConfigurationFeature2:usbMgr.USBConfiguration;
-let USBConfigurationFeature3:usbMgr.USBConfiguration;
-let USBInterfaceFeature:usbMgr.USBInterface;
-let USBInterfaceFeature1:usbMgr.USBInterface;
-let USBInterfaceFeature2:usbMgr.USBInterface;
-let USBEndpointFeature:usbMgr.USBEndpoint;
-let USBEndpointFeature1:usbMgr.USBEndpoint;
+let USBDeviceFeature: usbMgr.USBDevice;
+let USBDeviceFeature1: usbMgr.USBDevice;
+let USBDeviceFeature2: usbMgr.USBDevice;
+let USBDeviceFeature3: usbMgr.USBDevice;
+let USBDeviceFeature4: usbMgr.USBDevice;
+let USBConfigurationFeature: usbMgr.USBConfiguration;
+let USBConfigurationFeature1: usbMgr.USBConfiguration;
+let USBConfigurationFeature2: usbMgr.USBConfiguration;
+let USBConfigurationFeature3: usbMgr.USBConfiguration;
+let USBInterfaceFeature: usbMgr.USBInterface;
+let USBInterfaceFeature1: usbMgr.USBInterface;
+let USBInterfaceFeature2: usbMgr.USBInterface;
+let USBEndpointFeature: usbMgr.USBEndpoint;
+let USBEndpointFeature1: usbMgr.USBEndpoint;
 
 USBDeviceFeature = {
   busNum: 2,
@@ -210,19 +209,19 @@ export default function UsbApiInputParaTest() {
   describe('UsbApiInputParaTest', () => {
 
     beforeAll(async () => {
-      console.log(TAG, '*************Usb Unit UsbApiInputParaTest Begin*************');
+      console.info(`${TAG} beforeAll start`);
     })
 
-    beforeEach(() =>  {
-      console.info(TAG, 'beforeEach: *************Usb Unit Test  Case*************');
+    beforeEach(() => {
+      console.info(`${TAG} beforeEach`);
     })
 
     afterEach(() => {
-      console.info(TAG, 'afterEach: *************Usb Unit Test  Case*************');
+      console.info(`${TAG} afterEach`);
     })
 
     afterAll(() => {
-      console.log(TAG, '*************Usb Unit UsbApiInputParaTest End*************');
+      console.info(`${TAG} afterAll`);
     })
 
     /**
@@ -233,12 +232,11 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testHasRightNoString', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testHasRightNoString begin');
+    it('testHasRightNoString', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testHasRightNoString start`);
       let ret = usbMgr.hasRight("");
-      console.info(TAG, 'usb testHasRightNoString ret: ' + ret);
+      console.info(`${TAG} testHasRightNoString ret: ${ret}`);
       expect(ret).assertFalse();
-      done();
     })
 
     /**
@@ -249,16 +247,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testHasRightNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testHasRightNull begin');
+    it('testHasRightNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testHasRightNull start`);
       try {
         let ret = usbMgr.hasRight(null);
-        console.info(TAG, 'usb testHasRightNull ret: ' + ret);
-        done();
+        console.info(`${TAG} testHasRightNull ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testHasRightNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testHasRightNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -270,16 +267,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testHasRightUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testHasRightUndefined begin');
+    it('testHasRightUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testHasRightUndefined start`);
       try {
         let ret = usbMgr.hasRight(undefined);
-        console.info(TAG, 'usb testHasRightUndefined ret: ' + ret);
-        done();
+        console.info(`${TAG} testHasRightUndefined ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testHasRightUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testHasRightUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -292,11 +288,15 @@ export default function UsbApiInputParaTest() {
      * @tc.level  LEVEL3
      */
     it('testRequestRightNoString', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testRequestRightNoString begin');
-      let ret = await usbMgr.requestRight("");
-      console.info(TAG, 'usb testRequestRightNoString ret: ' + ret);
-      expect(ret).assertFalse();
-      done();
+      try {
+        console.info(`${TAG} testRequestRightNoString start`);
+        let ret = await usbMgr.requestRight("");
+        console.info(`${TAG} testRequestRightNoString ret: ${ret}`);
+        expect(ret).assertFalse();
+        done();
+      } catch (err) {
+        done(err);
+      }
     })
 
     /**
@@ -308,13 +308,14 @@ export default function UsbApiInputParaTest() {
      * @tc.level  LEVEL3
      */
     it('testRequestRightNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testRequestRightNull begin');
       try {
+        console.info(`${TAG} testRequestRightNull start`);
         let ret = await usbMgr.requestRight(null);
-        console.info(TAG, 'usb testRequestRightNull ret: ' + ret);
+        console.info(`${TAG} testRequestRightNull ret: ${ret}`);
+        expect().assertFail();
         done();
       } catch (err) {
-        console.info(TAG, 'usb testRequestRightNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testRequestRightNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
         done();
       }
@@ -329,13 +330,14 @@ export default function UsbApiInputParaTest() {
      * @tc.level  LEVEL3
      */
     it('testRequestRightUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testRequestRightUndefined begin');
       try {
+        console.info(`${TAG} testRequestRightUndefined start`);
         let ret = await usbMgr.requestRight(undefined);
-        console.info(TAG, 'usb testRequestRightUndefined ret: ' + ret);
+        console.info(`${TAG} testRequestRightUndefined ret: ${ret}`);
+        expect().assertFail();
         done();
       } catch (err) {
-        console.info(TAG, 'usb testRequestRightUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testRequestRightUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
         done();
       }
@@ -349,16 +351,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testClosePipeNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testClosePipeNull begin');
+    it('testClosePipeNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testClosePipeNull start`);
       try {
         let ret = usbMgr.closePipe(null);
-        console.info(TAG, 'usb testClosePipeNull ret: ' + ret);
-        done();
+        console.info(`${TAG} testClosePipeNull ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testClosePipeNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testClosePipeNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -370,16 +371,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testClosePipeUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testClosePipeUndefined begin');
+    it('testClosePipeUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testClosePipeUndefined start`);
       try {
         let ret = usbMgr.closePipe(undefined);
-        console.info(TAG, 'usb testClosePipeUndefined ret: ' + ret);
-        done();
+        console.info(`${TAG} testClosePipeUndefined ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testClosePipeUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testClosePipeUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -391,16 +391,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testGetRawDescriptorNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testGetRawDescriptorNull begin');
+    it('testGetRawDescriptorNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testGetRawDescriptorNull start`);
       try {
         let ret = usbMgr.getRawDescriptor(null);
-        console.info(TAG, 'usb testGetRawDescriptorNull ret: ' + JSON.stringify(ret));
-        done();
+        console.info(`${TAG} testGetRawDescriptorNull ret: ${JSON.stringify(ret)}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testGetRawDescriptorNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testGetRawDescriptorNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -412,16 +411,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testGetRawDescriptorUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testGetRawDescriptorUndefined begin');
+    it('testGetRawDescriptorUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testGetRawDescriptorUndefined start`);
       try {
         let ret = usbMgr.getRawDescriptor(undefined);
-        console.info(TAG, 'usb testGetRawDescriptorUndefined ret: ' + JSON.stringify(ret));
-        done();
+        console.info(`${TAG} testGetRawDescriptorUndefined ret: ${JSON.stringify(ret)}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testGetRawDescriptorUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testGetRawDescriptorUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -433,16 +431,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testGetFileDescriptorNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testGetFileDescriptorNull begin');
+    it('testGetFileDescriptorNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testGetFileDescriptorNull start`);
       try {
         let ret = usbMgr.getFileDescriptor(null);
-        console.info(TAG, 'usb testGetFileDescriptorNull ret: ' + ret);
-        done();
+        console.info(`${TAG} testGetFileDescriptorNull ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testGetFileDescriptorNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testGetFileDescriptorNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -454,16 +451,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testGetFileDescriptorUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testGetFileDescriptorUndefined begin');
+    it('testGetFileDescriptorUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testGetFileDescriptorUndefined start`);
       try {
         let ret = usbMgr.getFileDescriptor(undefined);
-        console.info(TAG, 'usb testGetFileDescriptorUndefined ret: ' + ret);
-        done();
+        console.info(`${TAG} testGetFileDescriptorUndefined ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testGetFileDescriptorUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testGetFileDescriptorUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -475,16 +471,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testConnectDeviceNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testConnectDeviceNull begin');
+    it('testConnectDeviceNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testConnectDeviceNull start`);
       try {
         let ret = usbMgr.connectDevice(null);
-        console.info(TAG, 'usb testConnectDeviceNull ret: ' + JSON.stringify(ret));
-        done();
+        console.info(`${TAG} testConnectDeviceNull ret: ${JSON.stringify(ret)}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testConnectDeviceNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testConnectDeviceNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -496,16 +491,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testConnectDeviceUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testConnectDeviceUndefined begin');
+    it('testConnectDeviceUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testConnectDeviceUndefined start`);
       try {
         let ret = usbMgr.connectDevice(undefined);
-        console.info(TAG, 'usb testConnectDeviceUndefined ret: ' + JSON.stringify(ret));
-        done();
+        console.info(`${TAG} testConnectDeviceUndefined ret: ${JSON.stringify(ret)}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testConnectDeviceUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testConnectDeviceUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -517,16 +511,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testClaimInterfaceNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testClaimInterfaceNull begin');
+    it('testClaimInterfaceNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testClaimInterfaceNull start`);
       try {
         let ret = usbMgr.claimInterface(null, null, false);
-        console.info(TAG, 'usb testClaimInterfaceNull ret: ' + ret);
-        done();
+        console.info(`${TAG} testClaimInterfaceNull ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testClaimInterfaceNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testClaimInterfaceNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -538,16 +531,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testClaimInterfaceUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testClaimInterfaceUndefined begin');
+    it('testClaimInterfaceUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testClaimInterfaceUndefined start`);
       try {
         let ret = usbMgr.claimInterface(undefined, undefined, false);
-        console.info(TAG, 'usb testClaimInterfaceUndefined ret: ' + ret);
-        done();
+        console.info(`${TAG} testClaimInterfaceUndefined ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testClaimInterfaceUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testClaimInterfaceUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -559,16 +551,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testReleaseInterfaceNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testReleaseInterfaceNull begin');
+    it('testReleaseInterfaceNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testReleaseInterfaceNull start`);
       try {
         let ret = usbMgr.releaseInterface(null, null);
-        console.info(TAG, 'usb testReleaseInterfaceNull ret: ' + ret);
-        done();
+        console.info(`${TAG} testReleaseInterfaceNull ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testReleaseInterfaceNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testReleaseInterfaceNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -580,16 +571,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testReleaseInterfaceUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testReleaseInterfaceUndefined begin');
+    it('testReleaseInterfaceUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testReleaseInterfaceUndefined start`);
       try {
         let ret = usbMgr.releaseInterface(undefined, undefined);
-        console.info(TAG, 'usb testReleaseInterfaceUndefined ret: ' + ret);
-        done();
+        console.info(`${TAG} testReleaseInterfaceUndefined ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testReleaseInterfaceUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testReleaseInterfaceUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -601,16 +591,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testSetConfigurationNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testSetConfigurationNull begin');
+    it('testSetConfigurationNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testSetConfigurationNull start`);
       try {
         let ret = usbMgr.setConfiguration(null, null);
-        console.info(TAG, 'usb testSetConfigurationNull ret: ' + ret);
-        done();
+        console.info(`${TAG} testSetConfigurationNull ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testSetConfigurationNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testSetConfigurationNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -622,16 +611,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testSetConfigurationUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testSetConfigurationUndefined begin');
+    it('testSetConfigurationUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testSetConfigurationUndefined start`);
       try {
         let ret = usbMgr.setConfiguration(undefined, undefined);
-        console.info(TAG, 'usb testSetConfigurationUndefined ret: ' + ret);
-        done();
+        console.info(`${TAG} testSetConfigurationUndefined ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testSetConfigurationUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testSetConfigurationUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -643,16 +631,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testSetInterfaceNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testSetInterfaceNull begin');
+    it('testSetInterfaceNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testSetInterfaceNull start`);
       try {
         let ret = usbMgr.setInterface(null, null);
-        console.info(TAG, 'usb testSetInterfaceNull ret: ' + ret);
-        done();
+        console.info(`${TAG} testSetInterfaceNull ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testSetInterfaceNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testSetInterfaceNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -664,16 +651,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testSetInterfaceUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testSetInterfaceUndefined begin');
+    it('testSetInterfaceUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testSetInterfaceUndefined start`);
       try {
         let ret = usbMgr.setInterface(undefined, undefined);
-        console.info(TAG, 'usb testSetInterfaceUndefined ret: ' + ret);
-        done();
+        console.info(`${TAG} testSetInterfaceUndefined ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testSetInterfaceUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testSetInterfaceUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -685,16 +671,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testControlTransferNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testControlTransferNull begin');
+    it('testControlTransferNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testControlTransferNull start`);
       try {
         let ret = usbMgr.controlTransfer(null, null, null);
-        console.info(TAG, 'usb testControlTransferNull ret: ' + ret);
-        done();
+        console.info(`${TAG} testControlTransferNull ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testControlTransferNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testControlTransferNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -706,16 +691,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testControlTransferUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testControlTransferUndefined begin');
+    it('testControlTransferUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testControlTransferUndefined start`);
       try {
         let ret = usbMgr.controlTransfer(undefined, undefined, undefined);
-        console.info(TAG, 'usb testControlTransferUndefined ret: ' + ret);
-        done();
+        console.info(`${TAG} testControlTransferUndefined ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testControlTransferUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testControlTransferUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -727,16 +711,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testBulkTransferNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testBulkTransferNull begin');
+    it('testBulkTransferNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testBulkTransferNull start`);
       try {
         let ret = usbMgr.bulkTransfer(null, null, null);
-        console.info(TAG, 'usb testBulkTransferNull ret: ' + ret);
-        done();
+        console.info(`${TAG} testBulkTransferNull ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testBulkTransferNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testBulkTransferNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -748,16 +731,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testBulkTransferUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testBulkTransferUndefined begin');
+    it('testBulkTransferUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testBulkTransferUndefined start`);
       try {
         let ret = usbMgr.bulkTransfer(undefined, undefined, undefined);
-        console.info(TAG, 'usb testBulkTransferUndefined ret: ' + ret);
-        done();
+        console.info(`${TAG} testBulkTransferUndefined ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testBulkTransferUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testBulkTransferUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -769,16 +751,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testUsbControlTransferNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testUsbControlTransferNull begin');
+    it('testUsbControlTransferNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbControlTransferNull start`);
       try {
         let ret = usbMgr.usbControlTransfer(null, null, null);
-        console.info(TAG, 'usb testUsbControlTransferNull ret: ' + ret);
-        done();
+        console.info(`${TAG} testUsbControlTransferNull ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testUsbControlTransferNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testUsbControlTransferNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -790,16 +771,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testUsbControlTransferUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testUsbControlTransferUndefined begin');
+    it('testUsbControlTransferUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbControlTransferUndefined start`);
       try {
         let ret = usbMgr.usbControlTransfer(undefined, undefined, undefined);
-        console.info(TAG, 'usb testUsbControlTransferUndefined ret: ' + ret);
-        done();
+        console.info(`${TAG} testUsbControlTransferUndefined ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testUsbControlTransferUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testUsbControlTransferUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -811,16 +791,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testHasAccessoryRightNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testHasAccessoryRightNull begin');
+    it('testHasAccessoryRightNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testHasAccessoryRightNull start`);
       try {
         let ret = usbMgr.hasAccessoryRight(null);
-        console.info(TAG, 'usb testHasAccessoryRightNull ret: ' + ret);
-        done();
+        console.info(`${TAG} testHasAccessoryRightNull ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testHasAccessoryRightNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testHasAccessoryRightNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -832,16 +811,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testHasAccessoryRightUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testHasAccessoryRightUndefined begin');
+    it('testHasAccessoryRightUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testHasAccessoryRightUndefined start`);
       try {
         let ret = usbMgr.hasAccessoryRight(undefined);
-        console.info(TAG, 'usb testHasAccessoryRightUndefined ret: ' + ret);
-        done();
+        console.info(`${TAG} testHasAccessoryRightUndefined ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testHasAccessoryRightUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testHasAccessoryRightUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -853,16 +831,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testRequestAccessoryRightNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testRequestAccessoryRightNull begin');
+    it('testRequestAccessoryRightNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testRequestAccessoryRightNull start`);
       try {
         let ret = usbMgr.requestAccessoryRight(null);
-        console.info(TAG, 'usb testRequestAccessoryRightNull ret: ' + ret);
-        done();
+        console.info(`${TAG} testRequestAccessoryRightNull ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testRequestAccessoryRightNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testRequestAccessoryRightNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -874,16 +851,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testRequestAccessoryRightUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testRequestAccessoryRightUndefined begin');
+    it('testRequestAccessoryRightUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testRequestAccessoryRightUndefined start`);
       try {
         let ret = usbMgr.requestAccessoryRight(undefined);
-        console.info(TAG, 'usb testRequestAccessoryRightUndefined ret: ' + ret);
-        done();
+        console.info(`${TAG} testRequestAccessoryRightUndefined ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testRequestAccessoryRightUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testRequestAccessoryRightUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -895,15 +871,13 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testCancelAccessoryRightNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testCancelAccessoryRightNull begin');
+    it('testCancelAccessoryRightNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testCancelAccessoryRightNull start`);
       try {
         usbMgr.cancelAccessoryRight(null);
-        done();
       } catch (err) {
-        console.info(TAG, 'usb testCancelAccessoryRightNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testCancelAccessoryRightNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -915,15 +889,13 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testCancelAccessoryRightUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testCancelAccessoryRightUndefined begin');
+    it('testCancelAccessoryRightUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testCancelAccessoryRightUndefined start`);
       try {
         usbMgr.cancelAccessoryRight(undefined);
-        done();
       } catch (err) {
-        console.info(TAG, 'usb testCancelAccessoryRightUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testCancelAccessoryRightUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -935,16 +907,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testOpenAccessoryNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testOpenAccessoryNull begin');
+    it('testOpenAccessoryNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testOpenAccessoryNull start`);
       try {
         let ret = usbMgr.openAccessory(null);
-        console.info(TAG, 'usb testOpenAccessoryNull ret: ' + ret);
-        done();
+        console.info(`${TAG} testOpenAccessoryNull ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testOpenAccessoryNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testOpenAccessoryNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -956,16 +927,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testOpenAccessoryUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testOpenAccessoryUndefined begin');
+    it('testOpenAccessoryUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testOpenAccessoryUndefined start`);
       try {
         let ret = usbMgr.openAccessory(undefined);
-        console.info(TAG, 'usb testOpenAccessoryUndefined ret: ' + ret);
-        done();
+        console.info(`${TAG} testOpenAccessoryUndefined ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testOpenAccessoryUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testOpenAccessoryUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -977,15 +947,13 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testCloseAccessoryNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testCloseAccessoryNull begin');
+    it('testCloseAccessoryNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testCloseAccessoryNull start`);
       try {
         usbMgr.closeAccessory(null);
-        done();
       } catch (err) {
-        console.info(TAG, 'usb testCloseAccessoryNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testCloseAccessoryNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -997,15 +965,13 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testCloseAccessoryUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testCloseAccessoryUndefined begin');
+    it('testCloseAccessoryUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testCloseAccessoryUndefined start`);
       try {
         usbMgr.closeAccessory(undefined);
-        done();
       } catch (err) {
-        console.info(TAG, 'usb testCloseAccessoryUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testCloseAccessoryUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1017,15 +983,13 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testUsbSubmitTransferNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testUsbSubmitTransferNull begin');
+    it('testUsbSubmitTransferNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbSubmitTransferNull start`);
       try {
         usbMgr.usbSubmitTransfer(null);
-        done();
       } catch (err) {
-        console.info(TAG, 'usb testUsbSubmitTransferNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testUsbSubmitTransferNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1037,15 +1001,13 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testUsbSubmitTransferUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testUsbSubmitTransferUndefined begin');
+    it('testUsbSubmitTransferUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbSubmitTransferUndefined start`);
       try {
         usbMgr.usbSubmitTransfer(undefined);
-        done();
       } catch (err) {
-        console.info(TAG, 'usb testUsbSubmitTransferUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testUsbSubmitTransferUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1057,15 +1019,13 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testUsbCancelTransferNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testUsbCancelTransferNull begin');
+    it('testUsbCancelTransferNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbCancelTransferNull start`);
       try {
         usbMgr.usbCancelTransfer(null);
-        done();
       } catch (err) {
-        console.info(TAG, 'usb testUsbCancelTransferNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testUsbCancelTransferNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1077,15 +1037,13 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testUsbCancelTransferUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testUsbCancelTransferUndefined begin');
+    it('testUsbCancelTransferUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbCancelTransferUndefined start`);
       try {
         usbMgr.usbCancelTransfer(undefined);
-        done();
       } catch (err) {
-        console.info(TAG, 'usb testUsbCancelTransferUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testUsbCancelTransferUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1097,16 +1055,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testResetUsbDeviceNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testResetUsbDeviceNull begin');
+    it('testResetUsbDeviceNull', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testResetUsbDeviceNull start`);
       try {
         let ret = usbMgr.resetUsbDevice(null);
-        console.info(TAG, 'usb testResetUsbDeviceNull ret: ' + ret);
-        done();
+        console.info(`${TAG} testResetUsbDeviceNull ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testResetUsbDeviceNull fail:' + JSON.stringify(err));
+        console.info(`${TAG} testResetUsbDeviceNull catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1118,16 +1075,15 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testResetUsbDeviceUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testResetUsbDeviceUndefined begin');
+    it('testResetUsbDeviceUndefined', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testResetUsbDeviceUndefined start`);
       try {
         let ret = usbMgr.resetUsbDevice(undefined);
-        console.info(TAG, 'usb testResetUsbDeviceUndefined ret: ' + ret);
-        done();
+        console.info(`${TAG} testResetUsbDeviceUndefined ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testResetUsbDeviceUndefined fail:' + JSON.stringify(err));
+        console.info(`${TAG} testResetUsbDeviceUndefined catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1139,17 +1095,16 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testConnectDeviceInputPara', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testConnectDeviceInputPara begin');
+    it('testConnectDeviceInputPara', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testConnectDeviceInputPara start`);
       try {
-        console.info(TAG, 'usb testConnectDeviceInputPara USBDeviceFeature: ' + JSON.stringify(USBDeviceFeature));
+        console.info(`${TAG} testConnectDeviceInputPara USBDeviceFeature: ${JSON.stringify(USBDeviceFeature)}`);
         let ret = usbMgr.connectDevice(USBDeviceFeature);
-        console.info(TAG, 'usb testConnectDeviceInputPara ret: ' + JSON.stringify(ret));
-        done();
+        console.info(`${TAG} testConnectDeviceInputPara ret: ${JSON.stringify(ret)}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testConnectDeviceInputPara fail:' + JSON.stringify(err));
+        console.info(`${TAG} testConnectDeviceInputPara catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(14400001);
-        done();
       }
     })
 
@@ -1161,17 +1116,16 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testConnectDeviceInputPara001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testConnectDeviceInputPara001 begin');
+    it('testConnectDeviceInputPara001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testConnectDeviceInputPara001 start`);
       try {
-        console.info(TAG, 'usb testConnectDeviceInputPara001 USBDeviceFeature1: ' + JSON.stringify(USBDeviceFeature1));
+        console.info(`${TAG} testConnectDeviceInputPara001 USBDeviceFeature1: ${JSON.stringify(USBDeviceFeature1)}`);
         let ret = usbMgr.connectDevice(USBDeviceFeature1);
-        console.info(TAG, 'usb testConnectDeviceInputPara001 ret: ' + JSON.stringify(ret));
-        done();
+        console.info(`${TAG} testConnectDeviceInputPara001 ret: ${JSON.stringify(ret)}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testConnectDeviceInputPara001 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testConnectDeviceInputPara001 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(14400001);
-        done();
       }
     })
 
@@ -1183,17 +1137,16 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testConnectDeviceInputPara002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testConnectDeviceInputPara002 begin');
+    it('testConnectDeviceInputPara002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testConnectDeviceInputPara002 start`);
       try {
-        console.info(TAG, 'usb testConnectDeviceInputPara002 USBDeviceFeature2: ' + JSON.stringify(USBDeviceFeature2));
+        console.info(`${TAG} testConnectDeviceInputPara002 USBDeviceFeature2: ${JSON.stringify(USBDeviceFeature2)}`);
         let ret = usbMgr.connectDevice(USBDeviceFeature2);
-        console.info(TAG, 'usb testConnectDeviceInputPara002 ret: ' + JSON.stringify(ret));
-        done();
+        console.info(`${TAG} testConnectDeviceInputPara002 ret: ${JSON.stringify(ret)}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testConnectDeviceInputPara002 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testConnectDeviceInputPara002 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(14400001);
-        done();
       }
     })
 
@@ -1205,17 +1158,16 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testConnectDeviceInputPara003', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testConnectDeviceInputPara003 begin');
+    it('testConnectDeviceInputPara003', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testConnectDeviceInputPara003 start`);
       try {
-        console.info(TAG, 'usb testConnectDeviceInputPara003 USBDeviceFeature3: ' + JSON.stringify(USBDeviceFeature3));
+        console.info(`${TAG} testConnectDeviceInputPara003 USBDeviceFeature3: ${JSON.stringify(USBDeviceFeature3)}`);
         let ret = usbMgr.connectDevice(USBDeviceFeature3);
-        console.info(TAG, 'usb testConnectDeviceInputPara003 ret: ' + JSON.stringify(ret));
-        done();
+        console.info(`${TAG} testConnectDeviceInputPara003 ret: ${JSON.stringify(ret)}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testConnectDeviceInputPara003 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testConnectDeviceInputPara003 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(14400001);
-        done();
       }
     })
 
@@ -1227,17 +1179,16 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testConnectDeviceInputPara004', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testConnectDeviceInputPara004 begin');
+    it('testConnectDeviceInputPara004', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testConnectDeviceInputPara004 start`);
       try {
-        console.info(TAG, 'usb testConnectDeviceInputPara004 USBDeviceFeature4: ' + JSON.stringify(USBDeviceFeature4));
+        console.info(`${TAG} testConnectDeviceInputPara004 USBDeviceFeature4: ${JSON.stringify(USBDeviceFeature4)}`);
         let ret = usbMgr.connectDevice(USBDeviceFeature4);
-        console.info(TAG, 'usb testConnectDeviceInputPara004 ret: ' + JSON.stringify(ret));
-        done();
+        console.info(`${TAG} testConnectDeviceInputPara004 ret: ${JSON.stringify(ret)}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testConnectDeviceInputPara004 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testConnectDeviceInputPara004 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(14400001);
-        done();
       }
     })
 
@@ -1249,17 +1200,16 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testClaimInterfaceInputPara', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testClaimInterfaceInputPara begin');
+    it('testClaimInterfaceInputPara', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testClaimInterfaceInputPara start`);
       try {
-        console.info(TAG, 'usb testClaimInterfaceInputPara USBInterfaceFeature: ' + JSON.stringify(USBInterfaceFeature));
-        let ret = usbMgr.claimInterface(null,USBInterfaceFeature);
-        console.info(TAG, 'usb testClaimInterfaceInputPara ret: ' + ret);
-        done();
+        console.info(`${TAG} testClaimInterfaceInputPara USBInterfaceFeature: ${JSON.stringify(USBInterfaceFeature)}`);
+        let ret = usbMgr.claimInterface(null, USBInterfaceFeature);
+        console.info(`${TAG} testClaimInterfaceInputPara ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testClaimInterfaceInputPara fail:' + JSON.stringify(err));
+        console.info(`${TAG} testClaimInterfaceInputPara catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1271,17 +1221,17 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testClaimInterfaceInputPara001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testClaimInterfaceInputPara001 begin');
+    it('testClaimInterfaceInputPara001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testClaimInterfaceInputPara001 start`);
       try {
-        console.info(TAG, 'usb testClaimInterfaceInputPara001 USBInterfaceFeature1: ' + JSON.stringify(USBInterfaceFeature1));
-        let ret = usbMgr.claimInterface(null,USBInterfaceFeature1);
-        console.info(TAG, 'usb testClaimInterfaceInputPara001 ret: ' + ret);
-        done();
+        console.info(
+          `${TAG} testClaimInterfaceInputPara001 USBInterfaceFeature1: ${JSON.stringify(USBInterfaceFeature1)}`);
+        let ret = usbMgr.claimInterface(null, USBInterfaceFeature1);
+        console.info(`${TAG} testClaimInterfaceInputPara001 ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testClaimInterfaceInputPara001 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testClaimInterfaceInputPara001 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1293,17 +1243,17 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testClaimInterfaceInputPara002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testClaimInterfaceInputPara002 begin');
+    it('testClaimInterfaceInputPara002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testClaimInterfaceInputPara002 start`);
       try {
-        console.info(TAG, 'usb testClaimInterfaceInputPara002 USBInterfaceFeature2: ' + JSON.stringify(USBInterfaceFeature2));
-        let ret = usbMgr.claimInterface(null,USBInterfaceFeature2);
-        console.info(TAG, 'usb testClaimInterfaceInputPara002 ret: ' + ret);
-        done();
+        console.info(
+          `${TAG} testClaimInterfaceInputPara002 USBInterfaceFeature2: ${JSON.stringify(USBInterfaceFeature2)}`);
+        let ret = usbMgr.claimInterface(null, USBInterfaceFeature2);
+        console.info(`${TAG} testClaimInterfaceInputPara002 ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testClaimInterfaceInputPara002 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testClaimInterfaceInputPara002 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1315,17 +1265,17 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testReleaseInterfaceInputPara', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testReleaseInterfaceInputPara begin');
+    it('testReleaseInterfaceInputPara', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testReleaseInterfaceInputPara start`);
       try {
-        console.info(TAG, 'usb testReleaseInterfaceInputPara USBInterfaceFeature: ' + JSON.stringify(USBInterfaceFeature));
-        let ret = usbMgr.releaseInterface(null,USBInterfaceFeature);
-        console.info(TAG, 'usb testReleaseInterfaceInputPara ret: ' + ret);
-        done();
+        console.info(
+          `${TAG} testReleaseInterfaceInputPara USBInterfaceFeature: ${JSON.stringify(USBInterfaceFeature)}`);
+        let ret = usbMgr.releaseInterface(null, USBInterfaceFeature);
+        console.info(`${TAG} testReleaseInterfaceInputPara ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testReleaseInterfaceInputPara fail:' + JSON.stringify(err));
+        console.info(`${TAG} testReleaseInterfaceInputPara catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1337,17 +1287,17 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testReleaseInterfaceInputPara001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testReleaseInterfaceInputPara001 begin');
+    it('testReleaseInterfaceInputPara001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testReleaseInterfaceInputPara001 start`);
       try {
-        console.info(TAG, 'usb testReleaseInterfaceInputPara001 USBInterfaceFeature1: ' + JSON.stringify(USBInterfaceFeature1));
-        let ret = usbMgr.releaseInterface(null,USBInterfaceFeature1);
-        console.info(TAG, 'usb testReleaseInterfaceInputPara001 ret: ' + ret);
-        done();
+        console.info(
+          `${TAG} testReleaseInterfaceInputPara001 USBInterfaceFeature1: ${JSON.stringify(USBInterfaceFeature1)}`);
+        let ret = usbMgr.releaseInterface(null, USBInterfaceFeature1);
+        console.info(`${TAG} testReleaseInterfaceInputPara001 ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testReleaseInterfaceInputPara001 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testReleaseInterfaceInputPara001 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1359,17 +1309,17 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testReleaseInterfaceInputPara002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testReleaseInterfaceInputPara002 begin');
+    it('testReleaseInterfaceInputPara002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testReleaseInterfaceInputPara002 start`);
       try {
-        console.info(TAG, 'usb testReleaseInterfaceInputPara002 USBInterfaceFeature2: ' + JSON.stringify(USBInterfaceFeature2));
-        let ret = usbMgr.releaseInterface(null,USBInterfaceFeature2);
-        console.info(TAG, 'usb testReleaseInterfaceInputPara002 ret: ' + ret);
-        done();
+        console.info(
+          `${TAG} testReleaseInterfaceInputPara002 USBInterfaceFeature2: ${JSON.stringify(USBInterfaceFeature2)}`);
+        let ret = usbMgr.releaseInterface(null, USBInterfaceFeature2);
+        console.info(`${TAG} testReleaseInterfaceInputPara002 ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testReleaseInterfaceInputPara002 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testReleaseInterfaceInputPara002 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1381,17 +1331,17 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testSetConfigurationInputPara', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testSetConfigurationInputPara begin');
+    it('testSetConfigurationInputPara', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testSetConfigurationInputPara start`);
       try {
-        console.info(TAG, 'usb testSetConfigurationInputPara USBConfigurationFeature: ' + JSON.stringify(USBConfigurationFeature));
-        let ret = usbMgr.setConfiguration(null,USBConfigurationFeature);
-        console.info(TAG, 'usb testSetConfigurationInputPara ret: ' + ret);
-        done();
+        console.info(
+          `${TAG} testSetConfigurationInputPara USBConfigurationFeature: ${JSON.stringify(USBConfigurationFeature)}`);
+        let ret = usbMgr.setConfiguration(null, USBConfigurationFeature);
+        console.info(`${TAG} testSetConfigurationInputPara ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testSetConfigurationInputPara fail:' + JSON.stringify(err));
+        console.info(`${TAG} testSetConfigurationInputPara catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1403,17 +1353,17 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testSetConfigurationInputPara001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testSetConfigurationInputPara001 begin');
+    it('testSetConfigurationInputPara001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testSetConfigurationInputPara001 start`);
       try {
-        console.info(TAG, 'usb testSetConfigurationInputPara001 USBConfigurationFeature1: ' + JSON.stringify(USBConfigurationFeature1));
-        let ret = usbMgr.setConfiguration(null,USBConfigurationFeature1);
-        console.info(TAG, 'usb testSetConfigurationInputPara001 ret: ' + ret);
-        done();
+        console.info(`${TAG} testSetConfigurationInputPara001 USBConfigurationFeature1: ${JSON.stringify(
+          USBConfigurationFeature1)}`);
+        let ret = usbMgr.setConfiguration(null, USBConfigurationFeature1);
+        console.info(`${TAG} testSetConfigurationInputPara001 ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testSetConfigurationInputPara001 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testSetConfigurationInputPara001 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1425,17 +1375,17 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testSetConfigurationInputPara002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testSetConfigurationInputPara002 begin');
+    it('testSetConfigurationInputPara002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testSetConfigurationInputPara002 start`);
       try {
-        console.info(TAG, 'usb testSetConfigurationInputPara002 USBConfigurationFeature2: ' + JSON.stringify(USBConfigurationFeature2));
-        let ret = usbMgr.setConfiguration(null,USBConfigurationFeature2);
-        console.info(TAG, 'usb testSetConfigurationInputPara002 ret: ' + ret);
-        done();
+        console.info(`${TAG} testSetConfigurationInputPara002 USBConfigurationFeature2: ${JSON.stringify(
+          USBConfigurationFeature2)}`);
+        let ret = usbMgr.setConfiguration(null, USBConfigurationFeature2);
+        console.info(`${TAG} testSetConfigurationInputPara002 ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testSetConfigurationInputPara002 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testSetConfigurationInputPara002 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1447,17 +1397,17 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testSetConfigurationInputPara003', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testSetConfigurationInputPara003 begin');
+    it('testSetConfigurationInputPara003', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testSetConfigurationInputPara003 start`);
       try {
-        console.info(TAG, 'usb testSetConfigurationInputPara003 USBConfigurationFeature3: ' + JSON.stringify(USBConfigurationFeature3));
-        let ret = usbMgr.setConfiguration(null,USBConfigurationFeature3);
-        console.info(TAG, 'usb testSetConfigurationInputPara003 ret: ' + ret);
-        done();
+        console.info(`${TAG} testSetConfigurationInputPara003 USBConfigurationFeature3: ${JSON.stringify(
+          USBConfigurationFeature3)}`);
+        let ret = usbMgr.setConfiguration(null, USBConfigurationFeature3);
+        console.info(`${TAG} testSetConfigurationInputPara003 ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testSetConfigurationInputPara003 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testSetConfigurationInputPara003 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1469,17 +1419,16 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testSetInterfaceInputPara', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testSetInterfaceInputPara begin');
+    it('testSetInterfaceInputPara', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testSetInterfaceInputPara start`);
       try {
-        console.info(TAG, 'usb testSetInterfaceInputPara USBInterfaceFeature: ' + JSON.stringify(USBInterfaceFeature));
-        let ret = usbMgr.setInterface(null,USBInterfaceFeature);
-        console.info(TAG, 'usb testSetInterfaceInputPara ret: ' + ret);
-        done();
+        console.info(`${TAG} testSetInterfaceInputPara USBInterfaceFeature: ${JSON.stringify(USBInterfaceFeature)}`);
+        let ret = usbMgr.setInterface(null, USBInterfaceFeature);
+        console.info(`${TAG} testSetInterfaceInputPara ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testSetInterfaceInputPara fail:' + JSON.stringify(err));
+        console.info(`${TAG} testSetInterfaceInputPara catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1491,17 +1440,17 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testSetInterfaceInputPara001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testSetInterfaceInputPara001 begin');
+    it('testSetInterfaceInputPara001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testSetInterfaceInputPara001 start`);
       try {
-        console.info(TAG, 'usb testSetInterfaceInputPara001 USBInterfaceFeature1: ' + JSON.stringify(USBInterfaceFeature1));
-        let ret = usbMgr.setInterface(null,USBInterfaceFeature1);
-        console.info(TAG, 'usb testSetInterfaceInputPara001 ret: ' + ret);
-        done();
+        console.info(
+          `${TAG} testSetInterfaceInputPara001 USBInterfaceFeature1: ${JSON.stringify(USBInterfaceFeature1)}`);
+        let ret = usbMgr.setInterface(null, USBInterfaceFeature1);
+        console.info(`${TAG} testSetInterfaceInputPara001 ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testSetInterfaceInputPara001 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testSetInterfaceInputPara001 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1513,17 +1462,17 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testSetInterfaceInputPara002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testSetInterfaceInputPara002 begin');
+    it('testSetInterfaceInputPara002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testSetInterfaceInputPara002 start`);
       try {
-        console.info(TAG, 'usb testSetInterfaceInputPara002 USBInterfaceFeature2: ' + JSON.stringify(USBInterfaceFeature2));
-        let ret = usbMgr.setInterface(null,USBInterfaceFeature2);
-        console.info(TAG, 'usb testSetInterfaceInputPara002 ret: ' + ret);
-        done();
+        console.info(
+          `${TAG} testSetInterfaceInputPara002 USBInterfaceFeature2: ${JSON.stringify(USBInterfaceFeature2)}`);
+        let ret = usbMgr.setInterface(null, USBInterfaceFeature2);
+        console.info(`${TAG} testSetInterfaceInputPara002 ret: ${ret}`);
+        expect().assertFail();
       } catch (err) {
-        console.info(TAG, 'usb testSetInterfaceInputPara002 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testSetInterfaceInputPara002 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(401);
-        done();
       }
     })
 
@@ -1535,8 +1484,8 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testUsbTransferInputPara', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testUsbTransferInputPara begin');
+    it('testUsbTransferInputPara', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbTransferInputPara start`);
       try {
         let pip: usbMgr.USBDevicePipe = {
           devAddress: 1,
@@ -1549,18 +1498,17 @@ export default function UsbApiInputParaTest() {
           type: usbMgr.UsbEndpointTransferType.TRANSFER_TYPE_BULK,
           timeout: 2000,
           length: 10,
-          callback: () => {},
+          callback: () => {
+          },
           userData: new Uint8Array(10),
           buffer: new Uint8Array(10),
           isoPacketCount: 0,
         };
         usbMgr.usbSubmitTransfer(transferParams);
         usbMgr.usbCancelTransfer(transferParams);
-        done();
       } catch (err) {
-        console.info(TAG, 'usb testUsbTransferInputPara fail:' + JSON.stringify(err));
+        console.info(`${TAG} testUsbTransferInputPara catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(14400001);
-        done();
       }
     })
 
@@ -1572,8 +1520,8 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testUsbTransferInputPara001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testUsbTransferInputPara001 begin');
+    it('testUsbTransferInputPara001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbTransferInputPara001 start`);
       try {
         let pip: usbMgr.USBDevicePipe = {
           devAddress: 1,
@@ -1586,18 +1534,17 @@ export default function UsbApiInputParaTest() {
           type: usbMgr.UsbEndpointTransferType.TRANSFER_TYPE_INTERRUPT,
           timeout: 2000,
           length: 10,
-          callback: () => {},
+          callback: () => {
+          },
           userData: new Uint8Array(10),
           buffer: new Uint8Array(10),
           isoPacketCount: 1,
         };
         usbMgr.usbSubmitTransfer(transferParams);
         usbMgr.usbCancelTransfer(transferParams);
-        done();
       } catch (err) {
-        console.info(TAG, 'usb testUsbTransferInputPara001 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testUsbTransferInputPara001 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(14400001);
-        done();
       }
     })
 
@@ -1609,8 +1556,8 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testUsbTransferInputPara002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testUsbTransferInputPara002 begin');
+    it('testUsbTransferInputPara002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbTransferInputPara002 start`);
       try {
         let pip: usbMgr.USBDevicePipe = {
           devAddress: 1,
@@ -1623,18 +1570,17 @@ export default function UsbApiInputParaTest() {
           type: usbMgr.UsbEndpointTransferType.TRANSFER_TYPE_ISOCHRONOUS,
           timeout: 2000,
           length: 10,
-          callback: () => {},
+          callback: () => {
+          },
           userData: new Uint8Array(10),
           buffer: new Uint8Array(10),
           isoPacketCount: 2,
         };
         usbMgr.usbSubmitTransfer(transferParams);
         usbMgr.usbCancelTransfer(transferParams);
-        done();
       } catch (err) {
-        console.info(TAG, 'usb testUsbTransferInputPara002 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testUsbTransferInputPara002 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(14400001);
-        done();
       }
     })
 
@@ -1646,8 +1592,8 @@ export default function UsbApiInputParaTest() {
      * @tc.size   MEDIUMTEST
      * @tc.level  LEVEL3
      */
-    it('testUsbTransferInputPara003', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, async (done: Function) => {
-      console.info(TAG, 'usb testUsbTransferInputPara003 begin');
+    it('testUsbTransferInputPara003', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbTransferInputPara003 start`);
       try {
         let pip: usbMgr.USBDevicePipe = {
           devAddress: 1,
@@ -1660,18 +1606,281 @@ export default function UsbApiInputParaTest() {
           type: usbMgr.UsbEndpointTransferType.TRANSFER_TYPE_BULK,
           timeout: 2000,
           length: 10,
-          callback: () => {},
+          callback: () => {
+          },
           userData: new Uint8Array(10),
           buffer: new Uint8Array(10),
           isoPacketCount: 1,
         };
         usbMgr.usbSubmitTransfer(transferParams);
         usbMgr.usbCancelTransfer(transferParams);
-        done();
       } catch (err) {
-        console.info(TAG, 'usb testUsbTransferInputPara003 fail:' + JSON.stringify(err));
+        console.info(`${TAG} testUsbTransferInputPara003 catch err: ${JSON.stringify(err)}`);
         expect(err.code).assertEqual(14400001);
-        done();
+      }
+    })
+
+    /**
+     * @tc.name   testUsbSubmitTransferParamEx001
+     * @tc.number SUB_USB_HostManager_InputPara_6700
+     * @tc.desc   usbSubmitTransfer with invalid flags=-1 should throw 401
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testUsbSubmitTransferParamEx001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbSubmitTransferParamEx001 start`);
+      try {
+        let pip: usbMgr.USBDevicePipe = { devAddress: 1, busNum: 2 };
+        let transferParams: usbMgr.UsbDataTransferParams = {
+          devPipe: pip,
+          flags: -1,
+          endpoint: 1,
+          type: usbMgr.UsbEndpointTransferType.TRANSFER_TYPE_BULK,
+          timeout: 2000,
+          length: 10,
+          callback: () => {
+          },
+          userData: new Uint8Array(10),
+          buffer: new Uint8Array(10),
+          isoPacketCount: 0,
+        };
+        usbMgr.usbSubmitTransfer(transferParams);
+        expect().assertFail();
+      } catch (err) {
+        console.info(`${TAG} testUsbSubmitTransferParamEx001 catch err: ${JSON.stringify(err)}`);
+        expect(err.code).assertEqual(401);
+      }
+    })
+
+    /**
+     * @tc.name   testUsbSubmitTransferParamEx002
+     * @tc.number SUB_USB_HostManager_InputPara_6800
+     * @tc.desc   usbSubmitTransfer with invalid flags=4 (out of range) should throw 401
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testUsbSubmitTransferParamEx002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbSubmitTransferParamEx002 start`);
+      try {
+        let pip: usbMgr.USBDevicePipe = { devAddress: 1, busNum: 2 };
+        let transferParams: usbMgr.UsbDataTransferParams = {
+          devPipe: pip,
+          flags: 4,
+          endpoint: 1,
+          type: usbMgr.UsbEndpointTransferType.TRANSFER_TYPE_BULK,
+          timeout: 2000,
+          length: 10,
+          callback: () => {
+          },
+          userData: new Uint8Array(10),
+          buffer: new Uint8Array(10),
+          isoPacketCount: 0,
+        };
+        usbMgr.usbSubmitTransfer(transferParams);
+        expect().assertFail();
+      } catch (err) {
+        console.info(`${TAG} testUsbSubmitTransferParamEx002 catch err: ${JSON.stringify(err)}`);
+        expect(err.code).assertEqual(401);
+      }
+    })
+
+    /**
+     * @tc.name   testUsbSubmitTransferParamEx003
+     * @tc.number SUB_USB_HostManager_InputPara_6900
+     * @tc.desc   usbSubmitTransfer with invalid type=0 should throw 401
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testUsbSubmitTransferParamEx003', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbSubmitTransferParamEx003 start`);
+      try {
+        let pip: usbMgr.USBDevicePipe = { devAddress: 1, busNum: 2 };
+        let transferParams: usbMgr.UsbDataTransferParams = {
+          devPipe: pip,
+          flags: usbMgr.UsbTransferFlags.USB_TRANSFER_SHORT_NOT_OK,
+          endpoint: 1,
+          type: 0,
+          timeout: 2000,
+          length: 10,
+          callback: () => {
+          },
+          userData: new Uint8Array(10),
+          buffer: new Uint8Array(10),
+          isoPacketCount: 0,
+        };
+        usbMgr.usbSubmitTransfer(transferParams);
+        expect().assertFail();
+      } catch (err) {
+        console.info(`${TAG} testUsbSubmitTransferParamEx003 catch err: ${JSON.stringify(err)}`);
+        expect(err.code).assertEqual(401);
+      }
+    })
+
+    /**
+     * @tc.name   testUsbSubmitTransferParamEx004
+     * @tc.number SUB_USB_HostManager_InputPara_7000
+     * @tc.desc   usbSubmitTransfer with invalid type=4 (out of range) should throw 401
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testUsbSubmitTransferParamEx004', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbSubmitTransferParamEx004 start`);
+      try {
+        let pip: usbMgr.USBDevicePipe = { devAddress: 1, busNum: 2 };
+        let transferParams: usbMgr.UsbDataTransferParams = {
+          devPipe: pip,
+          flags: usbMgr.UsbTransferFlags.USB_TRANSFER_SHORT_NOT_OK,
+          endpoint: 1,
+          type: 4,
+          timeout: 2000,
+          length: 10,
+          callback: () => {
+          },
+          userData: new Uint8Array(10),
+          buffer: new Uint8Array(10),
+          isoPacketCount: 0,
+        };
+        usbMgr.usbSubmitTransfer(transferParams);
+        expect().assertFail();
+      } catch (err) {
+        console.info(`${TAG} testUsbSubmitTransferParamEx004 catch err: ${JSON.stringify(err)}`);
+        expect(err.code).assertEqual(401);
+      }
+    })
+
+    /**
+     * @tc.name   testUsbCancelTransferParamEx001
+     * @tc.number SUB_USB_HostManager_InputPara_7100
+     * @tc.desc   usbCancelTransfer with invalid flags=-1 should throw 401
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testUsbCancelTransferParamEx001', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbCancelTransferParamEx001 start`);
+      try {
+        let pip: usbMgr.USBDevicePipe = { devAddress: 1, busNum: 2 };
+        let transferParams: usbMgr.UsbDataTransferParams = {
+          devPipe: pip,
+          flags: -1,
+          endpoint: 1,
+          type: usbMgr.UsbEndpointTransferType.TRANSFER_TYPE_BULK,
+          timeout: 2000,
+          length: 10,
+          callback: () => {
+          },
+          userData: new Uint8Array(10),
+          buffer: new Uint8Array(10),
+          isoPacketCount: 0,
+        };
+        usbMgr.usbCancelTransfer(transferParams);
+        expect().assertFail();
+      } catch (err) {
+        console.info(`${TAG} testUsbCancelTransferParamEx001 catch err: ${JSON.stringify(err)}`);
+        expect(err.code).assertEqual(401);
+      }
+    })
+
+    /**
+     * @tc.name   testUsbCancelTransferParamEx002
+     * @tc.number SUB_USB_HostManager_InputPara_7200
+     * @tc.desc   usbCancelTransfer with invalid flags=4 (out of range) should throw 401
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testUsbCancelTransferParamEx002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbCancelTransferParamEx002 start`);
+      try {
+        let pip: usbMgr.USBDevicePipe = { devAddress: 1, busNum: 2 };
+        let transferParams: usbMgr.UsbDataTransferParams = {
+          devPipe: pip,
+          flags: 4,
+          endpoint: 1,
+          type: usbMgr.UsbEndpointTransferType.TRANSFER_TYPE_BULK,
+          timeout: 2000,
+          length: 10,
+          callback: () => {
+          },
+          userData: new Uint8Array(10),
+          buffer: new Uint8Array(10),
+          isoPacketCount: 0,
+        };
+        usbMgr.usbCancelTransfer(transferParams);
+        expect().assertFail();
+      } catch (err) {
+        console.info(`${TAG} testUsbCancelTransferParamEx002 catch err: ${JSON.stringify(err)}`);
+        expect(err.code).assertEqual(401);
+      }
+    })
+
+    /**
+     * @tc.name   testUsbCancelTransferParamEx003
+     * @tc.number SUB_USB_HostManager_InputPara_7300
+     * @tc.desc   usbCancelTransfer with invalid type=0 should throw 401
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testUsbCancelTransferParamEx003', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbCancelTransferParamEx003 start`);
+      try {
+        let pip: usbMgr.USBDevicePipe = { devAddress: 1, busNum: 2 };
+        let transferParams: usbMgr.UsbDataTransferParams = {
+          devPipe: pip,
+          flags: usbMgr.UsbTransferFlags.USB_TRANSFER_SHORT_NOT_OK,
+          endpoint: 1,
+          type: 0,
+          timeout: 2000,
+          length: 10,
+          callback: () => {
+          },
+          userData: new Uint8Array(10),
+          buffer: new Uint8Array(10),
+          isoPacketCount: 0,
+        };
+        usbMgr.usbCancelTransfer(transferParams);
+        expect().assertFail();
+      } catch (err) {
+        console.info(`${TAG} testUsbCancelTransferParamEx003 catch err: ${JSON.stringify(err)}`);
+        expect(err.code).assertEqual(401);
+      }
+    })
+
+    /**
+     * @tc.name   testUsbCancelTransferParamEx004
+     * @tc.number SUB_USB_HostManager_InputPara_7400
+     * @tc.desc   usbCancelTransfer with invalid type=4 (out of range) should throw 401
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testUsbCancelTransferParamEx004', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(`${TAG} testUsbCancelTransferParamEx004 start`);
+      try {
+        let pip: usbMgr.USBDevicePipe = { devAddress: 1, busNum: 2 };
+        let transferParams: usbMgr.UsbDataTransferParams = {
+          devPipe: pip,
+          flags: usbMgr.UsbTransferFlags.USB_TRANSFER_SHORT_NOT_OK,
+          endpoint: 1,
+          type: 4,
+          timeout: 2000,
+          length: 10,
+          callback: () => {
+          },
+          userData: new Uint8Array(10),
+          buffer: new Uint8Array(10),
+          isoPacketCount: 0,
+        };
+        usbMgr.usbCancelTransfer(transferParams);
+        expect().assertFail();
+      } catch (err) {
+        console.info(`${TAG} testUsbCancelTransferParamEx004 catch err: ${JSON.stringify(err)}`);
+        expect(err.code).assertEqual(401);
       }
     })
   })
