@@ -559,6 +559,53 @@ ohos_unittest("test_usbhostmanagerextended") {
   ]
 }
 
+ohos_unittest("test_usbhostmanagercase") {
+  module_out_path = module_output_path
+  sources = [
+    "src/usb_host_manager_case_test.cpp",
+  ]
+
+  configs = [
+    "${utils_path}:utils_config",
+    ":module_private_config",
+  ]
+  defines = [ "private=public" ]
+  if (usb_manager_pass_through) {
+    defines += [ "USB_MANAGER_PASS_THROUGH" ]
+  }
+  if (usb_manager_feature_host) {
+    defines += [ "USB_MANAGER_FEATURE_HOST" ]
+  }
+
+  deps = [
+    "${usb_manager_path}/interfaces/innerkits:usbsrv_client",
+    "${usb_manager_path}/services:usbservice",
+    "${usb_manager_path}/test/fuzztest:usbservice_source_set",
+  ]
+
+  external_deps = [
+    "ability_base:want",
+    "ability_runtime:ability_connect_callback_stub",
+    "access_token:libaccesstoken_sdk",
+    "access_token:libnativetoken",
+    "access_token:libtoken_setproc",
+    "bundle_framework:appexecfwk_base",
+    "bundle_framework:appexecfwk_core",
+    "cJSON:cjson",
+    "c_utils:utils",
+    "common_event_service:cesfwk_innerkits",
+    "drivers_interface_usb:libusb_proxy_1.0",
+    "eventhandler:libeventhandler",
+    "googletest:gtest_main",
+    "hilog:libhilog",
+    "init:libbegetutil",
+    "ipc:ipc_core",
+    "memmgr:memmgrclient",
+    "safwk:system_ability_fwk",
+    "samgr:samgr_proxy",
+  ]
+}
+
 ohos_unittest("test_usbdevicemodel") {
   module_out_path = module_output_path
   sources = [
