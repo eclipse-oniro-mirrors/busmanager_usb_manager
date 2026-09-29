@@ -670,6 +670,7 @@ static napi_value DeviceOpenAccessory(napi_env env, napi_callback_info info)
     napi_value handleObj = nullptr;
     if (ret == UEC_OK) {
         g_accFd = fd;
+        fdsan_exchange_owner_tag(fd, 0, fdsan_create_owner_tag(FDSAN_OWNER_TYPE_FILE, USB_NAPI_SUBDOMAIN));
         CreatAccessoryHandle(env, handleObj, fd);
     } else if (ret == UEC_SERVICE_PERMISSION_DENIED || ret == UEC_INTERFACE_PERMISSION_DENIED) {
         metrics.SetErrorCode(UEC_COMMON_HAS_NO_RIGHT);
@@ -719,7 +720,7 @@ static napi_value DeviceCloseAccessory(napi_env env, napi_callback_info info)
         ThrowBusinessError(env, OHEC_COMMON_PARAM_ERROR,
             "Parameter accessoryHandle error, need openAccessory first.");
     }
-    close(accessoryFd);
+    fdsan_close_with_tag(accessoryFd, fdsan_create_owner_tag(FDSAN_OWNER_TYPE_FILE, USB_NAPI_SUBDOMAIN));
     accessoryFd = 0;
     int32_t ret = g_usbClient.CloseAccessory(g_accFd);
     g_accFd = 0;
