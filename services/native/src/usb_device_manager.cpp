@@ -205,24 +205,26 @@ int32_t UsbDeviceManager::SetCurrentFunctions(int32_t funcs)
         return UEC_SERVICE_INVALID_VALUE;
     }
     int32_t lastFunc;
-    std::lock_guard<std::mutex> guard(functionMutex_);
-    if (usbDeviceInterface_->GetCurrentFunctions(lastFunc) != UEC_OK) {
-        USB_HILOGE(MODULE_USB_DEVICE, "UsbDeviceManager::get current functions fail");
-        ReportUsbOperationFaultSysEvent("FUNCTION_CHANGED", UEC_SERVICE_INVALID_VALUE, "DevIntfGetFunc is failed");
-        return UEC_SERVICE_INVALID_VALUE;
-    }
-    if (lastFunc == funcs) {
-        USB_HILOGI(MODULE_USB_DEVICE, "UsbDeviceManager::no change in functionality");
-        return UEC_OK;
-    }
-    int32_t ret = usbDeviceInterface_->SetCurrentFunctions(funcs);
-    if (ret != UEC_OK) {
-        USB_HILOGE(MODULE_USB_DEVICE, "UsbDeviceManager::usbDeviceInterface_ set function error");
-        ReportUsbOperationFaultSysEvent("FUNCTION_CHANGED", ret, "DevIntfSetFunc is failed");
-        if (ret == HDF_ERR_NOT_SUPPORT) {
-            return UEC_SERVICE_FUNCTION_NOT_SUPPORT;
+    {
+        std::lock_guard<std::mutex> guard(functionMutex_);
+        if (usbDeviceInterface_->GetCurrentFunctions(lastFunc) != UEC_OK) {
+            USB_HILOGE(MODULE_USB_DEVICE, "UsbDeviceManager::get current functions fail");
+            ReportUsbOperationFaultSysEvent("FUNCTION_CHANGED", UEC_SERVICE_INVALID_VALUE, "DevIntfGetFunc is failed");
+            return UEC_SERVICE_INVALID_VALUE;
         }
-        return ret;
+        if (lastFunc == funcs) {
+            USB_HILOGI(MODULE_USB_DEVICE, "UsbDeviceManager::no change in functionality");
+            return UEC_OK;
+        }
+        int32_t ret = usbDeviceInterface_->SetCurrentFunctions(funcs);
+        if (ret != UEC_OK) {
+            USB_HILOGE(MODULE_USB_DEVICE, "UsbDeviceManager::usbDeviceInterface_ set function error");
+            ReportUsbOperationFaultSysEvent("FUNCTION_CHANGED", ret, "DevIntfSetFunc is failed");
+            if (ret == HDF_ERR_NOT_SUPPORT) {
+                return UEC_SERVICE_FUNCTION_NOT_SUPPORT;
+            }
+            return ret;
+        }
     }
     UpdateFunctions(funcs);
     return UEC_OK;
@@ -235,24 +237,26 @@ int32_t UsbDeviceManager::SetCurrentFunctions(int32_t funcs)
         return UEC_SERVICE_INVALID_VALUE;
     }
     int32_t lastFunc;
-    std::lock_guard<std::mutex> guard(functionMutex_);
-    if (usbd_->GetCurrentFunctions(lastFunc) != UEC_OK) {
-        USB_HILOGE(MODULE_USB_DEVICE, "UsbDeviceManager::get current functions fail");
-        ReportUsbOperationFaultSysEvent("FUNCTION_CHANGED", UEC_SERVICE_INVALID_VALUE, "UsbdfGetFunc is failed");
-        return UEC_SERVICE_INVALID_VALUE;
-    }
-    if (lastFunc == funcs) {
-        USB_HILOGI(MODULE_USB_DEVICE, "UsbDeviceManager::no change in functionality");
-        return UEC_OK;
-    }
-    int32_t ret = usbd_->SetCurrentFunctions(funcs);
-    if (ret != UEC_OK) {
-        USB_HILOGE(MODULE_USB_DEVICE, "UsbDeviceManager::usbd_ set function error");
-        ReportUsbOperationFaultSysEvent("FUNCTION_CHANGED", UEC_SERVICE_INVALID_VALUE, "UsbdSetFunc is failed");
-        if (ret == HDF_ERR_NOT_SUPPORT) {
-            return UEC_SERVICE_FUNCTION_NOT_SUPPORT;
+    {
+        std::lock_guard<std::mutex> guard(functionMutex_);
+        if (usbd_->GetCurrentFunctions(lastFunc) != UEC_OK) {
+            USB_HILOGE(MODULE_USB_DEVICE, "UsbDeviceManager::get current functions fail");
+            ReportUsbOperationFaultSysEvent("FUNCTION_CHANGED", UEC_SERVICE_INVALID_VALUE, "UsbdfGetFunc is failed");
+            return UEC_SERVICE_INVALID_VALUE;
         }
-        return ret;
+        if (lastFunc == funcs) {
+            USB_HILOGI(MODULE_USB_DEVICE, "UsbDeviceManager::no change in functionality");
+            return UEC_OK;
+        }
+        int32_t ret = usbd_->SetCurrentFunctions(funcs);
+        if (ret != UEC_OK) {
+            USB_HILOGE(MODULE_USB_DEVICE, "UsbDeviceManager::usbd_ set function error");
+            ReportUsbOperationFaultSysEvent("FUNCTION_CHANGED", UEC_SERVICE_INVALID_VALUE, "UsbdSetFunc is failed");
+            if (ret == HDF_ERR_NOT_SUPPORT) {
+                return UEC_SERVICE_FUNCTION_NOT_SUPPORT;
+            }
+            return ret;
+        }
     }
     UpdateFunctions(funcs);
     return UEC_OK;
