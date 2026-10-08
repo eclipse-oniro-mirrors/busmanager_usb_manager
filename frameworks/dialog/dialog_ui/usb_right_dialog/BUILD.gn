@@ -32,7 +32,7 @@ ohos_hap("dialog_hap") {
   module_install_dir = "app/com.usb.right"
   if (defined(sign_hap_py_path) && usb_manager_feature_usb_right_dialog != "") {
     certificate_profile = usb_manager_feature_usb_right_dialog
-    key_alias = "HwUsbRightDialog Release"
+    key_alias = "HwUsbRightDialog Release V2"
     private_key_path = "HwUsbRightDialog Release"
     compatible_version = "8"
   }
