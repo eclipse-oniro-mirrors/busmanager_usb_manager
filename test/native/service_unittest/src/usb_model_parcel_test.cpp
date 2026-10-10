@@ -84,10 +84,28 @@ constexpr uint8_t MODEL_I_INTERFACE_UNSET = 255;
 constexpr uint8_t MODEL_I_CONFIG_UNSET = 255;
 
 constexpr const char *MODEL_NAME = "usb_model_parcel_test";
-constexpr const char *MODEL_MFG = "Huawei Device Co., Ltd";
+constexpr const char *MODEL_MFG = "OpenHarmony Device Co., Ltd";
 constexpr const char *MODEL_PRODUCT = "OpenHarmony USB Bridge";
 constexpr const char *MODEL_VERSION = "2.1.0";
 constexpr const char *MODEL_SERIAL = "SN-2048-1128";
+
+// Fixture values consumed by the MakeModel* helpers below.
+constexpr uint32_t MODEL_EP_ATTR_BULK = 2;
+constexpr uint32_t MODEL_EP_INTERVAL_DEFAULT = 0;
+constexpr uint32_t MODEL_EP_MAX_PACKET_SIZE = 64;
+constexpr uint8_t MODEL_EP_INTERFACE_ID = 3;
+constexpr int32_t MODEL_IFACE_CLASS_MASS_STORAGE = 8;
+constexpr int32_t MODEL_IFACE_SUBCLASS_SCSI = 6;
+constexpr uint32_t MODEL_CONFIG_ID = 1;
+constexpr uint32_t MODEL_CONFIG_MAX_POWER = 250;
+constexpr uint8_t MODEL_DEV_ADDR = 2;
+constexpr uint8_t MODEL_BUS_NUM = 1;
+constexpr int32_t MODEL_VENDOR_ID = 0x12D1;
+constexpr int32_t MODEL_PRODUCT_ID = 0x0001;
+constexpr uint8_t MODEL_I_MANUFACTURER = 1;
+constexpr uint8_t MODEL_I_PRODUCT = 2;
+constexpr uint8_t MODEL_I_SERIAL_NUMBER = 3;
+constexpr uint8_t MODEL_B_MAX_PACKET_SIZE0 = 64;
 } // namespace
 
 class UsbModelParcelTest : public testing::Test {
@@ -124,8 +142,9 @@ void UsbModelParcelTest::TearDown(void)
  */
 USBEndpoint MakeModelEndpoint(void)
 {
-    USBEndpoint ep(MODEL_EP_ADDR_BULK_IN, 2, 0, 64);
-    ep.SetInterfaceId(3);
+    USBEndpoint ep(MODEL_EP_ADDR_BULK_IN, MODEL_EP_ATTR_BULK, MODEL_EP_INTERVAL_DEFAULT,
+        MODEL_EP_MAX_PACKET_SIZE);
+    ep.SetInterfaceId(MODEL_EP_INTERFACE_ID);
     return ep;
 }
 
@@ -135,7 +154,8 @@ USBEndpoint MakeModelEndpoint(void)
  */
 UsbInterface MakeModelInterface(const std::vector<USBEndpoint> &endpoints)
 {
-    UsbInterface intf(0, 0, 8, 6, 0, "Mass Storage", endpoints);
+    UsbInterface intf(0, 0, MODEL_IFACE_CLASS_MASS_STORAGE, MODEL_IFACE_SUBCLASS_SCSI, 0, "Mass Storage",
+        endpoints);
     intf.SetiInterface(1);
     return intf;
 }
@@ -146,7 +166,7 @@ UsbInterface MakeModelInterface(const std::vector<USBEndpoint> &endpoints)
  */
 USBConfig MakeModelConfig(const std::vector<UsbInterface> &interfaces)
 {
-    USBConfig config(1, MODEL_CFG_SELF_POWERED, "Config 1", 250, interfaces);
+    USBConfig config(MODEL_CONFIG_ID, MODEL_CFG_SELF_POWERED, "Config 1", MODEL_CONFIG_MAX_POWER, interfaces);
     config.SetiConfiguration(0);
     return config;
 }
@@ -158,12 +178,12 @@ USBConfig MakeModelConfig(const std::vector<UsbInterface> &interfaces)
 UsbDevice MakeModelDevice(const std::vector<USBConfig> &configs)
 {
     UsbDevice device(MODEL_NAME, MODEL_MFG, MODEL_PRODUCT, MODEL_VERSION,
-        2, 1, 0x12D1, 0x0001, 0, 0, 0, configs);
+        MODEL_DEV_ADDR, MODEL_BUS_NUM, MODEL_VENDOR_ID, MODEL_PRODUCT_ID, 0, 0, 0, configs);
     device.SetmSerial(MODEL_SERIAL);
-    device.SetiManufacturer(1);
-    device.SetiProduct(2);
-    device.SetiSerialNumber(3);
-    device.SetbMaxPacketSize0(64);
+    device.SetiManufacturer(MODEL_I_MANUFACTURER);
+    device.SetiProduct(MODEL_I_PRODUCT);
+    device.SetiSerialNumber(MODEL_I_SERIAL_NUMBER);
+    device.SetbMaxPacketSize0(MODEL_B_MAX_PACKET_SIZE0);
     device.SetbcdUSB(0x0200);
     device.SetbcdDevice(0x0100);
     device.SetDescConfigCount(1);
@@ -1166,8 +1186,8 @@ HWTEST_F(UsbModelParcelTest, UsbDevice_ParcelRoundTrip_001, TestSize.Level1)
     EXPECT_EQ(out->GetmSerial(), MODEL_SERIAL);
     EXPECT_EQ(out->GetBusNum(), 1u);
     EXPECT_EQ(out->GetDevAddr(), 2u);
-    EXPECT_EQ(out->GetVendorId(), 0x12D1);
-    EXPECT_EQ(out->GetProductId(), 0x0001);
+    EXPECT_EQ(out->GetVendorId(), MODEL_VENDOR_ID);
+    EXPECT_EQ(out->GetProductId(), MODEL_PRODUCT_ID);
     EXPECT_EQ(out->GetClass(), 0);
     EXPECT_EQ(out->GetSubclass(), 0);
     EXPECT_EQ(out->GetProtocol(), 0);
@@ -1359,8 +1379,8 @@ HWTEST_F(UsbModelParcelTest, UsbDevice_JsonRoundTrip_001, TestSize.Level1)
     EXPECT_EQ(reconstructed.GetVersion(), MODEL_VERSION);
     EXPECT_EQ(reconstructed.GetBusNum(), 1u);
     EXPECT_EQ(reconstructed.GetDevAddr(), 2u);
-    EXPECT_EQ(reconstructed.GetVendorId(), 0x12D1);
-    EXPECT_EQ(reconstructed.GetProductId(), 0x0001);
+    EXPECT_EQ(reconstructed.GetVendorId(), MODEL_VENDOR_ID);
+    EXPECT_EQ(reconstructed.GetProductId(), MODEL_PRODUCT_ID);
     ASSERT_EQ(reconstructed.GetConfigCount(), 1);
     USB_HILOGI(MODULE_USB_SERVICE, "UsbDevice_JsonRoundTrip_001 end");
 }
