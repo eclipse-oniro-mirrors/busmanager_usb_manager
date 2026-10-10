@@ -57,6 +57,8 @@ constexpr size_t MAX_DEVICE_NAME_LEN = 64;      // cap for fuzzed device names
 constexpr size_t MAX_NESTED_IFACES = 4;         // cap for synthetic configs
 constexpr size_t MAX_NESTED_EPS = 4;            // cap for synthetic endpoints
 constexpr uint32_t PERMISSION_REQUEST_LIMIT = 64;
+constexpr uint32_t BITS_PER_BYTE = 8;           // shift amount for big-endian assembly
+constexpr size_t ROTATE_BY_TWO = 2;             // rotation offset for boundary tables
 
 // Bounded byte-stream reader. Reads consume bytes sequentially; reads that fall
 // past the end of the buffer return a deterministic default (zero / false).
@@ -82,19 +84,9 @@ public:
     // Reads two bytes in big-endian order, defaulting to 0 when short.
     uint16_t ReadU16()
     {
-        uint16_t hi = ReadU8();
-        uint16_t lo = ReadU8();
-        return static_cast<uint16_t>((hi << 8) | lo);
-    }
-
-    // Reads four bytes in big-endian order, defaulting to 0 when short.
-    uint32_t ReadU32()
-    {
-        uint32_t a = ReadU8();
-        uint32_t b = ReadU8();
-        uint32_t c = ReadU8();
-        uint32_t d = ReadU8();
-        return (a << 24) | (b << 16) | (c << 8) | d;
+        uint32_t value = ReadU8();
+        value = (value << BITS_PER_BYTE) | ReadU8();
+        return static_cast<uint16_t>(value);
     }
 
     // Reads one byte and folds it to a boolean.
@@ -126,15 +118,6 @@ public:
         }
         out[copied] = '\0';
         return copied;
-    }
-
-    // Reads exactly count bytes into out; pads with zeros when short.
-    void ReadBytes(void *out, size_t count)
-    {
-        uint8_t *dst = static_cast<uint8_t *>(out);
-        for (size_t i = 0; i < count; ++i) {
-            dst[i] = ReadU8();
-        }
     }
 
 private:
@@ -451,8 +434,7 @@ bool TestHasPermissionShortNames()
 bool TestHasPermissionLongName(const uint8_t *data, size_t size)
 {
     FuzzReader reader(data, size);
-    char deviceName[MAX_DEVICE_NAME_LEN];
-    memset(deviceName, 0, sizeof(deviceName));
+    char deviceName[MAX_DEVICE_NAME_LEN] = {};
     for (size_t i = 0; i < MAX_DEVICE_NAME_LEN - 1; ++i) {
         deviceName[i] = static_cast<char>(reader.ReadU8());
     }
@@ -711,6 +693,10 @@ bool TestMixedPipeFlow(const uint8_t *data, size_t size)
 // Volatile sink that keeps the compiler from optimizing away descriptor reads.
 static volatile uint32_t g_checksum = 0;
 
+// Maximum number of nested descriptors walked per level, bounding the read-only
+// traversal of API-returned data.
+constexpr uint32_t MAX_DESCRIPTOR_WALK = 64;
+
 // Reads a single character from a possibly-null device string without ever
 // dereferencing a fuzzed pointer (the string is API-owned).
 uint32_t SummarizeString(const char *str)
@@ -719,6 +705,81 @@ uint32_t SummarizeString(const char *str)
         return 0;
     }
     return static_cast<uint32_t>(static_cast<uint8_t>(str[0]));
+}
+
+// Accumulates every scalar field of a single endpoint into the checksum sink.
+void WalkEndpoint(const OH_UsbManager_UsbEndpoint &ep)
+{
+    g_checksum += ep.address;
+    g_checksum += ep.attributes;
+    g_checksum += ep.interval;
+    g_checksum += ep.maxPacketSize;
+    g_checksum += static_cast<uint32_t>(ep.direction);
+    g_checksum += ep.number;
+    g_checksum += ep.type;
+    g_checksum += ep.interfaceId;
+}
+
+// Walks one interface, folding its scalar fields and each of its endpoints.
+void WalkInterface(const OH_UsbManager_UsbInterface &iface)
+{
+    g_checksum += iface.id;
+    g_checksum += iface.protocol;
+    g_checksum += iface.clazz;
+    g_checksum += iface.subClass;
+    g_checksum += iface.alternateSetting;
+    g_checksum += SummarizeString(iface.name);
+
+    uint32_t epCount = iface.endpointCount;
+    if (epCount > MAX_DESCRIPTOR_WALK) {
+        epCount = MAX_DESCRIPTOR_WALK;
+    }
+    for (uint32_t e = 0; iface.endpoints != nullptr && e < epCount; ++e) {
+        WalkEndpoint(iface.endpoints[e]);
+    }
+}
+
+// Walks one config, folding its scalar fields and each of its interfaces.
+void WalkConfig(const OH_UsbManager_UsbConfig &cfg)
+{
+    g_checksum += cfg.id;
+    g_checksum += cfg.attributes;
+    g_checksum += cfg.maxPower;
+    g_checksum += cfg.isRemoteWakeup ? 1U : 0U;
+    g_checksum += cfg.isSelfPowered ? 1U : 0U;
+    g_checksum += SummarizeString(cfg.name);
+
+    uint32_t ifaceCount = cfg.interfaceCount;
+    if (ifaceCount > MAX_DESCRIPTOR_WALK) {
+        ifaceCount = MAX_DESCRIPTOR_WALK;
+    }
+    for (uint32_t i = 0; cfg.interfaces != nullptr && i < ifaceCount; ++i) {
+        WalkInterface(cfg.interfaces[i]);
+    }
+}
+
+// Walks one device, folding its scalar fields and each of its configs.
+void WalkDevice(const OH_UsbManager_UsbDevice &dev)
+{
+    g_checksum += dev.busNum;
+    g_checksum += dev.devAddress;
+    g_checksum += dev.vendorId;
+    g_checksum += dev.productId;
+    g_checksum += dev.clazz;
+    g_checksum += dev.subClass;
+    g_checksum += dev.protocol;
+    g_checksum += SummarizeString(dev.name);
+    g_checksum += SummarizeString(dev.manufacturerName);
+    g_checksum += SummarizeString(dev.productName);
+    g_checksum += SummarizeString(dev.version);
+
+    uint32_t cfgCount = dev.configCount;
+    if (cfgCount > MAX_DESCRIPTOR_WALK) {
+        cfgCount = MAX_DESCRIPTOR_WALK;
+    }
+    for (uint32_t c = 0; dev.configs != nullptr && c < cfgCount; ++c) {
+        WalkConfig(dev.configs[c]);
+    }
 }
 
 // Walks the returned device array and every nested descriptor, folding all
@@ -732,66 +793,9 @@ bool TestEnumerateAndWalkDeviceTree()
         return true;
     }
 
-    constexpr uint32_t kMaxWalk = 64;
-    uint32_t devicesToWalk = (deviceCount < kMaxWalk) ? deviceCount : kMaxWalk;
-
+    uint32_t devicesToWalk = (deviceCount < MAX_DESCRIPTOR_WALK) ? deviceCount : MAX_DESCRIPTOR_WALK;
     for (uint32_t d = 0; d < devicesToWalk; ++d) {
-        const OH_UsbManager_UsbDevice &dev = devices[d];
-        g_checksum += dev.busNum;
-        g_checksum += dev.devAddress;
-        g_checksum += dev.vendorId;
-        g_checksum += dev.productId;
-        g_checksum += dev.clazz;
-        g_checksum += dev.subClass;
-        g_checksum += dev.protocol;
-        g_checksum += SummarizeString(dev.name);
-        g_checksum += SummarizeString(dev.manufacturerName);
-        g_checksum += SummarizeString(dev.productName);
-        g_checksum += SummarizeString(dev.version);
-
-        uint32_t cfgCount = dev.configCount;
-        if (cfgCount > kMaxWalk) {
-            cfgCount = kMaxWalk;
-        }
-        for (uint32_t c = 0; dev.configs != nullptr && c < cfgCount; ++c) {
-            const OH_UsbManager_UsbConfig &cfg = dev.configs[c];
-            g_checksum += cfg.id;
-            g_checksum += cfg.attributes;
-            g_checksum += cfg.maxPower;
-            g_checksum += cfg.isRemoteWakeup ? 1U : 0U;
-            g_checksum += cfg.isSelfPowered ? 1U : 0U;
-            g_checksum += SummarizeString(cfg.name);
-
-            uint32_t ifaceCount = cfg.interfaceCount;
-            if (ifaceCount > kMaxWalk) {
-                ifaceCount = kMaxWalk;
-            }
-            for (uint32_t i = 0; cfg.interfaces != nullptr && i < ifaceCount; ++i) {
-                const OH_UsbManager_UsbInterface &iface = cfg.interfaces[i];
-                g_checksum += iface.id;
-                g_checksum += iface.protocol;
-                g_checksum += iface.clazz;
-                g_checksum += iface.subClass;
-                g_checksum += iface.alternateSetting;
-                g_checksum += SummarizeString(iface.name);
-
-                uint32_t epCount = iface.endpointCount;
-                if (epCount > kMaxWalk) {
-                    epCount = kMaxWalk;
-                }
-                for (uint32_t e = 0; iface.endpoints != nullptr && e < epCount; ++e) {
-                    const OH_UsbManager_UsbEndpoint &ep = iface.endpoints[e];
-                    g_checksum += ep.address;
-                    g_checksum += ep.attributes;
-                    g_checksum += ep.interval;
-                    g_checksum += ep.maxPacketSize;
-                    g_checksum += static_cast<uint32_t>(ep.direction);
-                    g_checksum += ep.number;
-                    g_checksum += ep.type;
-                    g_checksum += ep.interfaceId;
-                }
-            }
-        }
+        WalkDevice(devices[d]);
     }
 
     OH_UsbManager_FreeUsbDeviceList(devices, deviceCount);
@@ -823,7 +827,7 @@ bool TestConnectDeviceFieldBoundaries()
         device.productId = kVidPid[(i + 1) % kCount];
         device.clazz = kByte[i];
         device.subClass = kByte[(i + 1) % kCount];
-        device.protocol = kByte[(i + 2) % kCount];
+        device.protocol = kByte[(i + ROTATE_BY_TWO) % kCount];
         pipe = {};
         (void)OH_UsbManager_ConnectDevice(&device, &pipe);
     }
