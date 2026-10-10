@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Copyright (c) 2025-2026 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,8 +19,8 @@ import { BusinessError } from '@ohos.base'
 import CheckEmptyUtils from './CheckEmptyUtils.js';
 import EventConstants from './EventConstants.js';
 import parameter from '@ohos.systemparameter';
-import { describe, beforeAll, beforeEach, afterEach, afterAll, it, expect, TestType, Size, Level } from '@ohos/hypium';
-
+import { describe, beforeAll, beforeEach, afterEach, afterAll, it, expect, TestType, Size, Level } from '@ohos/hypium-dynamic';
+import { isFilteredDevice } from './FilterUtils';
 
 let gDeviceList: Array<usb.USBDevice>;
 let gPipe: usb.USBDevicePipe;
@@ -51,7 +51,6 @@ function deviceConnected() {
   console.info(TAG, "Test USB device is not connected");
   return false;
 }
-
 
 async function driveFn() {
   console.info('**************driveFn**************');
@@ -197,7 +196,7 @@ async function callControlTransferEx(pip: usb.USBDevicePipe, controlParam: usb.U
 }
 
 function toReleaseInterface(testCaseName: string, conIndex: number, interIndex: number) {
-  gDeviceList = usb.getDevices();
+  gDeviceList = usb.getDevices().filter(device => !isFilteredDevice(device.vendorId, device.productId));
   let tmpInterface = gDeviceList[0].configs[conIndex].interfaces[interIndex];
   let isClaim = usb.releaseInterface(gPipe, tmpInterface);
   console.info(TAG, `usb ${testCaseName} toReleaseInterface ret: ${JSON.stringify(isClaim)}`);
@@ -225,7 +224,7 @@ export default function UsbApiDeprecatedEtsTest() {
 
       // version > 17  host currentMode = 2 device currentMode = 1
       try {
-        gDeviceList = usb.getDevices();
+        gDeviceList = usb.getDevices().filter(device => !isFilteredDevice(device.vendorId, device.productId));
         console.info(TAG, 'beforeAll: usb case gDeviceList return: ' + gDeviceList);
         isDeviceConnected = deviceConnected();
         if (isDeviceConnected) {
@@ -246,7 +245,7 @@ export default function UsbApiDeprecatedEtsTest() {
 
     beforeEach(() => {
       console.info(TAG, 'beforeEach: *************Usb Unit Test  Case*************');
-      gDeviceList = usb.getDevices();
+      gDeviceList = usb.getDevices().filter(device => !isFilteredDevice(device.vendorId, device.productId));
       if (isDeviceConnected) {
         devices = gDeviceList[0];
         console.info(TAG, 'beforeEach return devices : ' + JSON.stringify(devices));
@@ -296,7 +295,7 @@ export default function UsbApiDeprecatedEtsTest() {
     it('testGetDevices002', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, (done: Function) => {
       console.info(TAG, 'usb testGetDevices002 begin');
       if (!isDeviceConnected) {
-        let res = usb.getDevices();
+        let res = usb.getDevices().filter(device => !isFilteredDevice(device.vendorId, device.productId));
         console.info(TAG, 'usb case getDevices ret length: ' + res.length);
         expect(res.length).assertEqual(0);
         done();
@@ -305,6 +304,7 @@ export default function UsbApiDeprecatedEtsTest() {
         return;
       }
     })
+
 
     /**
      * @tc.name   testHasRight001
@@ -374,7 +374,15 @@ export default function UsbApiDeprecatedEtsTest() {
 
       gPipe = usb.connectDevice(devices);
       console.info(TAG, 'usb case testConnectDevice001 ret: ' + JSON.stringify(gPipe));
+      console.info(TAG, 'usb case testConnectDevice001 gPipe: ' + typeof(gPipe));
+      console.info(TAG, 'usb case testConnectDevice001 busNum: ' + typeof(gPipe.busNum));
+      console.info(TAG, 'usb case testConnectDevice001 devAddress: ' + typeof(gPipe.devAddress));
       expect(CheckEmptyUtils.isEmpty(gPipe)).assertFalse();
+      expect(typeof(gPipe)).assertEqual("object");
+      expect(typeof(gPipe.busNum)).assertEqual("number");
+      expect(typeof(gPipe.devAddress)).assertEqual("number");
+      expect(gPipe.busNum > 0).assertTrue();
+      expect(gPipe.devAddress > 0).assertTrue();
       toClosePipe('testConnectDevice001');
     })
 
@@ -493,6 +501,8 @@ export default function UsbApiDeprecatedEtsTest() {
       getPipe('testGetRawDescriptor001');
       let descriptor = usb.getRawDescriptor(gPipe);
       console.info(TAG, 'usb case testGetRawDescriptor001 ret: ' + JSON.stringify(descriptor));
+      console.info(TAG, 'usb case testGetRawDescriptor001 descriptor: ' + typeof(descriptor));
+      expect(typeof(descriptor)).assertEqual("object");
       expect(descriptor.length).assertLarger(0);
       toClosePipe('testGetRawDescriptor001');
     })
@@ -2306,3 +2316,351 @@ export default function UsbApiDeprecatedEtsTest() {
         }
       }
     })
+
+    /**
+     * @tc.name   testReleaseInterface004
+     * @tc.number SUB_USB_HostManager_JS_Compatibility_1900
+     * @tc.desc   Negative test: release Interface, error Interface protocol
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testReleaseInterface004', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb SUB_USB_HostManager_JS_Compatibility_1900 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+
+      if (gDeviceList[0].configs.length == 0) {
+        console.info(TAG, 'usb testReleaseInterface004 case current device.configs.length = 0');
+        expect(false).assertTrue();
+        return
+      }
+      for (let j = 0; j < gDeviceList[0].configs.length; j++) {
+        if (gDeviceList[0].configs[j].interfaces.length == 0) {
+          console.info(TAG, 'usb testReleaseInterface004 case current device.configs.interfaces.length = 0');
+        }
+        for (let k = 0; k < gDeviceList[0].configs[j].interfaces.length; k++) {
+          let tmpInterface = gDeviceList[0].configs[j].interfaces[k];
+          let isClaimed = usb.claimInterface(gPipe, tmpInterface, true);
+          expect(isClaimed).assertEqual(0);
+
+          tmpInterface.protocol = 124;
+          let isClaim = usb.releaseInterface(gPipe, tmpInterface);
+          console.info(TAG, 'usb case testReleaseInterface004 function return: ' + isClaim);
+          expect(isClaim == 0).assertTrue();
+        }
+      }
+    })
+
+    /**
+     * @tc.name   testReleaseInterface005
+     * @tc.number SUB_USB_HostManager_JS_Compatibility_2000
+     * @tc.desc   Negative test: release Interface, error Interface subClass
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testReleaseInterface005', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testReleaseInterface005 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+
+      if (gDeviceList[0].configs.length == 0) {
+        console.info(TAG, 'usb testReleaseInterface005 case current device.configs.length = 0');
+        expect(false).assertTrue();
+        return
+      }
+      for (let j = 0; j < gDeviceList[0].configs.length; j++) {
+        if (gDeviceList[0].configs[j].interfaces.length == 0) {
+          console.info(TAG, 'usb testReleaseInterface005 case current device.configs.interfaces.length = 0');
+        }
+        for (let k = 0; k < gDeviceList[0].configs[j].interfaces.length; k++) {
+          let tmpInterface = gDeviceList[0].configs[j].interfaces[k];
+          let isClaimed = usb.claimInterface(gPipe, tmpInterface, true);
+          expect(isClaimed).assertEqual(0);
+
+          tmpInterface.subClass = 784;
+          let isClaim = usb.releaseInterface(gPipe, tmpInterface);
+          console.info(TAG, 'usb case testReleaseInterface005 function return: ' + isClaim);
+          expect(isClaim == 0).assertTrue();
+        }
+      }
+    })
+
+    /**
+     * @tc.name   testReleaseInterface006
+     * @tc.number SUB_USB_HostManager_JS_Compatibility_2100
+     * @tc.desc   Negative test: release Interface, error Interface alternateSetting
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testReleaseInterface006', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testReleaseInterface006 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+
+      if (gDeviceList[0].configs.length == 0) {
+        console.info(TAG, 'usb testReleaseInterface006 case current device.configs.length = 0');
+        expect(false).assertTrue();
+        return
+      }
+      for (let j = 0; j < gDeviceList[0].configs.length; j++) {
+        if (gDeviceList[0].configs[j].interfaces.length == 0) {
+          console.info(TAG, 'usb testReleaseInterface006 case current device.configs.interfaces.length = 0');
+        }
+        for (let k = 0; k < gDeviceList[0].configs[j].interfaces.length; k++) {
+          let tmpInterface = gDeviceList[0].configs[j].interfaces[k];
+          let isClaimed = usb.claimInterface(gPipe, tmpInterface, true);
+          expect(isClaimed).assertEqual(0);
+
+          tmpInterface.alternateSetting = 784;
+          let isClaim = usb.releaseInterface(gPipe, tmpInterface);
+          console.info(TAG, 'usb case testReleaseInterface006 function return: ' + isClaim);
+          expect(isClaim == 0).assertTrue();
+        }
+      }
+    })
+
+    /**
+     * @tc.name   testSetInterface003
+     * @tc.number SUB_USB_HostManager_JS_Compatibility_4200
+     * @tc.desc   Negative test: Set device interface, Interface protocol error
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetInterface003', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetInterface003 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+
+      for (let j = 0; j < gDeviceList[0].configs.length; j++) {
+        if (gDeviceList[0].configs[j].interfaces.length == 0) {
+          console.info(TAG, 'usb case testSetInterface003 current device.configs.interfaces.length = 0');
+          expect(gDeviceList[0].configs[j].interfaces.length == 0).assertFalse();
+        }
+        let isClaimed = usb.claimInterface(gPipe, gDeviceList[0].configs[j].interfaces[0], true);
+        expect(isClaimed).assertEqual(0);
+
+        let tmpInterface = gDeviceList[0].configs[j].interfaces[0];
+        tmpInterface.protocol = 482;
+        let ret = usb.setInterface(gPipe, tmpInterface);
+        console.info(TAG, 'usb case testSetInterface003 return : ' + ret);
+        expect(ret == 0).assertTrue();
+
+        toReleaseInterface('testSetInterface003', j, 0);
+      }
+    })
+
+    /**
+     * @tc.name   testSetInterface004
+     * @tc.number SUB_USB_HostManager_JS_Compatibility_4300
+     * @tc.desc   Negative test: Set device interface, Interface clazz error
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetInterface004', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetInterface004 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+
+      for (let j = 0; j < gDeviceList[0].configs.length; j++) {
+        if (gDeviceList[0].configs[j].interfaces.length == 0) {
+          console.info(TAG, 'usb case testSetInterface004 current device.configs.interfaces.length = 0');
+          expect(gDeviceList[0].configs[j].interfaces.length == 0).assertFalse();
+        }
+        let isClaimed = usb.claimInterface(gPipe, gDeviceList[0].configs[j].interfaces[0], true);
+        expect(isClaimed).assertEqual(0);
+
+        let tmpInterface = gDeviceList[0].configs[j].interfaces[0];
+        tmpInterface.clazz = 482;
+        let ret = usb.setInterface(gPipe, tmpInterface);
+        console.info(TAG, 'usb case testSetInterface004 return : ' + ret);
+        expect(ret == 0).assertTrue();
+
+        toReleaseInterface('testSetInterface004', j, 0);
+      }
+    })
+
+    /**
+     * @tc.name   testSetInterface005
+     * @tc.number SUB_USB_HostManager_JS_Compatibility_4400
+     * @tc.desc   Negative test: Set device interface, Interface subClass error
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetInterface005', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetInterface005 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+
+      for (let j = 0; j < gDeviceList[0].configs.length; j++) {
+        if (gDeviceList[0].configs[j].interfaces.length == 0) {
+          console.info(TAG, 'usb case testSetInterface005 current device.configs.interfaces.length = 0');
+          expect(gDeviceList[0].configs[j].interfaces.length == 0).assertFalse();
+        }
+        let isClaimed = usb.claimInterface(gPipe, gDeviceList[0].configs[j].interfaces[0], true);
+        expect(isClaimed).assertEqual(0);
+
+        let tmpInterface = gDeviceList[0].configs[j].interfaces[0];
+        tmpInterface.subClass = 482;
+        let ret = usb.setInterface(gPipe, tmpInterface);
+        console.info(TAG, 'usb case testSetInterface005 return : ' + ret);
+        expect(ret == 0).assertTrue();
+
+        toReleaseInterface('testSetInterface005', j, 0);
+      }
+    })
+
+    /**
+     * @tc.name   testSetInterface006
+     * @tc.number SUB_USB_HostManager_JS_Compatibility_4500
+     * @tc.desc   Negative test: Set device interface, Interface name error
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetInterface006', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetInterface006 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+
+      for (let j = 0; j < gDeviceList[0].configs.length; j++) {
+        if (gDeviceList[0].configs[j].interfaces.length == 0) {
+          console.info(TAG, 'usb case testSetInterface005 current device.configs.interfaces.length = 0');
+          expect(gDeviceList[0].configs[j].interfaces.length == 0).assertFalse();
+        }
+        let isClaimed = usb.claimInterface(gPipe, gDeviceList[0].configs[j].interfaces[0], true);
+        expect(isClaimed).assertEqual(0);
+
+        let tmpInterface = gDeviceList[0].configs[j].interfaces[0];
+        tmpInterface.name = 'wer32';
+        let ret = usb.setInterface(gPipe, tmpInterface);
+        console.info(TAG, 'usb case testSetInterface006 return : ' + ret);
+        expect(ret == 0).assertTrue();
+
+        toReleaseInterface('testSetInterface006', j, 0);
+      }
+    })
+
+    /**
+     * @tc.name   testSetConfiguration003
+     * @tc.number SUB_USB_HostManager_JS_Compatibility_3700
+     * @tc.desc   Negative test: Set Device Configuration, USBConfig name error
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetConfiguration003', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetConfiguration003 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+
+      for (let j = 0; j < gDeviceList[0].configs.length; j++) {
+        let config = gDeviceList[0].configs[j];
+        config.name = 'asdfsd';
+        let ret = usb.setConfiguration(gPipe, config);
+        console.info(TAG, 'usb case testSetConfiguration003 return : ' + ret);
+        expect(ret).assertEqual(0);
+      }
+    })
+
+    /**
+     * @tc.name   testSetConfiguration004
+     * @tc.number SUB_USB_HostManager_JS_Compatibility_3800
+     * @tc.desc   Negative test: Set Device Configuration, USBConfig name, id error
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetConfiguration004', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetConfiguration004 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+
+      for (let j = 0; j < gDeviceList[0].configs.length; j++) {
+        let config = gDeviceList[0].configs[j];
+        config.name = 'asdfsd';
+        config.id = 154;
+        let ret = usb.setConfiguration(gPipe, config);
+        console.info(TAG, 'usb case testSetConfiguration004 return : ' + ret);
+        expect(ret).assertLess(0);
+      }
+    })
+
+    /**
+     * @tc.name   testSetConfiguration005
+     * @tc.number SUB_USB_HostManager_JS_Compatibility_3900
+     * @tc.desc   Negative test: Set Device Configuration, USBConfig attributes error
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetConfiguration005', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetConfiguration005 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+
+      for (let j = 0; j < gDeviceList[0].configs.length; j++) {
+        let config = gDeviceList[0].configs[j];
+        config.attributes = 154;
+        let ret = usb.setConfiguration(gPipe, config);
+        console.info(TAG, 'usb case testSetConfiguration005 return : ' + ret);
+        expect(ret == 0).assertTrue();
+      }
+    })
+
+    /**
+     * @tc.name   testSetConfiguration006
+     * @tc.number SUB_USB_HostManager_JS_Compatibility_4000
+     * @tc.desc   Negative test: Set Device Configuration, USBConfig name interval(1-16) error
+     * @tc.type   FUNCTION
+     * @tc.size   MEDIUMTEST
+     * @tc.level  LEVEL3
+     */
+    it('testSetConfiguration006', TestType.FUNCTION | Size.MEDIUMTEST | Level.LEVEL3, () => {
+      console.info(TAG, 'usb testSetConfiguration006 begin');
+      if (!isDeviceConnected) {
+        expect(isDeviceConnected).assertFalse();
+        return
+      }
+      if (gDeviceList.length == 0) {
+        console.info(TAG, 'usb case get_device_list is null')
+        expect(false).assertTrue();
+        return
+      }
+
+      for (let j = 0; j < gDeviceList[0].configs.length; j++) {
+        let config = gDeviceList[0].configs[j];
+        config.name = 'asdfsd';
+        config.interfaces[0].endpoints[0].interval = 0;
+        let ret = usb.setConfiguration(gPipe, config);
+        console.info(TAG, 'usb case testSetConfiguration006 return : ' + ret);
+        expect(ret == 0).assertTrue();
+      }
+    })
+  })
+}
