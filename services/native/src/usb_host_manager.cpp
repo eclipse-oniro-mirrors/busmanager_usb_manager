@@ -2298,7 +2298,7 @@ void UsbHostManager::ReportManageDeviceInfo(const std::string &operationType, Us
             {"class", baseClass},
             {"pid", pid},
             {"protocol", protocol},
-            {"security_policy_type", operationType},
+            {"securityPolicyType", operationType},
             {"timestamp_utc", UsbSecurityReport::GetCurrentTime()},
             {"vid", vid},
             {"manufactureName", device->GetManufacturerName()},
