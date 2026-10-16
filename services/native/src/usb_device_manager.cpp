@@ -40,6 +40,7 @@ constexpr uint32_t PARAM_INDEX = 2;
 constexpr uint32_t DELAY_CONNECT_INTERVAL = 1000;
 constexpr uint32_t DELAY_DISCONN_INTERVAL = 1400;
 constexpr uint32_t DELAY_RESTOREDIALOG_INTERVAL = 2000;
+constexpr int32_t MAX_INPUT_STRING_NUMBER_SIZE = 9;
 const std::map<std::string_view, uint32_t> UsbDeviceManager::FUNCTION_MAPPING_N2C = {
     {UsbSrvSupport::FUNCTION_NAME_NONE, UsbSrvSupport::FUNCTION_NONE},
     {UsbSrvSupport::FUNCTION_NAME_ACM, UsbSrvSupport::FUNCTION_ACM},
@@ -599,6 +600,10 @@ void UsbDeviceManager::DumpSetFunc(int32_t fd, const std::string &args)
         GetDumpHelp(fd);
         return;
     }
+    if (args.size() > MAX_INPUT_STRING_NUMBER_SIZE) {
+        dprintf(fd, "Invalid input, value out of range\n");
+        return;
+    }
     int32_t mode;
     if (!StringToInteger(args, mode)) {
         dprintf(fd, "Invalid input, the number is out of range\n");
@@ -639,6 +644,10 @@ void UsbDeviceManager::DumpSetFunc(int32_t fd, const std::string &args)
     if (!std::regex_match(args, std::regex("^[0-9]+$"))) {
         dprintf(fd, "Invalid input, please enter a valid integer\n");
         GetDumpHelp(fd);
+        return;
+    }
+    if (args.size() > MAX_INPUT_STRING_NUMBER_SIZE) {
+        dprintf(fd, "Invalid input, value out of range\n");
         return;
     }
     int32_t mode;
