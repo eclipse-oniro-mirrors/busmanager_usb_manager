@@ -38,6 +38,7 @@ constexpr int32_t PARAM_COUNT_THR = 3;
 constexpr int32_t DEFAULT_ROLE_HOST = 1;
 #ifdef USB_MANAGER_HIDUMPER_SET
 constexpr int32_t DEFAULT_ROLE_DEVICE = 2;
+constexpr int32_t MAX_INPUT_STRING_NUMBER_SIZE = 9;
 #endif // USB_MANAGER_HIDUMPER_SET
 constexpr uint32_t CMD_INDEX = 1;
 constexpr uint32_t PARAM_INDEX = 2;
@@ -468,6 +469,10 @@ void UsbPortManager::DumpSetPortRoles(int32_t fd, const std::string &args)
     if (!std::regex_match(args, std::regex("^[0-9]+$"))) {
         dprintf(fd, "Invalid input, please enter a valid integer\n");
         GetDumpHelp(fd);
+        return;
+    }
+    if (args.size() > MAX_INPUT_STRING_NUMBER_SIZE) {
+        dprintf(fd, "Invalid input, value out of range\n");
         return;
     }
     int32_t mode = stoi(args);
