@@ -61,6 +61,9 @@ constexpr int32_t BCD_HEX_DIGITS = 4;
 constexpr int LAST_FIVE = 5;
 constexpr int BOM_BYTE_COUNT = 2;
 constexpr int INVALID_RET = -1;
+// HDF status code returned by the driver layer when no device handle exists; defined
+// locally to avoid depending on hdf_core.
+constexpr int32_t HDF_FAILURE_CODE = -1;
 constexpr int BYTES_PER_UTF8_CHAR = 4;
 constexpr int64_t USB_AUDIT_EVENT_ID_DEFAULT = 0x30000000;
 const std::string USB_AUDIT_VERSION_DEFAULT = "";
@@ -671,15 +674,37 @@ int32_t UsbHostManager::GetFileDescriptor(uint8_t busNum, uint8_t devAddr, int32
         return UEC_SERVICE_INVALID_VALUE;
     }
     const HDI::Usb::V2_0::UsbDev dev = {busNum, devAddr};
-    return usbHostInterface_->GetDeviceFileDescriptor(dev, fd);
+    int32_t ret = usbHostInterface_->GetDeviceFileDescriptor(dev, fd);
+    if (ret == HDF_FAILURE_CODE && IsDevicePresent(busNum, devAddr)) {
+        USB_HILOGW(MODULE_USB_HOST,
+            "device bus:%{public}hhu dev:%{public}hhu is present but fd is unavailable, pipe is not opened",
+            busNum, devAddr);
+        return UEC_SERVICE_INNER_ERR;
+    }
+    return ret;
 #else
     const UsbDev dev = {busNum, devAddr};
     if (usbd_ == nullptr) {
         USB_HILOGE(MODULE_USB_HOST, "UsbHostManager::usbd_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
-    return usbd_->GetDeviceFileDescriptor(dev, fd);
+    int32_t ret = usbd_->GetDeviceFileDescriptor(dev, fd);
+    if (ret == HDF_FAILURE_CODE && IsDevicePresent(busNum, devAddr)) {
+        USB_HILOGW(MODULE_USB_HOST,
+            "device bus:%{public}hhu dev:%{public}hhu is present but fd is unavailable, pipe is not opened",
+            busNum, devAddr);
+        return UEC_SERVICE_INNER_ERR;
+    }
+    return ret;
 #endif // USB_MANAGER_PASS_THROUGH
+}
+
+bool UsbHostManager::IsDevicePresent(uint8_t busNum, uint8_t devAddr)
+{
+    std::string name = std::to_string(busNum) + "-" + std::to_string(devAddr);
+    std::shared_lock lock(devicesMutex_);
+    auto iter = devices_.find(name);
+    return (iter != devices_.end()) && (iter->second != nullptr);
 }
 
 int32_t UsbHostManager::GetDeviceSpeed(uint8_t busNum, uint8_t devAddr, uint8_t &speed)
