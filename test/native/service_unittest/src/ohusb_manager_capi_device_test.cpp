@@ -29,6 +29,8 @@ namespace CapiTest {
 
 static constexpr OH_UsbManager_ErrorCode ERR_SUCCESS = OH_USBMANAGER_SUCCESS;
 static constexpr OH_UsbManager_ErrorCode ERR_PERM = OH_USBMANAGER_ERROR_PERMISSION_DENIED;
+static constexpr OH_UsbManager_ErrorCode ERR_SERVICE = OH_USBMANAGER_ERROR_SERVICE_EXCEPTION;
+static constexpr uint32_t MAX_CLOSE_RETRY_COUNT = 10;
 
 static bool GetFirstDevice(OH_UsbManager_UsbDevice &outDevice)
 {
@@ -169,6 +171,28 @@ HWTEST_F(OHUsbManagerDeviceTest, ClosePipeSysPermission001, TestSize.Level2)
     ASSERT_EQ(ret, ERR_SUCCESS);
     OH_UsbManager_ErrorCode closeRet = OH_UsbManager_ClosePipe(&pipe);
     EXPECT_EQ(closeRet, ERR_SUCCESS);
+}
+
+// After the pipe is closed, the device is still present, so GetFileDescriptor must report
+// SERVICE_EXCEPTION instead of NO_DEVICE.
+HWTEST_F(OHUsbManagerDeviceTest, GetFileDescriptorAfterClose001, TestSize.Level2)
+{
+    USB_HILOGI(MODULE_USB_INNERKIT, "GetFileDescriptorAfterClose001 start");
+    OH_UsbManager_UsbDevice device = {};
+    if (!GetFirstDevice(device)) {
+        GTEST_SKIP() << "No USB device, skip";
+    }
+    OH_UsbManager_UsbPipe pipe = {};
+    OH_UsbManager_ErrorCode ret = OH_UsbManager_ConnectDevice(&device, &pipe);
+    ASSERT_EQ(ret, ERR_SUCCESS);
+    uint32_t closeCount = 0;
+    while (closeCount < MAX_CLOSE_RETRY_COUNT && OH_UsbManager_ClosePipe(&pipe) == ERR_SUCCESS) {
+        closeCount++;
+    }
+    EXPECT_GT(closeCount, static_cast<uint32_t>(0));
+    int32_t fd = -1;
+    OH_UsbManager_ErrorCode fdRet = OH_UsbManager_GetFileDescriptor(&pipe, &fd);
+    EXPECT_EQ(fdRet, ERR_SERVICE);
 }
 
 HWTEST_F(OHUsbManagerDeviceTest, HasPermissionSysPermission001, TestSize.Level2)
