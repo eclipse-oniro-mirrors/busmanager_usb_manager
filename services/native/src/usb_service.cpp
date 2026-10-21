@@ -26,7 +26,6 @@
 #include "parameters.h"
 #include "bundle_mgr_interface.h"
 #include "bundle_mgr_proxy.h"
-#include "common_timer_errors.h"
 #include "file_ex.h"
 #include "if_system_ability_manager.h"
 #include "iproxy_broker.h"
@@ -44,6 +43,7 @@
 #include "usb_right_db_helper.h"
 #include "usb_report_sys_event.h"
 #include "usb_settings_datashare.h"
+#include "usb_timer_wraper.h"
 #include "tokenid_kit.h"
 #include "accesstoken_kit.h"
 #include "mem_mgr_proxy.h"
@@ -3012,8 +3012,7 @@ void UsbService::UnLoadSelf(UnLoadSaType type)
     }
 #endif // USB_MANAGER_FEATURE_DEVICE
     std::lock_guard<std::mutex>  guard(unloadSelfTimerMutex_);
-    unloadSelfTimer_.Unregister(unloadSelfTimerId_);
-    unloadSelfTimer_.Shutdown(false);
+    UsbTimerWrapper::GetInstance()->Unregister(unloadSelfTimerId_);
 
     if (IsNotNeedUnload()) {  // delay unload conditions
         USB_HILOGW(MODULE_USB_SERVICE, "not need unload");
@@ -3023,11 +3022,7 @@ void UsbService::UnLoadSelf(UnLoadSaType type)
         Memory::MemMgrClient::GetInstance().SetCritical(getpid(), false, USB_SYSTEM_ABILITY_ID);
     }
 
-    if (auto ret = unloadSelfTimer_.Setup(); ret != Utils::TIMER_ERR_OK) {
-        USB_HILOGE(MODULE_USB_SERVICE, "set up timer failed %{public}u", ret);
-        return;
-    }
-    unloadSelfTimerId_ = unloadSelfTimer_.Register(task, UNLOAD_SA_TIMER_INTERVAL, true);
+    unloadSelfTimerId_ = UsbTimerWrapper::GetInstance()->Register(task, UNLOAD_SA_TIMER_INTERVAL, true);
     USB_HILOGI(MODULE_USB_SERVICE, "UnLoadSelf exit,unloadSelfTimerId_=[%{public}u]", unloadSelfTimerId_);
 }
 // LCOV_EXCL_STOP

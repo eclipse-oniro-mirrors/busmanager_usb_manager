@@ -31,7 +31,6 @@
 #include "usb_interface_type.h"
 #include "system_ability.h"
 #include "system_ability_status_change_stub.h"
-#include "timer.h"
 #include "usb_device_manager.h"
 #include "usb_accessory_manager.h"
 #include "usb_host_manager.h"
@@ -393,7 +392,6 @@ private:
     std::map<std::string, std::string> deviceVidPidMap_;
     std::map<int32_t, std::pair<std::string, std::string>> serialVidPidMap_;
     sptr<OHOS::HDI::Usb::Serial::V1_0::ISerialInterface> seriald_ = nullptr;
-    Utils::Timer unloadSelfTimer_ {"unLoadTimer"};
     uint32_t unloadSelfTimerId_ {UINT32_MAX};
     sptr<IRemoteObject::DeathRecipient> recipient_;
 };
