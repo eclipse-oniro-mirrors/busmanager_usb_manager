@@ -21,6 +21,9 @@ idl_gen_interface("usb_server_interface") {
     "IClaimExclusiveCallback.idl",
     "IUsbConnectionCallback.idl",
   ]
+
+  sequenceable_ext_deps = [ "bounds_checking_function:libsec_shared" ]
+
   log_domainid = "0xD002A03"
   log_tag = "UsbSrvClient"
 }
