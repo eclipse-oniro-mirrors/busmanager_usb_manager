@@ -69,7 +69,9 @@ OH_UsbManager_ErrorCode ConvertErrCodeForConnect(int32_t cppRet)
 
 // Driver-layer errors for GetFileDescriptor: HDF_DEV_ERR_NO_DEVICE is returned by the HAL
 // driver, while the pass-through driver returns HDF_FAILURE when the device is gone or no
-// device handle exists (never connected or disconnected); both mean no fd is available.
+// device handle exists (never connected or disconnected). The service rewrites HDF_FAILURE
+// to a service error when the device is still present (pipe not opened), so -1/-202 values
+// reaching this layer mean the device is gone and no fd is available.
 OH_UsbManager_ErrorCode ConvertErrCodeForGetFd(int32_t cppRet)
 {
     if (cppRet == HDF_DEV_ERR_NO_DEVICE_CODE || cppRet == HDF_FAILURE_CODE) {

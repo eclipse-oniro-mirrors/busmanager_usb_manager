@@ -172,6 +172,7 @@ private:
         const nlohmann::json &preInterfacesJson = nlohmann::json::array());
     void GetActiveInterfacesJson(UsbDevice* device, nlohmann::json &interfacesJson);
     int32_t CheckDevPathIsExist(uint8_t busNum, uint8_t devAddr);
+    bool IsDevicePresent(uint8_t busNum, uint8_t devAddr);
     void LoadEdmService();
     MAP_STR_DEVICE devices_;
     SystemAbility *systemAbility_;
