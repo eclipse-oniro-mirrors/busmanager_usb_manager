@@ -60,7 +60,11 @@ UsbPortManager::~UsbPortManager()
 void UsbPortManager::Init()
 {
     USB_HILOGI(MODULE_USB_PORT, "UsbPortManager::QueryPort start");
-    int32_t ret = QueryPort();
+    int32_t ret = 0;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        ret = QueryPort();
+    }
     if (ret) {
         USB_HILOGE(MODULE_USB_PORT, "UsbPortManager::QueryPort false");
     }
@@ -382,7 +386,6 @@ void UsbPortManager::AddPort(UsbPort &port)
     USB_HILOGI(MODULE_USB_PORT, "addPort run, portId is %{public}d, supportedModes is %{public}d",
         port.id, port.supportedModes);
 
-    std::lock_guard<std::mutex> lock(mutex_);
     auto res = portMap_.insert(std::map<int32_t, UsbPort>::value_type(port.id, port));
     if (!res.second) {
         USB_HILOGW(MODULE_USB_PORT, "addPort port id duplicated");
