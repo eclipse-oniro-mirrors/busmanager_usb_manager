@@ -101,8 +101,6 @@ array<SerialPort> GetPortList()
     int32_t ret = g_usbClient.SerialGetPortList(portIds);
     if (ret < 0) {
         USB_HILOGE(MODULE_USB_NAPI, "GetPortList failed, ErrCode: %{public}d", ret);
-        metrics.SetErrorCode(ErrorCodeConversion(ret));
-        taihe::set_business_error(ErrorCodeConversion(ret), "GetPortList failed.");
         array<SerialPort> portList(tempPortList);
         return portList;
     }
