@@ -88,6 +88,7 @@ typedef struct SerialReadAsyncContext {
     uint32_t size;
     uint32_t timeout;
     void* pData;
+    napi_ref bufferRef = nullptr;
     UsbApiMetrics* metrics = nullptr;
 } SerialReadAsyncContext;
 

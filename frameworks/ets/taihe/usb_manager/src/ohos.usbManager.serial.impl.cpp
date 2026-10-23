@@ -101,6 +101,8 @@ array<SerialPort> GetPortList()
     int32_t ret = g_usbClient.SerialGetPortList(portIds);
     if (ret < 0) {
         USB_HILOGE(MODULE_USB_NAPI, "GetPortList failed, ErrCode: %{public}d", ret);
+        metrics.SetErrorCode(ErrorCodeConversion(ret));
+        taihe::set_business_error(ErrorCodeConversion(ret), "GetPortList failed.");
         array<SerialPort> portList(tempPortList);
         return portList;
     }
@@ -352,10 +354,7 @@ int32_t ReadSync(int32_t portId, uintptr_t buffer, ::taihe::optional_view<int32_
     if (timeout.has_value()) {
         utimeout = timeout.value();
     } else {
-        USB_HILOGE(MODULE_USB_NAPI, "timeout is invalid!");
-        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
-        set_business_error(SYSPARAM_INVALID_INPUT, "timeout is invalid!");
-        return ERROR;
+        USB_HILOGW(MODULE_USB_NAPI, "default timeout!");
     }
     int32_t ret = g_usbClient.SerialRead(portId, bufferData, dataSize, actualSize, utimeout);
     if (ret != 0) {
@@ -407,10 +406,7 @@ int32_t WriteSync(int32_t portId, ::taihe::array_view<uint8_t> buffer, ::taihe::
     if (timeout.has_value()) {
         utimeout = timeout.value();
     } else {
-        USB_HILOGE(MODULE_USB_NAPI, "timeout is invalid!");
-        metrics.SetErrorCode(SYSPARAM_INVALID_INPUT);
-        set_business_error(SYSPARAM_INVALID_INPUT, "timeout is invalid!");
-        return ERROR;
+        USB_HILOGE(MODULE_USB_NAPI, "default timeout!");
     }
     int32_t ret = g_usbClient.SerialWrite(portId, bufferVector, buffer.size(), actualSize, utimeout);
     if (ret != 0) {

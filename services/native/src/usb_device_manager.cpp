@@ -408,6 +408,7 @@ void UsbDeviceManager::ProcessStatus(int32_t status, bool &curConnect)
 
 void UsbDeviceManager::SetPhyConnectState(bool phyConnect)
 {
+    std::lock_guard<std::mutex> guard(deviceMutex_);
     phyConnect_ = phyConnect;
 }
 
@@ -585,6 +586,7 @@ void UsbDeviceManager::ProcessFuncChange(bool connected, int32_t currentFunc)
 
 void UsbDeviceManager::SetChargeFlag(bool isReverseCharge)
 {
+    std::lock_guard<std::mutex> guard(deviceMutex_);
     isReverseCharge_ = isReverseCharge;
 }
 
@@ -835,6 +837,7 @@ void UsbDeviceManager::ReportDevicePlugSysEvent(int32_t currentFunctions, bool c
 }
 bool UsbDeviceManager::IsGadgetConnected(void)
 {
+    std::lock_guard<std::mutex> guard(deviceMutex_);
     return gadgetConnected_;
 }
 } // namespace USB
