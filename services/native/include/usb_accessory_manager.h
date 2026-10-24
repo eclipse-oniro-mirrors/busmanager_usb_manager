@@ -79,6 +79,7 @@ private:
     sptr<HDI::Usb::V1_2::IUsbInterface> usbdImpl_ = nullptr;
     std::map<char, int> base64Map_;
     std::mutex mutexHandleEvent_;
+    std::mutex accFdMutex_;
 #ifdef USB_MANAGER_V2_0
     sptr<HDI::Usb::V2_0::IUsbDeviceInterface> usbDeviceInterface_ = nullptr;
 #endif // USB_MANAGER_V2_0

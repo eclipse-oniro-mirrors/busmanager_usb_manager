@@ -1202,6 +1202,7 @@ struct USBTransferAsyncContext {
     uint32_t numIsoPackets;
     std::string name = "CreateAshmem";
     ani_object callbackRef;
+    ani_ref bufferRef = nullptr;
 };
 
 static bool CreateAndWriteAshmem(USBTransferAsyncContext *asyncContext, OHOS::HDI::Usb::V1_2::USBTransferInfo &obj)
@@ -1317,13 +1318,20 @@ static void DeleteCallback(USBTransferAsyncContext* context)
         return;
     }
     ani_env* env = ::taihe::get_env();
-    if (env == nullptr || context->callbackRef == nullptr) {
-        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: env/callbackRef is nullptr", __func__);
+    if (env == nullptr) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: env is nullptr", __func__);
         delete context;
         return;
     }
-    if (env->GlobalReference_Delete(context->callbackRef) != ANI_OK) {
-        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: delete context.callbackRef is failed", __func__);
+    if (context->callbackRef != nullptr) {
+        if (env->GlobalReference_Delete(context->callbackRef) != ANI_OK) {
+            USB_HILOGE(MODULE_USB_NAPI, "%{public}s: delete context.callbackRef is failed", __func__);
+        }
+    }
+    if (context->bufferRef != nullptr) {
+        if (env->GlobalReference_Delete(context->bufferRef) != ANI_OK) {
+            USB_HILOGE(MODULE_USB_NAPI, "%{public}s: delete context.bufferRef is failed", __func__);
+        }
     }
     delete context;
 }
@@ -1520,9 +1528,15 @@ bool ExtractBufferData(USBTransferAsyncContext* context, ani_object array_obj)
     if (env->ArrayBuffer_GetInfo(static_cast<ani_arraybuffer>(buffer), &data, &size) != ANI_OK) {
         return false;
     }
+    ani_ref globalBufferRef;
+    if (env->GlobalReference_Create(static_cast<ani_object>(buffer), &globalBufferRef) != ANI_OK) {
+        USB_HILOGE(MODULE_USB_NAPI, "%{public}s: GlobalReference_Create for buffer failed", __func__);
+        return false;
+    }
     context->vm = vm;
     context->buffer = static_cast<uint8_t*>(data);
     context->bufferLength = size;
+    context->bufferRef = globalBufferRef;
     return true;
 }
 
@@ -1578,9 +1592,12 @@ void usbSubmitTransfer(UsbDataTransferParams const &transfer)
     if (!context) {
         return;
     }
-    if (!ExtractBufferData(context, reinterpret_cast<ani_object>(transfer.buffer)) ||
-        !SetupCallback(context, reinterpret_cast<ani_object>(transfer.callback))) {
+    if (!ExtractBufferData(context, reinterpret_cast<ani_object>(transfer.buffer))) {
         delete context;
+        return;
+    }
+    if (!SetupCallback(context, reinterpret_cast<ani_object>(transfer.callback))) {
+        DeleteCallback(context);
         return;
     }
     auto transferInfo = PrepareTransferInfo(transfer, context);

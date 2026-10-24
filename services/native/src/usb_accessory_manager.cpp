@@ -147,6 +147,7 @@ int32_t UsbAccessoryManager::SetUsbd(const sptr<OHOS::HDI::Usb::V1_2::IUsbInterf
 void UsbAccessoryManager::GetAccessoryList(const std::string &bundleName,
     std::vector<USBAccessory> &accessoryList)
 {
+    std::lock_guard<std::mutex> guard(mutexHandleEvent_);
     if (accStatus_ == ACC_START) {
         USBAccessory access = this->accessory;
         access.SetSerialNumber(bundleName + this->accessory.GetSerialNumber());
@@ -173,6 +174,7 @@ int32_t UsbAccessoryManager::OpenAccessory(int32_t &fd)
     ret = usbdImpl_->OpenAccessory(fd);
 #endif // USB_MANAGER_V2_0
     if (ret == UEC_OK) {
+        std::lock_guard<std::mutex> guard(accFdMutex_);
         accFd_ = fd;
         return ret;
     } else if (ret == ACCESSORY_IS_BUSY) {
@@ -198,13 +200,21 @@ int32_t UsbAccessoryManager::CloseAccessory(int32_t fd)
         USB_HILOGE(MODULE_USB_SERVICE, "UsbAccessoryManager usbdImpl_ is nullptr.");
         return UEC_SERVICE_INVALID_VALUE;
     }
-    ret = usbdImpl_->CloseAccessory(accFd_);
+    int32_t localAccFd = 0;
+    {
+        std::lock_guard<std::mutex> guard(accFdMutex_);
+        localAccFd = accFd_;
+    }
+    ret = usbdImpl_->CloseAccessory(localAccFd);
 #endif // USB_MANAGER_V2_0
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_SERVICE, "%{public}s, close ret: %{public}d, fd: %{public}d.", __func__, ret, fd);
         return ret;
     }
-    accFd_ = 0;
+    {
+        std::lock_guard<std::mutex> guard(accFdMutex_);
+        accFd_ = 0;
+    }
     return ret;
 }
 
@@ -499,6 +509,7 @@ int32_t UsbAccessoryManager::GetAccessorySerialNumber(const USBAccessory &access
 {
     USB_HILOGD(MODULE_USB_SERVICE, "%{public}s, bundleName: %{public}s, serial: %{public}s",
         __func__, bundleName.c_str(), this->accessory.GetSerialNumber().c_str());
+    std::lock_guard<std::mutex> guard(mutexHandleEvent_);
     if (accStatus_ != ACC_START) {
         USB_HILOGE(MODULE_USB_SERVICE, "invalid status %{public}d", accStatus_);
         return UEC_SERVICE_ACCESSORY_NOT_MATCH;

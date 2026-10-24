@@ -3530,7 +3530,7 @@ int32_t UsbService::RequestSerialRight(int32_t portId, bool &hasRight)
     
     SerialDeviceIdentity serialDeviceIdentity = { deviceName, deviceVidPidSerialNum };
     if (usbRightManager_->RequestRight(portId, serialDeviceIdentity, bundleName, tokenId, userId) != UEC_OK) {
-        USB_HILOGW(MODULE_USB_SERVICE, "%{public}s:user don't agree", __func__);
+        USB_HILOGW(MODULE_USB_SERVICE, "%{public}s:user don't agree or dialog failed", __func__);
         return UEC_OK;
     }
 #endif // USB_MANAGER_FEATURE_HOST || USB_MANAGER_FEATURE_DEVICE

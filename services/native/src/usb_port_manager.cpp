@@ -60,7 +60,11 @@ UsbPortManager::~UsbPortManager()
 void UsbPortManager::Init()
 {
     USB_HILOGI(MODULE_USB_PORT, "UsbPortManager::QueryPort start");
-    int32_t ret = QueryPort();
+    int32_t ret = 0;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        ret = QueryPort();
+    }
     if (ret) {
         USB_HILOGE(MODULE_USB_PORT, "UsbPortManager::QueryPort false");
     }
@@ -70,6 +74,7 @@ void UsbPortManager::Init()
 void UsbPortManager::AddSupportedMode()
 {
     USB_HILOGI(MODULE_USB_PORT, "%{public}s:: Enter", __func__);
+    std::lock_guard<std::mutex> lock(mutex_);
     supportedModeMap_.clear();
     for (const auto& [portId, port] : portMap_) {
         USB_HILOGI(MODULE_USB_PORT, "%{public}s:: portId is %{public}d, supportedModes is %{public}d",
@@ -163,6 +168,7 @@ bool UsbPortManager::IsReverseCharge()
 {
     int32_t powerRole_ = 0;
     int32_t dataRole_ = 0;
+    std::lock_guard<std::mutex> lock(mutex_);
     auto it = portMap_.find(CMD_INDEX);
     if (it == portMap_.end()) {
         USB_HILOGE(MODULE_USB_PORT, "Port not found");

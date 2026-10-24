@@ -374,6 +374,8 @@ OH_UsbManager_ErrorCode OH_UsbManager_RequestPermission(const char *deviceName,
             errCode = OH_USBMANAGER_ERROR_SERVICE_EXCEPTION;
             result = false;
         }
+        USB_HILOGI(MODULE_USB_INNERKIT, "RequestPermission callback invoking, errCode=%{public}d, result=%{public}d",
+            errCode, result);
         callback(errCode, result, userContext);
     }).detach();
     return OH_USBMANAGER_SUCCESS;
