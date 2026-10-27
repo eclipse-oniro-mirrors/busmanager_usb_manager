@@ -112,6 +112,12 @@ public:
     int32_t ManageInterfaceType(const std::vector<UsbDeviceTypeInfo> &devTypeInfo, bool disable) override;
     int32_t ManageUsbType(const std::vector<UsbDeviceTypeInfo> &devTypeInfo, bool disable) override;
     int32_t ManageUsbSerialDevice(bool disable);
+    int32_t UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, int32_t &bizResult) override;
+    int32_t UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uint8_t configId, uint8_t interfaceId,
+                                  bool authorized, int32_t &bizResult) override;
+    int32_t GetAllDevices(std::vector<UsbDevice> &deviceList) override;
+    int32_t RegDeviceControlCallback(const sptr<IRemoteObject> &cb) override;
+    int32_t UnRegDeviceControlCallback(const sptr<IRemoteObject> &cb) override;
     int32_t UsbAttachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid) override;
     int32_t UsbDetachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid) override;
     int32_t ClearHalt(uint8_t busNum, uint8_t devAddr, uint8_t interfaceId, uint8_t endpointId) override;
@@ -273,6 +279,16 @@ private:
         uint32_t tokenId_;
     };
 #endif // USB_MANAGER_FEATURE_DEVICE
+    class DeviceControlDeathRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        DeviceControlDeathRecipient(UsbService *service, IRemoteObject *remote) : service_(service), remote_(remote) {}
+        ~DeviceControlDeathRecipient() {}
+        void OnRemoteDied(const wptr<IRemoteObject> &object) override;
+
+    private:
+        UsbService *service_;
+        IRemoteObject *remote_;
+    };
 
     class ClaimDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
@@ -323,6 +339,14 @@ private:
     void UsbDeviceTypeChange(std::vector<UsbDeviceType> &disableType,
         const std::vector<UsbDeviceTypeInfo> &deviceTypes);
     void UsbTransInfoChange(HDI::Usb::V1_2::USBTransferInfo &info, const UsbTransInfo &param);
+    int32_t CheckDynamicControlPermission(const char *operation);
+    int32_t ValidateDynamicControlDeviceRef(uint8_t busNum, uint8_t devAddr, UsbDevice &dev);
+    int32_t ValidateDynamicControlInterfaceRef(UsbDevice &dev, uint8_t configId, uint8_t interfaceId);
+    std::vector<sptr<IRemoteObject>> GetDeviceControlSubscribers();
+    std::string BuildDeviceControlEventPayload(const UsbDevice &device, bool attached);
+    void SendDeviceControlEvent(const sptr<IRemoteObject> &remote, const std::string &payload, bool attached);
+    void NotifyDeviceControlEvent(const UsbDevice &device, bool attached);
+    void RemoveDeviceControlSubscriber(IRemoteObject *remote);
     std::string GetDeviceVidPidSerialNumber(const std::string &deviceName);
     int32_t GetDeviceVidPidSerialNumber(const std::string &deviceName, std::string& strDesc);
     void RemoveDeviceListener(const wptr<IRemoteObject> &object);
@@ -363,6 +387,13 @@ private:
     std::mutex unloadSelfTimerMutex_;
 #ifdef USB_MANAGER_FEATURE_HOST
     std::shared_ptr<UsbHostManager> usbHostManager_;
+    struct DeviceControlSubscriber {
+        sptr<IRemoteObject> remote;
+        sptr<UsbService::DeviceControlDeathRecipient> recipient;
+    };
+    std::map<IRemoteObject *, DeviceControlSubscriber> deviceControlSubscribers_;
+    std::mutex deviceControlSubscribersMutex_;
+
     std::list<DeviceListenerEntry> deviceListeners_;
     std::mutex deviceListenerMutex_;
     std::map<std::string, DeviceConnectionRecord> deviceConnectionMap_;

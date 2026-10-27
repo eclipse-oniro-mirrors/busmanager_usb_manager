@@ -80,6 +80,8 @@ public:
         WRITE_PARCEL_AND_RETURN_FALSE_WHEN_FAIL(Int32, parcel, this->alternateSetting_);
         WRITE_PARCEL_AND_RETURN_FALSE_WHEN_FAIL(String, parcel, this->name_);
         WRITE_PARCEL_AND_RETURN_FALSE_WHEN_FAIL(Uint8, parcel, this->iInterface_);
+        // Local trial: carry the interface authorization state across IPC.
+        WRITE_PARCEL_AND_RETURN_FALSE_WHEN_FAIL(Bool, parcel, this->authorized_);
 
         uint32_t epCount = this->endpoints_.size();
         WRITE_PARCEL_AND_RETURN_FALSE_WHEN_FAIL(Uint32, parcel, epCount);
@@ -102,6 +104,7 @@ public:
         usbInterface->alternateSetting_ = data.ReadInt32();
         usbInterface->name_ = data.ReadString();
         usbInterface->iInterface_ = data.ReadUint8();
+        usbInterface->authorized_ = data.ReadBool();
 
         uint32_t epCount = 0;
         epCount = data.ReadUint32();
