@@ -193,6 +193,68 @@ HWTEST_F(UsbHostManagerActiveInterfacesTest, UsbHostManager_GetActiveInterfacesJ
     EXPECT_EQ(interfacesJson.size(), 0);
     USB_HILOGI(MODULE_USB_SERVICE, "GetActiveInterfacesJson_004 size=%{public}zu", interfacesJson.size());
 }
+
+class MockUsbDeviceInterface : public OHOS::HDI::Usb::V2_0::IUsbDeviceInterface {
+public:
+    struct DeviceAuthorizeCall {
+        uint8_t busNum;
+        uint8_t devAddr;
+        bool authorized;
+    };
+    struct InterfaceAuthorizeCall {
+        uint8_t busNum;
+        uint8_t devAddr;
+        uint8_t configId;
+        uint8_t interfaceId;
+        bool authorized;
+    };
+
+    int32_t GetCurrentFunctions(int32_t &funcs) override
+    {
+        return 0;
+    }
+    int32_t SetCurrentFunctions(int32_t funcs) override
+    {
+        return 0;
+    }
+    int32_t GetAccessoryInfo(std::vector<std::string> &accessoryInfo) override
+    {
+        return 0;
+    }
+    int32_t OpenAccessory(int &fd) override
+    {
+        return 0;
+    }
+    int32_t CloseAccessory(int fd) override
+    {
+        return 0;
+    }
+    int32_t BindUsbdDeviceSubscriber(const sptr<OHOS::HDI::Usb::V2_0::IUsbdSubscriber> &subscriber) override
+    {
+        return 0;
+    }
+    int32_t UnbindUsbdDeviceSubscriber(const sptr<OHOS::HDI::Usb::V2_0::IUsbdSubscriber> &subscriber) override
+    {
+        return 0;
+    }
+    int32_t UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized) override
+    {
+        deviceCalls.push_back({busNum, devAddr, authorized});
+        return deviceRet;
+    }
+    int32_t UsbInterfaceAuthorize(const OHOS::HDI::Usb::V2_0::UsbDev &dev, uint8_t configId, uint8_t interfaceId,
+                                  bool authorized) override
+    {
+        interfaceCalls.push_back({dev.busNum, dev.devAddr, configId, interfaceId, authorized});
+        return interfaceRet;
+    }
+
+    std::vector<DeviceAuthorizeCall> deviceCalls;
+    std::vector<InterfaceAuthorizeCall> interfaceCalls;
+    int32_t deviceRet = 0;
+    int32_t interfaceRet = 0;
+};
+
 constexpr uint8_t DYN_TEST_BUS_NUM_1 = 1;
 constexpr uint8_t DYN_TEST_DEV_ADDR_1 = 1;
 constexpr uint8_t DYN_TEST_BUS_NUM_2 = 2;
@@ -318,9 +380,11 @@ HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_FullQuery_ContainsDisabledDevi
     // simulate the state written by the dynamic control strategy on a disabled device
     device->SetAuthorizeStatus(DISABLED);
 
-    std::vector<UsbDevice> allDevices;
+    std::vector<UsbDeviceInfo> allDevices;
     EXPECT_EQ(usbHostManager_->GetAllDevices(allDevices), UEC_OK);
     EXPECT_EQ(allDevices.size(), 1);
+    EXPECT_FALSE(allDevices[0].enabled);
+    EXPECT_EQ(allDevices[0].deviceId, "1-1");
 
     std::vector<UsbDevice> enabledDevices;
     EXPECT_EQ(usbHostManager_->GetDevices(enabledDevices), UEC_OK);
@@ -335,7 +399,7 @@ HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_FullQuery_ContainsDisabledDevi
 HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_EmptyManager_QueryReturnsEmpty, TestSize.Level1)
 {
     USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_EmptyManager_QueryReturnsEmpty start");
-    std::vector<UsbDevice> allDevices;
+    std::vector<UsbDeviceInfo> allDevices;
     EXPECT_EQ(usbHostManager_->GetAllDevices(allDevices), UEC_OK);
     EXPECT_TRUE(allDevices.empty());
 }
@@ -427,42 +491,160 @@ HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_HubExcluded, TestSize.Level1)
 }
 
 /**
- * @tc.name: UsbDynamicControl_DeviceStatusSerialization
- * @tc.desc: authorization state survives Marshalling/Unmarshalling so GetAllDevices can report DISABLED
+ * @tc.name: UsbDynamicControl_RootHubDetection
+ * @tc.desc: only the root hub (hub class at address 1) is excluded from inner API control
  * @tc.type: FUNC
  */
-HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_DeviceStatusSerialization, TestSize.Level1)
+HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_RootHubDetection, TestSize.Level1)
 {
-    USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_DeviceStatusSerialization start");
-    UsbDevice *device = CreateTestDevice(DYN_TEST_BUS_NUM_1, DYN_TEST_DEV_ADDR_1, DISABLED);
-    ASSERT_NE(device, nullptr);
-    Parcel parcel;
-    ASSERT_TRUE(device->Marshalling(parcel));
-    parcel.RewindRead(0);
-    UsbDevice *out = UsbDevice::Unmarshalling(parcel);
-    ASSERT_NE(out, nullptr);
-    EXPECT_EQ(out->GetAuthorizeStatus(), DISABLED);
-    delete out;
-    delete device;
+    USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_RootHubDetection start");
+    UsbDevice *rootHub = CreateTestDevice(DYN_TEST_BUS_NUM_1, 1, NEW_ARRIVED);
+    ASSERT_NE(rootHub, nullptr);
+    rootHub->SetClass(USB_BASE_CLASS_HUB);
+    EXPECT_TRUE(IsRootHub(*rootHub));
+
+    UsbDevice *nonRootHub = CreateTestDevice(DYN_TEST_BUS_NUM_1, 2, NEW_ARRIVED);
+    ASSERT_NE(nonRootHub, nullptr);
+    nonRootHub->SetClass(USB_BASE_CLASS_HUB);
+    EXPECT_FALSE(IsRootHub(*nonRootHub));
+
+    UsbDevice *normalDevice = CreateTestDevice(DYN_TEST_BUS_NUM_1, 3, NEW_ARRIVED);
+    ASSERT_NE(normalDevice, nullptr);
+    EXPECT_FALSE(IsRootHub(*normalDevice));
+
+    delete rootHub;
+    delete nonRootHub;
+    delete normalDevice;
 }
 
 /**
- * @tc.name: UsbDynamicControl_InterfaceStatusSerialization
- * @tc.desc: interface authorization state survives Marshalling/Unmarshalling
+ * @tc.name: UsbDynamicControl_ModeEnterDisablesAllNonHub
+ * @tc.desc: entering the mode disables every non-HUB device and skips HUB
  * @tc.type: FUNC
  */
-HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_InterfaceStatusSerialization, TestSize.Level1)
+HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_ModeEnterDisablesAllNonHub, TestSize.Level1)
 {
-    USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_InterfaceStatusSerialization start");
-    UsbInterface intf;
-    intf.SetAuthorizeStatus(false);
-    Parcel parcel;
-    ASSERT_TRUE(intf.Marshalling(parcel));
-    parcel.RewindRead(0);
-    UsbInterface *out = UsbInterface::Unmarshalling(parcel);
-    ASSERT_NE(out, nullptr);
-    EXPECT_FALSE(out->GetAuthorizeStatus());
-    delete out;
+    USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_ModeEnterDisablesAllNonHub start");
+    sptr<MockUsbDeviceInterface> mock = new (std::nothrow) MockUsbDeviceInterface();
+    ASSERT_NE(mock, nullptr);
+    usbHostManager_->usbDeviceInterface_ = mock;
+
+    UsbDevice *device1 = CreateTestDevice(DYN_TEST_BUS_NUM_1, 2, ENABLED);
+    UsbDevice *device2 = CreateTestDevice(DYN_TEST_BUS_NUM_1, 3, ENABLED);
+    UsbDevice *hub = CreateTestDevice(DYN_TEST_BUS_NUM_1, 4, ENABLED);
+    ASSERT_NE(device1, nullptr);
+    ASSERT_NE(device2, nullptr);
+    ASSERT_NE(hub, nullptr);
+    hub->SetClass(USB_BASE_CLASS_HUB);
+    ASSERT_TRUE(usbHostManager_->AddDevice(device1));
+    ASSERT_TRUE(usbHostManager_->AddDevice(device2));
+    ASSERT_TRUE(usbHostManager_->AddDevice(hub));
+    mock->deviceCalls.clear();
+
+    usbHostManager_->SetDynamicControlEnabled(true);
+
+    ASSERT_EQ(mock->deviceCalls.size(), 2);
+    for (const auto &call : mock->deviceCalls) {
+        EXPECT_FALSE(call.authorized);
+        EXPECT_NE(call.devAddr, 4);
+    }
+}
+
+/**
+ * @tc.name: UsbDynamicControl_ModeExitEnablesAllNonHub
+ * @tc.desc: exiting the mode enables every non-HUB device and skips HUB
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_ModeExitEnablesAllNonHub, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_ModeExitEnablesAllNonHub start");
+    sptr<MockUsbDeviceInterface> mock = new (std::nothrow) MockUsbDeviceInterface();
+    ASSERT_NE(mock, nullptr);
+    usbHostManager_->usbDeviceInterface_ = mock;
+    UsbDevice *device = CreateTestDevice(DYN_TEST_BUS_NUM_1, 2, ENABLED);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(usbHostManager_->AddDevice(device));
+    usbHostManager_->SetDynamicControlEnabled(true);
+    mock->deviceCalls.clear();
+
+    usbHostManager_->SetDynamicControlEnabled(false);
+
+    ASSERT_EQ(mock->deviceCalls.size(), 1);
+    EXPECT_TRUE(mock->deviceCalls[0].authorized);
+    EXPECT_EQ(mock->deviceCalls[0].devAddr, 2);
+}
+
+/**
+ * @tc.name: UsbDynamicControl_NewNonHubDefaultDisabled
+ * @tc.desc: a NEW_ARRIVED non-HUB device is disabled and query reports enabled=false
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_NewNonHubDefaultDisabled, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_NewNonHubDefaultDisabled start");
+    sptr<MockUsbDeviceInterface> mock = new (std::nothrow) MockUsbDeviceInterface();
+    ASSERT_NE(mock, nullptr);
+    usbHostManager_->usbDeviceInterface_ = mock;
+    usbHostManager_->SetDynamicControlEnabled(true);
+
+    UsbDevice *device = CreateTestDevice(DYN_TEST_BUS_NUM_1, 2, NEW_ARRIVED);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(usbHostManager_->AddDevice(device));
+    ASSERT_FALSE(mock->deviceCalls.empty());
+    EXPECT_FALSE(mock->deviceCalls.back().authorized);
+
+    std::vector<UsbDeviceInfo> infos;
+    ASSERT_EQ(usbHostManager_->GetAllDevices(infos), UEC_OK);
+    ASSERT_EQ(infos.size(), 1);
+    EXPECT_FALSE(infos[0].enabled);
+    EXPECT_FALSE(infos[0].isHub);
+}
+
+/**
+ * @tc.name: UsbDynamicControl_NewHubNotDisabled
+ * @tc.desc: a NEW_ARRIVED HUB is not disabled by the dynamic mode
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_NewHubNotDisabled, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_NewHubNotDisabled start");
+    sptr<MockUsbDeviceInterface> mock = new (std::nothrow) MockUsbDeviceInterface();
+    ASSERT_NE(mock, nullptr);
+    usbHostManager_->usbDeviceInterface_ = mock;
+    usbHostManager_->SetDynamicControlEnabled(true);
+
+    UsbDevice *hub = CreateTestDevice(DYN_TEST_BUS_NUM_1, 2, NEW_ARRIVED);
+    ASSERT_NE(hub, nullptr);
+    hub->SetClass(USB_BASE_CLASS_HUB);
+    ASSERT_TRUE(usbHostManager_->AddDevice(hub));
+    EXPECT_TRUE(mock->deviceCalls.empty());
+
+    std::vector<UsbDeviceInfo> infos;
+    ASSERT_EQ(usbHostManager_->GetAllDevices(infos), UEC_OK);
+    ASSERT_EQ(infos.size(), 1);
+    EXPECT_TRUE(infos[0].enabled);
+    EXPECT_TRUE(infos[0].isHub);
+}
+
+/**
+ * @tc.name: UsbDynamicControl_InterfaceBottomLayerError
+ * @tc.desc: host manager returns the bottom-layer interface authorize error unchanged
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_InterfaceBottomLayerError, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_InterfaceBottomLayerError start");
+    sptr<MockUsbDeviceInterface> mock = new (std::nothrow) MockUsbDeviceInterface();
+    ASSERT_NE(mock, nullptr);
+    usbHostManager_->usbDeviceInterface_ = mock;
+    mock->interfaceRet = UEC_INTERFACE_INVALID_OPERATION;
+
+    OHOS::HDI::Usb::V1_0::UsbDev dev = {DYN_TEST_BUS_NUM_1, 2};
+    int32_t ret = usbHostManager_->UsbInterfaceAuthorize(dev, 0, 0, false);
+
+    EXPECT_EQ(ret, UEC_INTERFACE_INVALID_OPERATION);
+    ASSERT_EQ(mock->interfaceCalls.size(), 1);
+    EXPECT_FALSE(mock->interfaceCalls[0].authorized);
 }
 
 } // namespace USB

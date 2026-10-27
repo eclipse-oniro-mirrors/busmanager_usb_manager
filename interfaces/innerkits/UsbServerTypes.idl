@@ -45,3 +45,29 @@
    int productId;
    int vendorId;
  };
+
+struct UsbInterfaceInfo {
+    int interfaceId;
+    int interfaceClass;
+    int subClass;
+    int protocol;
+    int alternateSetting;
+    boolean enabled;
+};
+
+struct UsbDeviceInfo {
+    String deviceId;
+    unsigned char busNum;
+    unsigned char devAddr;
+    int vendorId;
+    int productId;
+    int deviceClass;
+    int subClass;
+    int protocol;
+    String serial;
+    String manufacturerName;
+    String productName;
+    boolean isHub;
+    boolean enabled;
+    UsbInterfaceInfo[] interfaces;
+};

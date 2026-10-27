@@ -76,10 +76,6 @@ public:
         WRITE_PARCEL_AND_RETURN_FALSE_WHEN_FAIL(String, parcel, this->productName_);
         WRITE_PARCEL_AND_RETURN_FALSE_WHEN_FAIL(String, parcel, this->version_);
         WRITE_PARCEL_AND_RETURN_FALSE_WHEN_FAIL(String, parcel, this->serial_);
-        // Local trial: carry the authorization state across IPC so GetAllDevices() can
-        // report DISABLED devices. Upstream should replace this with a dedicated
-        // UsbDeviceInfo IDL structure instead of changing UsbDevice's wire format.
-        WRITE_PARCEL_AND_RETURN_FALSE_WHEN_FAIL(Int32, parcel, static_cast<int32_t>(this->authorizeStatus_));
 
         uint32_t configCount = this->configs_.size();
         WRITE_PARCEL_AND_RETURN_FALSE_WHEN_FAIL(Int32, parcel, configCount);
@@ -114,7 +110,6 @@ public:
         usbDevice->productName_ = data.ReadString();
         usbDevice->version_ = data.ReadString();
         usbDevice->serial_ = data.ReadString();
-        usbDevice->authorizeStatus_ = static_cast<AuthorizeStatus>(data.ReadInt32());
 
         uint32_t configCount = data.ReadUint32();
         for (uint32_t i = 0; i < configCount && i < USB_CONFIG_MAX_NUM; i++) {

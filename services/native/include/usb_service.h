@@ -115,7 +115,7 @@ public:
     int32_t UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, int32_t &bizResult) override;
     int32_t UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uint8_t configId, uint8_t interfaceId,
                                   bool authorized, int32_t &bizResult) override;
-    int32_t GetAllDevices(std::vector<UsbDevice> &deviceList) override;
+    int32_t GetAllDevices(std::vector<UsbDeviceInfo> &deviceInfos) override;
     int32_t RegDeviceControlCallback(const sptr<IRemoteObject> &cb) override;
     int32_t UnRegDeviceControlCallback(const sptr<IRemoteObject> &cb) override;
     int32_t UsbAttachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid) override;
@@ -341,10 +341,8 @@ private:
     void UsbTransInfoChange(HDI::Usb::V1_2::USBTransferInfo &info, const UsbTransInfo &param);
     int32_t CheckDynamicControlPermission(const char *operation);
     int32_t ValidateDynamicControlDeviceRef(uint8_t busNum, uint8_t devAddr, UsbDevice &dev);
-    int32_t ValidateDynamicControlInterfaceRef(UsbDevice &dev, uint8_t configId, uint8_t interfaceId);
     std::vector<sptr<IRemoteObject>> GetDeviceControlSubscribers();
-    std::string BuildDeviceControlEventPayload(const UsbDevice &device, bool attached);
-    void SendDeviceControlEvent(const sptr<IRemoteObject> &remote, const std::string &payload, bool attached);
+    void SendDeviceControlEvent(const sptr<IRemoteObject> &remote, const UsbDevice &device, bool attached);
     void NotifyDeviceControlEvent(const UsbDevice &device, bool attached);
     void RemoveDeviceControlSubscriber(IRemoteObject *remote);
     std::string GetDeviceVidPidSerialNumber(const std::string &deviceName);

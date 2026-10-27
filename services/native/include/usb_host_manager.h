@@ -20,12 +20,12 @@
 #include <map>
 #include <mutex>
 #include <string>
-#include <unordered_set>
 #include <vector>
 #include <functional>
 
 #include "system_ability.h"
 #include "usb_device.h"
+#include "usb_server_types.h"
 #include "usb_errors.h"
 #include "usb_right_manager.h"
 #include "serial_manager.h"
@@ -60,11 +60,16 @@ inline bool IsDynamicControlExcludedDevice(int32_t baseClass)
     // HUB are enumerated as independent devices and are managed individually.
     return baseClass == USB_BASE_CLASS_HUB;
 }
+
+inline bool IsRootHub(const UsbDevice &device)
+{
+    // Provisional: USB root hubs are normally address 1 on their bus. Non-root hubs
+    // remain controllable through the dynamic control inner APIs.
+    return device.GetClass() == USB_BASE_CLASS_HUB && device.GetDevAddr() == 1;
+}
 constexpr int32_t DEVICE_CONTROL_EVENT_CODE = 1;
 constexpr int32_t DEVICE_CONTROL_EVENT_TIMEOUT_MS = 200;
 constexpr char DYNAMIC_CONTROL_OPERATION_TYPE[] = "DynamicControl";
-constexpr char DYNAMIC_CONTROL_MANUAL_OPERATION_TYPE[] = "DynamicControlManual";
-constexpr char DYNAMIC_CONTROL_RESTORE_OPERATION_TYPE[] = "DynamicControlRestore";
 constexpr char DYNAMIC_CONTROL_MODE_PARAM[] = "persist.edm.usb_dynamic_control_enable";
 struct DeviceClassUsage {
     uint8_t usage;
@@ -129,7 +134,7 @@ public:
     int32_t GetDevices(std::vector<UsbDevice> &deviceList);
     // Returns all enumerated devices, including DISABLED ones. Authorization is enforced by
     // the service layer; this method performs no permission check.
-    int32_t GetAllDevices(std::vector<UsbDevice> &deviceList);
+    int32_t GetAllDevices(std::vector<UsbDeviceInfo> &deviceInfos);
     int32_t GetDeviceInfo(uint8_t busNum, uint8_t devAddr, UsbDevice &dev);
     int32_t GetDeviceInfoDescriptor(
         const HDI::Usb::V1_0::UsbDev &uDev, std::vector<uint8_t> &descriptor, UsbDevice &dev);
@@ -180,10 +185,8 @@ private:
     bool IsEdmEnabled();
     void ApplyDynamicControlPolicy();
     void ExecuteEdmStrategy();
-    void EnforceDynamicControlPolicy();
     void DisableAllNonHubDevicesForDynamicMode();
-    void RestoreDynamicDisabledDevices();
-    bool IsDynamicDisabled(const std::string &deviceName);
+    void EnableAllNonHubDevicesForDynamicMode();
     void NotifyDeviceDetached(UsbDevice &device, bool wasEnabled);
     void NotifyDeviceAttached(const UsbDevice &device, bool wasDisabled);
     int32_t ExecuteManageDevicePolicy(std::vector<UsbDeviceId> &trustList);
@@ -225,8 +228,6 @@ private:
     SystemAbility *systemAbility_;
     bool isPermTypePolicy_ = false;
     std::atomic<bool> isDynamicControlEnabled_{false};
-    std::mutex dynamicModeMutex_;
-    std::unordered_set<std::string> dynamicDisabledDevices_;
     std::function<void(const UsbDevice &device, bool attached)> deviceControlEventSink_ = nullptr;
     std::mutex mutex_;
     std::shared_mutex devicesMutex_;
