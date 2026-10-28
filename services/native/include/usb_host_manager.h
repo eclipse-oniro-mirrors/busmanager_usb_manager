@@ -99,6 +99,7 @@ public:
     void ExecuteStrategy();
     // Thread-safe query of the persist-mode flag; does not take devicesMutex_.
     bool IsDynamicControlEnabled() const;
+    static void SetEdmEnabledForTest(int32_t value);
     // Startup path: restores the mode flag only; device enumeration applies the policy.
     void InitDynamicControlEnabled(bool enabled);
     // Runtime path: enabling disables current non-HUB devices and records them; disabling

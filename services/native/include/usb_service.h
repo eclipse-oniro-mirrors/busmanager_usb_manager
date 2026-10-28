@@ -89,6 +89,7 @@ public:
         return ready_;
     }
     static sptr<UsbService> GetGlobalInstance();
+    static void SetCallerValidForTest(int32_t value);
 #ifndef USB_MANAGER_PASS_THROUGH
     int32_t SetUsbd(const sptr<HDI::Usb::V1_2::IUsbInterface> &usbd);
 #endif // USB_MANAGER_PASS_THROUGH
@@ -340,6 +341,7 @@ private:
         const std::vector<UsbDeviceTypeInfo> &deviceTypes);
     void UsbTransInfoChange(HDI::Usb::V1_2::USBTransferInfo &info, const UsbTransInfo &param);
     int32_t CheckDynamicControlPermission(const char *operation);
+    void OnDynamicControlParamChanged(const char *key, const char *value);
     int32_t ValidateDynamicControlDeviceRef(uint8_t busNum, uint8_t devAddr, UsbDevice &dev);
     std::vector<sptr<IRemoteObject>> GetDeviceControlSubscribers();
     void SendDeviceControlEvent(const sptr<IRemoteObject> &remote, const UsbDevice &device, bool attached);

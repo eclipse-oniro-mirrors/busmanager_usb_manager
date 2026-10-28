@@ -15,6 +15,7 @@
 
 #include "usb_service.h"
 
+#include <atomic>
 #include <cstdio>
 #include <filesystem>
 #include <iostream>
@@ -86,6 +87,7 @@ static const std::filesystem::path TTYACM_PATH = "/sys/class/tty";
 static const std::string TTYACM_PREFIX = "ttyACM";
 constexpr const pid_t ROOT_UID = 0;
 constexpr const pid_t EDM_UID = 3057;
+std::atomic<int32_t> g_callerValidForTest{-1};
 } // namespace
 auto g_serviceInstance = DelayedSpSingleton<UsbService>::GetInstance();
 const bool G_REGISTER_RESULT =
@@ -340,14 +342,8 @@ void UsbService::OnStart()
     auto dynamicWatchRet = WatchParameter(
         DYNAMIC_CONTROL_MODE_PARAM,
         [](const char *key, const char *value, void *context) {
-            if (key == nullptr || value == nullptr) {
-                USB_HILOGE(MODULE_USB_SERVICE, "dynamic control param null pointer");
-                return;
-            }
-            USB_HILOGI(MODULE_USB_SERVICE, "watch dynamic control param: get %{public}s=%{public}s", key, value);
-            bool enabled = (std::string(value) == "1");
-            if (g_serviceInstance != nullptr && g_serviceInstance->usbHostManager_ != nullptr) {
-                g_serviceInstance->usbHostManager_->SetDynamicControlEnabled(enabled);
+            if (g_serviceInstance != nullptr) {
+                g_serviceInstance->OnDynamicControlParamChanged(key, value);
             }
         },
         this);
@@ -1364,6 +1360,19 @@ int32_t UsbService::GetDevices(std::vector<UsbDevice> &deviceList)
     return usbHostManager_->GetDevices(deviceList);
 }
 
+void UsbService::OnDynamicControlParamChanged(const char *key, const char *value)
+{
+    if (key == nullptr || value == nullptr) {
+        USB_HILOGE(MODULE_USB_SERVICE, "dynamic control param null pointer");
+        return;
+    }
+    USB_HILOGI(MODULE_USB_SERVICE, "watch dynamic control param: get %{public}s=%{public}s", key, value);
+    bool enabled = (std::string(value) == "1");
+    if (usbHostManager_ != nullptr) {
+        usbHostManager_->SetDynamicControlEnabled(enabled);
+    }
+}
+
 int32_t UsbService::CheckDynamicControlPermission(const char *operation)
 {
     if (!IsCallerValid()) {
@@ -1392,10 +1401,6 @@ int32_t UsbService::ValidateDynamicControlDeviceRef(uint8_t busNum, uint8_t devA
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control invalid busNum/devAddr: %{public}hhu/%{public}hhu", busNum,
                    devAddr);
         return DYNAMIC_CONTROL_INVALID_PARAM;
-    }
-    if (usbHostManager_ == nullptr) {
-        USB_HILOGE(MODULE_USB_SERVICE, "UsbService::usbHostManager_ is nullptr");
-        return UEC_SERVICE_INVALID_VALUE;
     }
     if (!usbHostManager_->GetTargetDevice(busNum, devAddr, dev)) {
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control target device not attached, bus:%{public}hhu dev:%{public}hhu",
@@ -3462,8 +3467,17 @@ int32_t UsbService::DeviceEvent(const HDI::Usb::V1_0::USBDeviceInfo &info)
 }
 // LCOV_EXCL_STOP
 
+void UsbService::SetCallerValidForTest(int32_t value)
+{
+    g_callerValidForTest.store(value);
+}
+
 bool UsbService::IsCallerValid()
 {
+    int32_t override = g_callerValidForTest.load();
+    if (override >= 0) {
+        return override == 1;
+    }
     OHOS::Security::AccessToken::AccessTokenID callerToken = IPCSkeleton::GetCallingTokenID();
     auto callerTokenType = OHOS::Security::AccessToken::AccessTokenKit::GetTokenType(callerToken);
     if (callerTokenType == OHOS::Security::AccessToken::TypeATokenTypeEnum::TOKEN_NATIVE) {

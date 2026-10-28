@@ -144,6 +144,8 @@ constexpr const char* USB_DEV_FS_PATH = "/dev/bus/usb";
 #ifdef USB_MANAGER_PASS_THROUGH
 const std::string SERVICE_NAME = "usb_host_interface_service";
 #endif // USB_MANAGER_PASS_THROUGH
+std::atomic<int32_t> g_edmEnabledForTest{-1};
+
 UsbHostManager::UsbHostManager(SystemAbility *systemAbility)
 {
     systemAbility_ = systemAbility;
@@ -1666,8 +1668,17 @@ std::string UsbHostManager::GetDevStringValFromIdx(uint8_t busNum, uint8_t devAd
     return strDesc;
 }
 
+void UsbHostManager::SetEdmEnabledForTest(int32_t value)
+{
+    g_edmEnabledForTest.store(value);
+}
+
 bool UsbHostManager::IsEdmEnabled()
 {
+    int32_t override = g_edmEnabledForTest.load();
+    if (override >= 0) {
+        return override == 1;
+    }
     std::string edmParaValue = OHOS::system::GetParameter("persist.edm.enterprise_config_enable", "false");
     USB_HILOGI(MODULE_USB_HOST, "edmParaValue enterprise_config_enable value is %{public}s", edmParaValue.c_str());
     return edmParaValue == "true";
