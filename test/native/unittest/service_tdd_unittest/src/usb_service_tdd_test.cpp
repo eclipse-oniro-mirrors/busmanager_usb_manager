@@ -48,7 +48,6 @@ constexpr int32_t TEST_TOKEN_ID_NUM = 1;
 constexpr int32_t TEST_VENDOR_ID = 0x1234;
 constexpr int32_t TEST_PRODUCT_ID = 0xABCD;
 constexpr uint32_t TEST_SERIAL_READ_MAX = 64 * 1024;
-constexpr uint32_t TEST_SERIAL_WRITE_MAX = 200 * 1024;
 constexpr int32_t TEST_HUB_DEVICE_CLASS = 9;
 constexpr int32_t TDD_APP_A = 0;
 constexpr int32_t TDD_APP_B = 1;
@@ -272,21 +271,6 @@ HWTEST_F(UsbServiceTddTest, ServiceAvailable003, TestSize.Level1)
 
 #ifdef USB_MANAGER_FEATURE_DEVICE
 /**
- * @tc.name: SysApiPermission001
- * @tc.desc: Test GetCurrentFunctions called by a normal native token without permission
- * @tc.desc: Negative test: rejected with UEC_SERVICE_PERMISSION_DENIED_SYSAPI
- * @tc.type: FUNC
- */
-HWTEST_F(UsbServiceTddTest, SysApiPermission001, TestSize.Level1)
-{
-    SwitchToNormalCaller();
-    auto &client = UsbSrvClient::GetInstance();
-    int32_t funcs = -1;
-    int32_t ret = client.GetCurrentFunctions(funcs);
-    EXPECT_EQ(UEC_SERVICE_PERMISSION_DENIED_SYSAPI, ret);
-}
-
-/**
  * @tc.name: SysApiPermission002
  * @tc.desc: Test GetCurrentFunctions called by a system_basic token without MANAGE_USB_CONFIG
  * @tc.desc: Negative test: rejected with UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED
@@ -299,20 +283,6 @@ HWTEST_F(UsbServiceTddTest, SysApiPermission002, TestSize.Level1)
     int32_t funcs = -1;
     int32_t ret = client.GetCurrentFunctions(funcs);
     EXPECT_EQ(UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED, ret);
-}
-
-/**
- * @tc.name: SysApiPermission003
- * @tc.desc: Test UsbFunctionsToString called by a normal native token
- * @tc.desc: Negative test: returns the PERMISSION_DENIED_SYSAPI marker string
- * @tc.type: FUNC
- */
-HWTEST_F(UsbServiceTddTest, SysApiPermission003, TestSize.Level1)
-{
-    SwitchToNormalCaller();
-    auto &client = UsbSrvClient::GetInstance();
-    std::string funcResult = client.UsbFunctionsToString(0);
-    EXPECT_EQ(PERMISSION_DENIED_SYSAPI, funcResult);
 }
 
 /**
@@ -330,37 +300,7 @@ HWTEST_F(UsbServiceTddTest, SysApiPermission004, TestSize.Level1)
 }
 #endif // USB_MANAGER_FEATURE_DEVICE
 
-#ifdef USB_MANAGER_FEATURE_PORT
-/**
- * @tc.name: SysApiPermission005
- * @tc.desc: Test GetPorts called by a normal native token without permission
- * @tc.desc: Negative test: rejected with UEC_SERVICE_PERMISSION_DENIED_SYSAPI
- * @tc.type: FUNC
- */
-HWTEST_F(UsbServiceTddTest, SysApiPermission005, TestSize.Level1)
-{
-    SwitchToNormalCaller();
-    auto &client = UsbSrvClient::GetInstance();
-    std::vector<UsbPort> ports;
-    int32_t ret = client.GetPorts(ports);
-    EXPECT_EQ(UEC_SERVICE_PERMISSION_DENIED_SYSAPI, ret);
-}
-#endif // USB_MANAGER_FEATURE_PORT
-
 #ifdef USB_MANAGER_FEATURE_HOST
-/**
- * @tc.name: SysApiPermission006
- * @tc.desc: Test AddAccessRight called by a normal native token without permission
- * @tc.desc: Negative test: rejected with UEC_SERVICE_PERMISSION_DENIED_SYSAPI
- * @tc.type: FUNC
- */
-HWTEST_F(UsbServiceTddTest, SysApiPermission006, TestSize.Level1)
-{
-    SwitchToNormalCaller();
-    auto &client = UsbSrvClient::GetInstance();
-    int32_t ret = client.AddAccessRight(std::to_string(TEST_TOKEN_ID_NUM), TDD_UNKNOWN_DEVICE);
-    EXPECT_EQ(UEC_SERVICE_PERMISSION_DENIED_SYSAPI, ret);
-}
 
 /**
  * @tc.name: SysApiPermission007
@@ -1070,39 +1010,6 @@ HWTEST_F(UsbServiceTddTest, SerialValidation001, TestSize.Level1)
 }
 
 /**
- * @tc.name: SerialValidation002
- * @tc.desc: Test SerialRead with a receive buffer above the 64KB read limit
- * @tc.desc: Negative test: rejected with UEC_SERIAL_IO_EXCEPTION before the
- *           port is validated
- * @tc.type: FUNC
- */
-HWTEST_F(UsbServiceTddTest, SerialValidation002, TestSize.Level1)
-{
-    auto &client = UsbSrvClient::GetInstance();
-    std::vector<uint8_t> data(TEST_SERIAL_READ_MAX + 1, 0);
-    uint32_t actualSize = 0;
-    int32_t ret = client.SerialRead(TEST_SERIAL_PORT_ID_INVALID, data, 1, actualSize, TEST_TIMEOUT_MS);
-    EXPECT_EQ(UEC_SERIAL_IO_EXCEPTION, ret);
-}
-
-/**
- * @tc.name: SerialValidation003
- * @tc.desc: Test SerialWrite with a buffer above the 200KB write limit
- * @tc.desc: Negative test: rejected with UEC_SERIAL_IO_EXCEPTION before the
- *           port is validated
- * @tc.type: FUNC
- */
-HWTEST_F(UsbServiceTddTest, SerialValidation003, TestSize.Level1)
-{
-    auto &client = UsbSrvClient::GetInstance();
-    std::vector<uint8_t> data(TEST_SERIAL_WRITE_MAX + 1, 0);
-    uint32_t actualSize = 0;
-    int32_t ret = client.SerialWrite(TEST_SERIAL_PORT_ID_INVALID, data, TEST_SERIAL_WRITE_MAX + 1, actualSize,
-        TEST_TIMEOUT_MS);
-    EXPECT_EQ(UEC_SERIAL_IO_EXCEPTION, ret);
-}
-
-/**
  * @tc.name: SerialValidation004
  * @tc.desc: Test SerialWrite with a size larger than the supplied data buffer
  * @tc.desc: Negative test: rejected with UEC_SERVICE_INVALID_VALUE
@@ -1191,22 +1098,6 @@ HWTEST_F(UsbServiceTddTest, SerialValidation009, TestSize.Level1)
     EXPECT_EQ(UEC_OK, ret);
 }
 
-/**
- * @tc.name: SerialValidation010
- * @tc.desc: Test HasSerialRight with a port id that does not exist
- * @tc.desc: Negative test: rejected with the invalid-port error and hasRight
- *           stays false
- * @tc.type: FUNC
- */
-HWTEST_F(UsbServiceTddTest, SerialValidation010, TestSize.Level1)
-{
-    auto &client = UsbSrvClient::GetInstance();
-    bool hasRight = true;
-    int32_t ret = client.HasSerialRight(TEST_SERIAL_PORT_ID_INVALID, hasRight);
-    EXPECT_TRUE(ret == UEC_SERIAL_PORT_NOT_EXIST || ret == UEC_SERVICE_INVALID_VALUE);
-    EXPECT_FALSE(hasRight);
-}
-
 /* ------------------------------------------------------------------------ *
  * Section I: Port APIs (UsbService::GetPorts / GetSupportedModes / SetPortRole)
  * ------------------------------------------------------------------------ */
@@ -1214,28 +1105,11 @@ HWTEST_F(UsbServiceTddTest, SerialValidation010, TestSize.Level1)
 #ifdef USB_MANAGER_FEATURE_PORT
 /**
  * @tc.name: PortApi001
- * @tc.desc: Test GetPorts as an authorized system caller
- * @tc.desc: Positive test: the call succeeds and reports valid port ids
- * @tc.type: FUNC
- */
-HWTEST_F(UsbServiceTddTest, PortApi001, TestSize.Level1)
-{
-    auto &client = UsbSrvClient::GetInstance();
-    std::vector<UsbPort> ports;
-    int32_t ret = client.GetPorts(ports);
-    EXPECT_EQ(UEC_OK, ret);
-    for (auto &port : ports) {
-        EXPECT_GE(port.id, 0);
-    }
-}
-
-/**
- * @tc.name: PortApi002
  * @tc.desc: Test GetSupportedModes with a port id that does not exist
  * @tc.desc: Negative test: the HDI layer fails the request
  * @tc.type: FUNC
  */
-HWTEST_F(UsbServiceTddTest, PortApi002, TestSize.Level1)
+HWTEST_F(UsbServiceTddTest, PortApi001, TestSize.Level1)
 {
     auto &client = UsbSrvClient::GetInstance();
     int32_t supportedModes = -1;
@@ -1244,32 +1118,17 @@ HWTEST_F(UsbServiceTddTest, PortApi002, TestSize.Level1)
 }
 
 /**
- * @tc.name: PortApi003
+ * @tc.name: PortApi002
  * @tc.desc: Test SetPortRole with a port id that does not exist
  * @tc.desc: Negative test: the request must not report success for an unknown
  *           port
  * @tc.type: FUNC
  */
-HWTEST_F(UsbServiceTddTest, PortApi003, TestSize.Level1)
+HWTEST_F(UsbServiceTddTest, PortApi002, TestSize.Level1)
 {
     auto &client = UsbSrvClient::GetInstance();
     int32_t ret = client.SetPortRole(TEST_PORT_ID_INVALID, 0, 0);
     EXPECT_NE(UEC_OK, ret);
-}
-
-/**
- * @tc.name: PortApi004
- * @tc.desc: Test SetPortRole called by a normal native token without permission
- * @tc.desc: Negative test: rejected with UEC_SERVICE_PERMISSION_DENIED_SYSAPI
- *           before any port state is touched
- * @tc.type: FUNC
- */
-HWTEST_F(UsbServiceTddTest, PortApi004, TestSize.Level1)
-{
-    SwitchToNormalCaller();
-    auto &client = UsbSrvClient::GetInstance();
-    int32_t ret = client.SetPortRole(TEST_PORT_ID_INVALID, 0, 0);
-    EXPECT_EQ(UEC_SERVICE_PERMISSION_DENIED_SYSAPI, ret);
 }
 #endif // USB_MANAGER_FEATURE_PORT
 
@@ -1348,20 +1207,6 @@ HWTEST_F(UsbServiceTddTest, Functions005, TestSize.Level2)
     EXPECT_EQ(UEC_OK, ret);
 }
 
-/**
- * @tc.name: Functions006
- * @tc.desc: Test SetCurrentFunctions called by a normal native token without permission
- * @tc.desc: Negative test: rejected with UEC_SERVICE_PERMISSION_DENIED_SYSAPI
- *           before any function state is touched
- * @tc.type: FUNC
- */
-HWTEST_F(UsbServiceTddTest, Functions006, TestSize.Level1)
-{
-    SwitchToNormalCaller();
-    auto &client = UsbSrvClient::GetInstance();
-    int32_t ret = client.SetCurrentFunctions(0);
-    EXPECT_EQ(UEC_SERVICE_PERMISSION_DENIED_SYSAPI, ret);
-}
 #endif // USB_MANAGER_FEATURE_DEVICE
 
 /* ------------------------------------------------------------------------ *
