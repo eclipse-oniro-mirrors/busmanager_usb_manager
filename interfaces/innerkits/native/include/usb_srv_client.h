@@ -57,6 +57,11 @@ public:
     int32_t RemoveRight(std::string deviceName);
     int32_t GetDevices(std::vector<UsbDevice> &deviceList);
     int32_t GetAllDevices(std::vector<UsbDeviceInfo> &deviceInfos);
+    int32_t UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, int32_t &bizResult);
+    int32_t UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uint8_t configId, uint8_t interfaceId,
+                                  bool authorized, int32_t &bizResult);
+    int32_t RegDeviceControlCallback(const sptr<IRemoteObject> &cb);
+    int32_t UnRegDeviceControlCallback(const sptr<IRemoteObject> &cb);
     int32_t GetPorts(std::vector<UsbPort> &usbPorts);
     int32_t GetSupportedModes(int32_t portId, int32_t &supportedModes);
     int32_t SetPortRole(int32_t portId, int32_t powerRole, int32_t dataRole);

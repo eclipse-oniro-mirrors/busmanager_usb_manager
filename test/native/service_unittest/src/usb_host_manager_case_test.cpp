@@ -24,7 +24,9 @@
 #include "usb_device.h"
 #include "usb_host_manager.h"
 #include "usb_interface.h"
+#include "usb_server_proxy.h"
 #include "usb_service.h"
+#include "usb_srv_client.h"
 
 using namespace testing::ext;
 using namespace OHOS::USB;
@@ -283,6 +285,33 @@ public:
     int32_t sendCount = 0;
 };
 
+class MockUsbServerRemote : public IPCObjectStub {
+public:
+    MockUsbServerRemote() : IPCObjectStub(u"MockUsbServerRemote") {}
+    int SendRequest(uint32_t code, MessageParcel &data, MessageParcel &reply, MessageOption &option) override
+    {
+        if (code == static_cast<uint32_t>(IUsbServerIpcCode::COMMAND_GET_ALL_DEVICES)) {
+            reply.WriteInt32(UEC_OK);
+            reply.WriteInt32(static_cast<int32_t>(deviceInfos.size()));
+            for (auto &info : deviceInfos) {
+                if (UsbDeviceInfoBlockMarshalling(reply, info) != 0) {
+                    return -1;
+                }
+            }
+        } else if (code == static_cast<uint32_t>(IUsbServerIpcCode::COMMAND_USB_DEVICE_AUTHORIZE) ||
+                   code == static_cast<uint32_t>(IUsbServerIpcCode::COMMAND_USB_INTERFACE_AUTHORIZE)) {
+            reply.WriteInt32(UEC_OK);
+            reply.WriteInt32(bizResult);
+        } else {
+            reply.WriteInt32(UEC_OK);
+        }
+        return 0;
+    }
+
+    std::vector<UsbDeviceInfo> deviceInfos;
+    int32_t bizResult = 0;
+};
+
 UsbDevice *CreateServiceTestDevice(uint8_t busNum, uint8_t devAddr, int32_t deviceClass = 0x08)
 {
     auto device = new (std::nothrow) UsbDevice();
@@ -301,6 +330,26 @@ UsbDevice *CreateServiceTestDevice(uint8_t busNum, uint8_t devAddr, int32_t devi
     device->SetmSerial("SERVICE-SN");
     device->SetVersion("1.0.0");
     device->SetAuthorizeStatus(ENABLED);
+    return device;
+}
+
+UsbDevice *CreateCompositeTestDevice(uint8_t busNum, uint8_t devAddr, bool interfaceEnabled)
+{
+    UsbDevice *device = CreateServiceTestDevice(busNum, devAddr);
+    if (device == nullptr) {
+        return nullptr;
+    }
+    UsbInterface interface;
+    interface.SetId(0);
+    interface.SetClass(0x08);
+    interface.SetSubClass(0x06);
+    interface.SetProtocol(0x50);
+    interface.SetAlternateSetting(0);
+    interface.SetAuthorizeStatus(interfaceEnabled);
+    USBConfig config;
+    config.SetId(1);
+    config.SetInterfaces({interface});
+    device->SetConfigs({config});
     return device;
 }
 
@@ -1042,6 +1091,193 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_UnRegPermission,
     USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_UnRegPermission start");
     UsbService::SetCallerValidForTest(0);
     EXPECT_EQ(service_->UnRegDeviceControlCallback(nullptr), UEC_SERVICE_INVALID_OPERATION);
+}
+
+/**
+ * @tc.name: UsbDynamicControl_QueryCompositeAndHub
+ * @tc.desc: composite interface info, HUB flag, and removed-device filtering
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_QueryCompositeAndHub, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_QueryCompositeAndHub start");
+    UsbDevice *composite = CreateCompositeTestDevice(DYN_TEST_BUS_NUM_1, 2, false);
+    UsbDevice *hub = CreateTestDevice(DYN_TEST_BUS_NUM_1, 3, ENABLED);
+    ASSERT_NE(composite, nullptr);
+    ASSERT_NE(hub, nullptr);
+    hub->SetClass(USB_BASE_CLASS_HUB);
+    ASSERT_TRUE(usbHostManager_->AddDevice(composite));
+    ASSERT_TRUE(usbHostManager_->AddDevice(hub));
+
+    std::vector<UsbDeviceInfo> infos;
+    ASSERT_EQ(usbHostManager_->GetAllDevices(infos), UEC_OK);
+    ASSERT_EQ(infos.size(), 2);
+    for (const auto &info : infos) {
+        if (info.devAddr == 2) {
+            EXPECT_FALSE(info.isHub);
+            ASSERT_EQ(info.interfaces.size(), 1);
+            EXPECT_EQ(info.interfaces[0].interfaceClass, 0x08);
+            EXPECT_FALSE(info.interfaces[0].enabled);
+        }
+        if (info.devAddr == 3) {
+            EXPECT_TRUE(info.isHub);
+        }
+    }
+    ASSERT_TRUE(usbHostManager_->DelDevice(DYN_TEST_BUS_NUM_1, 2));
+    infos.clear();
+    ASSERT_EQ(usbHostManager_->GetAllDevices(infos), UEC_OK);
+    ASSERT_EQ(infos.size(), 1);
+    EXPECT_EQ(infos[0].devAddr, 3);
+}
+
+/**
+ * @tc.name: UsbDynamicControl_ModeExitIdempotentAndEdmDisabled
+ * @tc.desc: exit is idempotent and enables a device that was disabled before mode entry
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_ModeExitIdempotentAndEdmDisabled, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_ModeExitIdempotentAndEdmDisabled start");
+    sptr<MockUsbDeviceInterface> mock = new (std::nothrow) MockUsbDeviceInterface();
+    ASSERT_NE(mock, nullptr);
+    usbHostManager_->usbDeviceInterface_ = mock;
+    UsbHostManager::SetEdmEnabledForTest(0);
+    UsbDevice *device = CreateTestDevice(DYN_TEST_BUS_NUM_1, 2, ENABLED);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(usbHostManager_->AddDevice(device));
+    device->SetAuthorizeStatus(DISABLED);
+    mock->deviceCalls.clear();
+
+    usbHostManager_->SetDynamicControlEnabled(true);
+    EXPECT_TRUE(mock->deviceCalls.empty());
+    usbHostManager_->SetDynamicControlEnabled(false);
+    ASSERT_EQ(mock->deviceCalls.size(), 1);
+    EXPECT_TRUE(mock->deviceCalls[0].authorized);
+    mock->deviceCalls.clear();
+    usbHostManager_->SetDynamicControlEnabled(false);
+    EXPECT_TRUE(mock->deviceCalls.empty());
+    UsbHostManager::SetEdmEnabledForTest(-1);
+}
+
+/**
+ * @tc.name: UsbDynamicControlService_AuthorizeThenQuery
+ * @tc.desc: service authorize result is reflected by GetAllDevices (EDM replay path)
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_AuthorizeThenQuery, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_AuthorizeThenQuery start");
+    UsbDevice *device = CreateServiceTestDevice(1, 2);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
+    service_->usbHostManager_->SetDynamicControlEnabled(true);
+    int32_t bizResult = 0;
+    EXPECT_EQ(service_->UsbDeviceAuthorize(1, 2, true, bizResult), UEC_OK);
+    EXPECT_EQ(bizResult, DYNAMIC_CONTROL_OK);
+
+    std::vector<UsbDeviceInfo> infos;
+    ASSERT_EQ(service_->GetAllDevices(infos), UEC_OK);
+    ASSERT_EQ(infos.size(), 1);
+    EXPECT_TRUE(infos[0].enabled);
+}
+
+/**
+ * @tc.name: UsbDynamicControlService_ClientPath
+ * @tc.desc: UsbSrvClient GetAllDevices/device/interface authorize wrappers
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_ClientPath, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_ClientPath start");
+    sptr<MockUsbServerRemote> remote = new (std::nothrow) MockUsbServerRemote();
+    ASSERT_NE(remote, nullptr);
+    UsbDeviceInfo info;
+    info.deviceId = "1-2";
+    info.busNum = 1;
+    info.devAddr = 2;
+    info.vendorId = 0x1234;
+    info.productId = 0x5678;
+    info.deviceClass = 0x08;
+    info.isHub = false;
+    info.enabled = false;
+    remote->deviceInfos.push_back(info);
+
+    UsbSrvClient &client = UsbSrvClient::GetInstance();
+    client.proxy_ = new UsbServerProxy(remote);
+    ASSERT_NE(client.proxy_, nullptr);
+
+    std::vector<UsbDeviceInfo> infos;
+    EXPECT_EQ(client.GetAllDevices(infos), UEC_OK);
+    ASSERT_EQ(infos.size(), 1);
+    EXPECT_EQ(infos[0].deviceId, "1-2");
+    EXPECT_FALSE(infos[0].enabled);
+
+    int32_t bizResult = 0;
+    EXPECT_EQ(client.UsbDeviceAuthorize(1, 2, false, bizResult), UEC_OK);
+    EXPECT_EQ(bizResult, DYNAMIC_CONTROL_OK);
+    EXPECT_EQ(client.UsbInterfaceAuthorize(1, 2, 0, 0, true, bizResult), UEC_OK);
+    EXPECT_EQ(bizResult, DYNAMIC_CONTROL_OK);
+    client.proxy_ = nullptr;
+}
+
+/**
+ * @tc.name: UsbDynamicControl_ModeOffNoDisable
+ * @tc.desc: mode off does not disable an attached device through the dynamic branch
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_ModeOffNoDisable, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_ModeOffNoDisable start");
+    sptr<MockUsbDeviceInterface> mock = new (std::nothrow) MockUsbDeviceInterface();
+    ASSERT_NE(mock, nullptr);
+    usbHostManager_->usbDeviceInterface_ = mock;
+    UsbHostManager::SetEdmEnabledForTest(0);
+    UsbDevice *device = CreateTestDevice(DYN_TEST_BUS_NUM_1, 2, ENABLED);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(usbHostManager_->AddDevice(device));
+    mock->deviceCalls.clear();
+    usbHostManager_->ExecuteStrategy();
+    EXPECT_TRUE(mock->deviceCalls.empty());
+    UsbHostManager::SetEdmEnabledForTest(-1);
+}
+
+/**
+ * @tc.name: UsbDynamicControlService_AuthorizeIdempotent
+ * @tc.desc: repeated device authorize with the same state does not issue a second HDI call
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_AuthorizeIdempotent, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_AuthorizeIdempotent start");
+    UsbDevice *device = CreateServiceTestDevice(1, 2);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
+    int32_t bizResult = 0;
+    EXPECT_EQ(service_->UsbDeviceAuthorize(1, 2, false, bizResult), UEC_OK);
+    EXPECT_EQ(bizResult, DYNAMIC_CONTROL_OK);
+    mock_->deviceCalls.clear();
+    EXPECT_EQ(service_->UsbDeviceAuthorize(1, 2, false, bizResult), UEC_OK);
+    EXPECT_EQ(bizResult, DYNAMIC_CONTROL_OK);
+    EXPECT_TRUE(mock_->deviceCalls.empty());
+}
+
+/**
+ * @tc.name: UsbDynamicControlService_InterfaceInvalidPassthrough
+ * @tc.desc: invalid interface arguments are passed to the bottom layer, not pre-rejected
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_InterfaceInvalidPassthrough, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_InterfaceInvalidPassthrough start");
+    UsbDevice *device = CreateServiceTestDevice(1, 2);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
+    mock_->interfaceRet = UEC_INTERFACE_INVALID_VALUE;
+    int32_t bizResult = 0;
+    EXPECT_EQ(service_->UsbInterfaceAuthorize(1, 2, 0xFF, 0xFF, true, bizResult), UEC_INTERFACE_INVALID_VALUE);
+    ASSERT_EQ(mock_->interfaceCalls.size(), 1);
+    EXPECT_EQ(mock_->interfaceCalls[0].configId, 0xFF);
+    EXPECT_EQ(mock_->interfaceCalls[0].interfaceId, 0xFF);
 }
 
 } // namespace USB

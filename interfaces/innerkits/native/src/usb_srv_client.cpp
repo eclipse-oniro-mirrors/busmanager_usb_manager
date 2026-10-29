@@ -238,6 +238,55 @@ int32_t UsbSrvClient::GetAllDevices(std::vector<UsbDeviceInfo> &deviceInfos)
     return ret;
 }
 
+int32_t UsbSrvClient::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, int32_t &bizResult)
+{
+    RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
+    int32_t ret = proxy_->UsbDeviceAuthorize(busNum, devAddr, authorized, bizResult);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_INNERKIT, "UsbDeviceAuthorize failed ret = %{public}d!", ret);
+    }
+    return ret;
+}
+
+int32_t UsbSrvClient::UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uint8_t configId, uint8_t interfaceId,
+                                            bool authorized, int32_t &bizResult)
+{
+    RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
+    int32_t ret = proxy_->UsbInterfaceAuthorize(busNum, devAddr, configId, interfaceId, authorized, bizResult);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_INNERKIT, "UsbInterfaceAuthorize failed ret = %{public}d!", ret);
+    }
+    return ret;
+}
+
+int32_t UsbSrvClient::RegDeviceControlCallback(const sptr<IRemoteObject> &cb)
+{
+    RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
+    int32_t ret = proxy_->RegDeviceControlCallback(cb);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_INNERKIT, "RegDeviceControlCallback failed ret = %{public}d!", ret);
+    }
+    return ret;
+}
+
+int32_t UsbSrvClient::UnRegDeviceControlCallback(const sptr<IRemoteObject> &cb)
+{
+    RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
+    std::shared_lock<std::shared_mutex> lock(mutex_);
+    RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
+    int32_t ret = proxy_->UnRegDeviceControlCallback(cb);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_INNERKIT, "UnRegDeviceControlCallback failed ret = %{public}d!", ret);
+    }
+    return ret;
+}
+
 int32_t UsbSrvClient::ClaimInterface(USBDevicePipe &pipe, const UsbInterface &interface, bool force)
 {
     std::shared_lock<std::shared_mutex> lock(mutex_);
@@ -825,6 +874,31 @@ int32_t UsbSrvClient::GetDevices(std::vector<UsbDevice> &deviceList)
 }
 
 int32_t UsbSrvClient::GetAllDevices(std::vector<UsbDeviceInfo> &deviceInfos)
+{
+    USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
+    return CAPABILITY_NOT_SUPPORT;
+}
+
+int32_t UsbSrvClient::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, int32_t &bizResult)
+{
+    USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
+    return CAPABILITY_NOT_SUPPORT;
+}
+
+int32_t UsbSrvClient::UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uint8_t configId, uint8_t interfaceId,
+                                            bool authorized, int32_t &bizResult)
+{
+    USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
+    return CAPABILITY_NOT_SUPPORT;
+}
+
+int32_t UsbSrvClient::RegDeviceControlCallback(const sptr<IRemoteObject> &cb)
+{
+    USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
+    return CAPABILITY_NOT_SUPPORT;
+}
+
+int32_t UsbSrvClient::UnRegDeviceControlCallback(const sptr<IRemoteObject> &cb)
 {
     USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
     return CAPABILITY_NOT_SUPPORT;

@@ -561,6 +561,16 @@ ohos_unittest("test_usbhostmanagerextended") {
 
 ohos_unittest("test_usbhostmanagercase") {
   module_out_path = module_output_path
+  sanitize = {
+    integer_overflow = true
+    ubsan = true
+    boundary_sanitize = true
+    cfi = true
+    cfi_cross_dso = true
+    debug = false
+  }
+  branch_protector_ret = "pac_ret"
+
   sources = [
     "src/usb_host_manager_case_test.cpp",
   ]
@@ -571,10 +581,19 @@ ohos_unittest("test_usbhostmanagercase") {
   ]
   defines = [ "private=public" ]
   if (usb_manager_pass_through) {
-    defines += [ "USB_MANAGER_PASS_THROUGH" ]
+    defines += [
+      "USB_MANAGER_PASS_THROUGH",
+      "USB_MANAGER_V2_0",
+    ]
   }
   if (usb_manager_feature_host) {
     defines += [ "USB_MANAGER_FEATURE_HOST" ]
+  }
+  if (usb_manager_feature_device) {
+    defines += [ "USB_MANAGER_FEATURE_DEVICE" ]
+  }
+  if (usb_manager_feature_port) {
+    defines += [ "USB_MANAGER_FEATURE_PORT" ]
   }
 
   deps = [
