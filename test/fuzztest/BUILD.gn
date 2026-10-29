@@ -2359,6 +2359,54 @@ ohos_fuzztest("UsbMgrUnRegConnectionListenerFuzzTest") {
   ]
 }
 
+ohos_fuzztest("UsbMgrPrivateClaimFuzzTest") {
+  module_out_path = module_output_path
+
+  fuzz_config_file =
+      "${usb_manager_path}/test/fuzztest/usbmgrprivateclaim_fuzzer"
+
+  configs = [ ":module_private_config" ]
+
+  deps = [
+    "${usb_manager_path}/interfaces/innerkits:usbsrv_client",
+    ":usbservice_source_set",
+  ]
+
+  if (defined(defines)) {
+    defines += [ "private=public" ]
+  } else {
+    defines = [ "private=public" ]
+  }
+
+  defines += [
+    "USB_MANAGER_FEATURE_HOST",
+    "USB_MANAGER_FEATURE_DEVICE",
+    "USB_MANAGER_FEATURE_PORT",
+    "USB_MANAGER_PASS_THROUGH",
+  ]
+
+  external_deps = [
+    "ability_runtime:ability_manager",
+    "access_token:libaccesstoken_sdk",
+    "access_token:libnativetoken",
+    "access_token:libtoken_setproc",
+    "c_utils:utils",
+    "drivers_interface_usb:libusb_proxy_1.0",
+    "drivers_interface_usb:libusb_proxy_1.2",
+    "drivers_interface_usb:libserial_proxy_1.0",
+    "drivers_interface_usb:usb_idl_headers_1.2",
+    "hilog:libhilog",
+    "ipc:ipc_core",
+    "memmgr:memmgrclient",
+    "safwk:system_ability_fwk",
+    "selinux_adapter:librestorecon",
+  ]
+
+  sources = [
+    "usbmgrprivateclaim_fuzzer/usbmgrprivateclaim_fuzzer.cpp",
+  ]
+}
+
 group("fuzztest") {
   testonly = true
   deps = []
@@ -2396,6 +2444,7 @@ group("fuzztest") {
       ":UsbMgrOpenDeviceFuzzTest",
       ":UsbMgrParallelizeFuzzTest",
       ":UsbMgrPipeRequestWaitFuzzTest",
+      ":UsbMgrPrivateClaimFuzzTest",
       ":UsbMgrPrivateFuzzTest",
       ":UsbMgrPrivateGetTransferTypeStringFuzzTest",
       ":UsbMgrRegBulkCallbackFuzzTest",
