@@ -41,6 +41,7 @@ ohos_shared_library("ohusb_manager") {
   deps = [ "${usb_manager_path}/interfaces/innerkits:usbsrv_client" ]
 
   external_deps = [
+    "bounds_checking_function:libsec_shared",
     "c_utils:utils",
     "hilog:libhilog",
     "ipc:ipc_core",
