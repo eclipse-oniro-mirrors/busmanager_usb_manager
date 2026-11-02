@@ -238,12 +238,12 @@ int32_t UsbSrvClient::GetAllDevices(std::vector<UsbDeviceInfo> &deviceInfos)
     return ret;
 }
 
-int32_t UsbSrvClient::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, int32_t &bizResult)
+int32_t UsbSrvClient::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
     std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
-    int32_t ret = proxy_->UsbDeviceAuthorize(busNum, devAddr, authorized, bizResult);
+    int32_t ret = proxy_->UsbDeviceAuthorize(busNum, devAddr, authorized);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbDeviceAuthorize failed ret = %{public}d!", ret);
     }
@@ -251,12 +251,12 @@ int32_t UsbSrvClient::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool a
 }
 
 int32_t UsbSrvClient::UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uint8_t configId, uint8_t interfaceId,
-                                            bool authorized, int32_t &bizResult)
+                                            bool authorized)
 {
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
     std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
-    int32_t ret = proxy_->UsbInterfaceAuthorize(busNum, devAddr, configId, interfaceId, authorized, bizResult);
+    int32_t ret = proxy_->UsbInterfaceAuthorize(busNum, devAddr, configId, interfaceId, authorized);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbInterfaceAuthorize failed ret = %{public}d!", ret);
     }
@@ -879,14 +879,14 @@ int32_t UsbSrvClient::GetAllDevices(std::vector<UsbDeviceInfo> &deviceInfos)
     return CAPABILITY_NOT_SUPPORT;
 }
 
-int32_t UsbSrvClient::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, int32_t &bizResult)
+int32_t UsbSrvClient::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized)
 {
     USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
     return CAPABILITY_NOT_SUPPORT;
 }
 
 int32_t UsbSrvClient::UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uint8_t configId, uint8_t interfaceId,
-                                            bool authorized, int32_t &bizResult)
+                                            bool authorized)
 {
     USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
     return CAPABILITY_NOT_SUPPORT;

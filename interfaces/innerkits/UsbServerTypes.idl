@@ -52,7 +52,7 @@ struct UsbInterfaceInfo {
     int subClass;
     int protocol;
     int alternateSetting;
-    boolean enabled;
+    boolean authorized;
 };
 
 struct UsbDeviceInfo {
@@ -68,6 +68,6 @@ struct UsbDeviceInfo {
     String manufacturerName;
     String productName;
     boolean isHub;
-    boolean enabled;
+    boolean authorized;
     UsbInterfaceInfo[] interfaces;
 };

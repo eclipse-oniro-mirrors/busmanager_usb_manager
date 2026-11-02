@@ -417,7 +417,7 @@ public:
         return this->bcdDevice_;
     }
 
-    AuthorizeStatus GetAuthorizeStatus() const
+    AuthorizeStatus GetAuthorizeStatus()
     {
         return this->authorizeStatus_;
     }

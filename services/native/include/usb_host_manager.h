@@ -47,25 +47,23 @@
 
 namespace OHOS {
 namespace USB {
-constexpr int32_t DYNAMIC_CONTROL_OK = 0;
-constexpr int32_t DYNAMIC_CONTROL_INVALID_PARAM = UEC_INTERFACE_INVALID_VALUE;
-constexpr int32_t DYNAMIC_CONTROL_DEVICE_NOT_ATTACHED = UEC_INTERFACE_INVALID_OPERATION;
 constexpr uint8_t USB_DEVICE_ADDR_MIN = 1;
 constexpr uint8_t USB_DEVICE_ADDR_MAX = 127;
-constexpr int32_t USB_BASE_CLASS_HUB = 0x09;
+constexpr uint8_t ROOT_HUB_ADDRESS = 1;
+constexpr int32_t BASE_CLASS_HUB = 0x09;
 
 inline bool IsDynamicControlExcludedDevice(int32_t baseClass)
 {
     // HUB devices are never disabled by the dynamic control mode; devices behind a
     // HUB are enumerated as independent devices and are managed individually.
-    return baseClass == USB_BASE_CLASS_HUB;
+    return baseClass == BASE_CLASS_HUB;
 }
 
 inline bool IsRootHub(const UsbDevice &device)
 {
     // Provisional: USB root hubs are normally address 1 on their bus. Non-root hubs
     // remain controllable through the dynamic control inner APIs.
-    return device.GetClass() == USB_BASE_CLASS_HUB && device.GetDevAddr() == 1;
+    return device.GetClass() == BASE_CLASS_HUB && device.GetDevAddr() == ROOT_HUB_ADDRESS;
 }
 constexpr int32_t DEVICE_CONTROL_EVENT_CODE = 1;
 constexpr int32_t DEVICE_CONTROL_EVENT_TIMEOUT_MS = 200;
@@ -100,12 +98,12 @@ public:
     // Thread-safe query of the persist-mode flag; does not take devicesMutex_.
     bool IsDynamicControlEnabled() const;
     static void SetEdmEnabledForTest(int32_t value);
-    // Startup path: restores the mode flag only; device enumeration applies the policy.
+    // Sets the dynamic control mode flag. Applying the policy to existing devices is the
+    // caller's responsibility (startup or the persist-parameter watcher).
     void InitDynamicControlEnabled(bool enabled);
-    // Runtime path: enabling disables current non-HUB devices and records them; disabling
-    // restores only recorded devices and re-runs the EDM policy. Caller must not hold
-    // devicesMutex_.
-    void SetDynamicControlEnabled(bool enabled);
+    // Disables or enables all non-HUB devices for the dynamic control mode. Caller must
+    // not hold devicesMutex_.
+    void SetAllNonHubDevicesAuthorized(bool authorized);
     // Registers the management event sink. The sink is invoked without devicesMutex_ and
     // must not synchronously re-enter UsbHostManager.
     void SetDeviceControlEventSink(const std::function<void(const UsbDevice &device, bool attached)> &sink);
@@ -184,10 +182,9 @@ private:
     int32_t FillDevStrings(UsbDevice &dev);
     std::string GetDevStringValFromIdx(uint8_t busNum, uint8_t devAddr, uint8_t idx);
     bool IsEdmEnabled();
-    void ApplyDynamicControlPolicy();
     void ExecuteEdmStrategy();
-    void DisableAllNonHubDevicesForDynamicMode();
-    void EnableAllNonHubDevicesForDynamicMode();
+    // Caller must hold devicesMutex_.
+    void ApplyDynamicControlToNewDevice(UsbDevice &dev);
     void NotifyDeviceDetached(UsbDevice &device, bool wasEnabled);
     void NotifyDeviceAttached(const UsbDevice &device, bool wasDisabled);
     int32_t ExecuteManageDevicePolicy(std::vector<UsbDeviceId> &trustList);

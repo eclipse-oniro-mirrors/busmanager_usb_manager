@@ -245,9 +245,9 @@ void UsbHostManager::UsbEdmLoadCallback::OnLoadSystemAbilityFail(int32_t systemA
 
 void UsbHostManager::ExecuteStrategy()
 {
+    // Dynamic control is mutually exclusive with the EDM policy flow. Newly attached
+    // devices are evaluated in AddDevice() only.
     if (IsDynamicControlEnabled()) {
-        // Dynamic control is mutually exclusive with the existing EDM policy flow.
-        ApplyDynamicControlPolicy();
         return;
     }
     ExecuteEdmStrategy();
@@ -531,7 +531,7 @@ int32_t UsbHostManager::GetDevices(std::vector<UsbDevice> &deviceList)
     USB_HILOGI(MODULE_USB_HOST, "list size %{public}zu", devices_.size());
     bool isSystemAppOrSa = usbRightManager_->IsSystemAppOrSa();
     for (auto it = devices_.begin(); it != devices_.end(); ++it) {
-        if ((it->second->GetClass() == USB_BASE_CLASS_HUB && !isSystemAppOrSa) ||
+        if ((it->second->GetClass() == BASE_CLASS_HUB && !isSystemAppOrSa) ||
             it->second->GetAuthorizeStatus() != ENABLED) {
             continue;
         }
@@ -571,8 +571,8 @@ int32_t UsbHostManager::GetAllDevices(std::vector<UsbDeviceInfo> &deviceInfos)
         info.serial = dev->GetmSerial();
         info.manufacturerName = dev->GetManufacturerName();
         info.productName = dev->GetProductName();
-        info.isHub = dev->GetClass() == USB_BASE_CLASS_HUB;
-        info.enabled = dev->GetAuthorizeStatus() != DISABLED;
+        info.isHub = dev->GetClass() == BASE_CLASS_HUB;
+        info.authorized = dev->GetAuthorizeStatus() != DISABLED;
         for (auto &config : dev->GetConfigs()) {
             for (auto &intf : config.GetInterfaces()) {
                 UsbInterfaceInfo interfaceInfo;
@@ -581,7 +581,7 @@ int32_t UsbHostManager::GetAllDevices(std::vector<UsbDeviceInfo> &deviceInfos)
                 interfaceInfo.subClass = intf.GetSubClass();
                 interfaceInfo.protocol = intf.GetProtocol();
                 interfaceInfo.alternateSetting = intf.GetAlternateSetting();
-                interfaceInfo.enabled = intf.GetAuthorizeStatus();
+                interfaceInfo.authorized = intf.GetAuthorizeStatus();
                 info.interfaces.push_back(interfaceInfo);
             }
         }
@@ -1351,6 +1351,21 @@ bool UsbHostManager::DelDevice(uint8_t busNum, uint8_t devNum)
     return true;
 }
 
+void UsbHostManager::ApplyDynamicControlToNewDevice(UsbDevice &dev)
+{
+    if (!IsDynamicControlEnabled() || IsDynamicControlExcludedDevice(dev.GetClass())) {
+        return;
+    }
+    uint8_t busNum = dev.GetBusNum();
+    uint8_t devNum = dev.GetDevAddr();
+    int32_t ret = UsbDeviceAuthorize(busNum, devNum, false, DYNAMIC_CONTROL_OPERATION_TYPE);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST,
+                   "dynamic control disable new device %{public}hhu-%{public}hhu failed ret:%{public}d", busNum, devNum,
+                   ret);
+    }
+}
+
 bool UsbHostManager::AddDevice(UsbDevice *dev)
 {
     if (dev == nullptr) {
@@ -1373,11 +1388,12 @@ bool UsbHostManager::AddDevice(UsbDevice *dev)
         devices_.erase(iter);
     }
     devices_.insert(std::pair<std::string, UsbDevice *>(name, dev));
-    dev->SetAuthorizeStatus(NEW_ARRIVED);   // will be updated in ExecuteStrategy
+    dev->SetAuthorizeStatus(NEW_ARRIVED);
     USB_HILOGI(MODULE_USB_HOST,
         "device:%{public}s bus:%{public}hhu dev:%{public}hhu insert, cur device size: %{public}zu",
         name.c_str(), busNum, devNum, devices_.size());
     AddUsbSerialDevice(*dev);
+    ApplyDynamicControlToNewDevice(*dev);
     lock.unlock();
 
     // DONT hold unique_lock here: ExecuteStratgy quiries policy (requires the same lock with policy execution in MDM)
@@ -1419,7 +1435,7 @@ bool UsbHostManager::PublishCommonEvent(const std::string &event, UsbDevice &dev
     CommonEventData data(want);
     data.SetData(dev.getJsonString().c_str());
     CommonEventPublishInfo publishInfo;
-    if (dev.GetClass() == USB_BASE_CLASS_HUB) {
+    if (dev.GetClass() == BASE_CLASS_HUB) {
         publishInfo.SetSubscriberType(SubscriberType::SYSTEM_SUBSCRIBER_TYPE);
     } else if (!IsAudioDevice(dev)) {
         if (event == CommonEventSupport::COMMON_EVENT_USB_DEVICE_DETACHED) {
@@ -1693,24 +1709,6 @@ void UsbHostManager::InitDynamicControlEnabled(bool enabled)
 {
     isDynamicControlEnabled_.store(enabled);
     USB_HILOGI(MODULE_USB_HOST, "InitDynamicControlEnabled: enabled=%{public}d", int(enabled));
-    if (enabled) {
-        DisableAllNonHubDevicesForDynamicMode();
-    }
-}
-
-void UsbHostManager::SetDynamicControlEnabled(bool enabled)
-{
-    bool previous = isDynamicControlEnabled_.exchange(enabled);
-    USB_HILOGI(MODULE_USB_HOST, "SetDynamicControlEnabled: enabled=%{public}d, previous=%{public}d", int(enabled),
-               int(previous));
-    if (previous == enabled) {
-        return;
-    }
-    if (enabled) {
-        DisableAllNonHubDevicesForDynamicMode();
-    } else {
-        EnableAllNonHubDevicesForDynamicMode();
-    }
 }
 
 void UsbHostManager::SetDeviceControlEventSink(const std::function<void(const UsbDevice &device, bool attached)> &sink)
@@ -1718,11 +1716,8 @@ void UsbHostManager::SetDeviceControlEventSink(const std::function<void(const Us
     deviceControlEventSink_ = sink;
 }
 
-void UsbHostManager::ApplyDynamicControlPolicy()
+void UsbHostManager::SetAllNonHubDevicesAuthorized(bool authorized)
 {
-    if (!IsDynamicControlEnabled()) {
-        return;
-    }
     std::vector<std::pair<uint8_t, uint8_t>> pendingDevices;
     {
         std::shared_lock lock(devicesMutex_);
@@ -1731,73 +1726,21 @@ void UsbHostManager::ApplyDynamicControlPolicy()
             if (dev == nullptr || IsDynamicControlExcludedDevice(dev->GetClass())) {
                 continue;
             }
-            if (dev->GetAuthorizeStatus() == NEW_ARRIVED) {
-                pendingDevices.push_back(std::make_pair(dev->GetBusNum(), dev->GetDevAddr()));
+            if (dev->GetAuthorizeStatus() == (authorized ? ENABLED : DISABLED)) {
+                continue;
             }
+            pendingDevices.push_back(std::make_pair(dev->GetBusNum(), dev->GetDevAddr()));
         }
     }
     for (auto &device : pendingDevices) {
         // UsbDeviceAuthorize() expects the caller to hold devicesMutex_.
         std::unique_lock lock(devicesMutex_);
-        int32_t ret = UsbDeviceAuthorize(device.first, device.second, false, DYNAMIC_CONTROL_OPERATION_TYPE);
+        int32_t ret = UsbDeviceAuthorize(device.first, device.second, authorized, DYNAMIC_CONTROL_OPERATION_TYPE);
         if (ret != UEC_OK) {
-            USB_HILOGE(MODULE_USB_HOST,
-                       "dynamic control disable failed, bus:%{public}hhu dev:%{public}hhu ret:%{public}d", device.first,
-                       device.second, ret);
-        }
-    }
-}
-
-void UsbHostManager::DisableAllNonHubDevicesForDynamicMode()
-{
-    std::vector<std::pair<uint8_t, uint8_t>> pendingDevices;
-    {
-        std::shared_lock lock(devicesMutex_);
-        for (auto it = devices_.begin(); it != devices_.end(); ++it) {
-            UsbDevice *dev = it->second;
-            if (dev == nullptr || IsDynamicControlExcludedDevice(dev->GetClass())) {
-                continue;
-            }
-            if (dev->GetAuthorizeStatus() == DISABLED) {
-                continue;
-            }
-            pendingDevices.push_back(std::make_pair(dev->GetBusNum(), dev->GetDevAddr()));
-        }
-    }
-    for (auto &device : pendingDevices) {
-        std::unique_lock lock(devicesMutex_);
-        int32_t ret = UsbDeviceAuthorize(device.first, device.second, false, DYNAMIC_CONTROL_OPERATION_TYPE);
-        if (ret != UEC_OK) {
-            USB_HILOGE(MODULE_USB_HOST,
-                       "dynamic mode enable disable failed, bus:%{public}hhu dev:%{public}hhu ret:%{public}d",
-                       device.first, device.second, ret);
-        }
-    }
-}
-
-void UsbHostManager::EnableAllNonHubDevicesForDynamicMode()
-{
-    std::vector<std::pair<uint8_t, uint8_t>> pendingDevices;
-    {
-        std::shared_lock lock(devicesMutex_);
-        for (auto it = devices_.begin(); it != devices_.end(); ++it) {
-            UsbDevice *dev = it->second;
-            if (dev == nullptr || IsDynamicControlExcludedDevice(dev->GetClass())) {
-                continue;
-            }
-            if (dev->GetAuthorizeStatus() == ENABLED) {
-                continue;
-            }
-            pendingDevices.push_back(std::make_pair(dev->GetBusNum(), dev->GetDevAddr()));
-        }
-    }
-    for (auto &device : pendingDevices) {
-        std::unique_lock lock(devicesMutex_);
-        int32_t ret = UsbDeviceAuthorize(device.first, device.second, true, DYNAMIC_CONTROL_OPERATION_TYPE);
-        if (ret != UEC_OK) {
-            USB_HILOGE(MODULE_USB_HOST,
-                       "dynamic mode exit enable failed, bus:%{public}hhu dev:%{public}hhu ret:%{public}d",
-                       device.first, device.second, ret);
+            USB_HILOGE(
+                MODULE_USB_HOST,
+                "dynamic mode %{public}s non-HUB device failed, bus:%{public}hhu dev:%{public}hhu ret:%{public}d",
+                authorized ? "enable" : "disable", device.first, device.second, ret);
         }
     }
 }
@@ -2270,7 +2213,7 @@ int32_t UsbHostManager::ManageGlobalInterfaceImpl(bool disable)
     std::shared_lock lock(devicesMutex_);
     USB_HILOGI(MODULE_USB_HOST, "list size %{public}zu", devices_.size());
     for (auto it = devices_.begin(); it != devices_.end(); ++it) {
-        if ((disable && it->second->GetClass() != USB_BASE_CLASS_HUB) ||
+        if ((disable && it->second->GetClass() != BASE_CLASS_HUB) ||
             (IsUsbSerialDisable() && IsUsbSerialDevice(*it->second))) {
             continue;
         }
@@ -2313,7 +2256,7 @@ int32_t UsbHostManager::ManageDeviceImpl(int32_t vendorId, int32_t productId, bo
     USB_HILOGI(MODULE_USB_HOST, "list size %{public}zu, vId: %{public}d, pId: %{public}d, b: %{public}d",
         devices_.size(), vendorId, productId, disable);
     for (auto it = devices_.begin(); it != devices_.end(); ++it) {
-        if (it->second->GetClass() == USB_BASE_CLASS_HUB) {
+        if (it->second->GetClass() == BASE_CLASS_HUB) {
             continue;
         }
         if ((it->second->GetVendorId() == vendorId) && (it->second->GetProductId() == productId)) {
@@ -2340,7 +2283,7 @@ int32_t UsbHostManager::ManageInterfaceTypeImpl(InterfaceType interfaceType, boo
         return UEC_SERVICE_INVALID_VALUE;
     }
     for (auto it = devices_.begin(); it != devices_.end(); ++it) {
-        if (it->second->GetClass() == USB_BASE_CLASS_HUB || it->second->GetAuthorizeStatus() == DISABLED) {
+        if (it->second->GetClass() == BASE_CLASS_HUB || it->second->GetAuthorizeStatus() == DISABLED) {
             continue;
         }
         UsbDev dev = {it->second->GetBusNum(), it->second->GetDevAddr()};
@@ -2623,7 +2566,7 @@ void UsbHostManager::ManageUsbTypeInterfaceImpl(const std::vector<UsbDeviceType>
     int32_t ret = UEC_OK;
 
     for (auto it = devices_.begin(); it != devices_.end(); ++it) {
-        if (it->second->GetClass() == USB_BASE_CLASS_HUB || it->second->GetAuthorizeStatus() == DISABLED) {
+        if (it->second->GetClass() == BASE_CLASS_HUB || it->second->GetAuthorizeStatus() == DISABLED) {
             continue;
         }
 

@@ -337,7 +337,11 @@ void UsbService::OnStart()
 
     std::string dynamicControlValue = OHOS::system::GetParameter(DYNAMIC_CONTROL_MODE_PARAM, "0");
     if (usbHostManager_ != nullptr) {
-        usbHostManager_->InitDynamicControlEnabled(dynamicControlValue == "1");
+        bool enabled = (dynamicControlValue == "1");
+        usbHostManager_->InitDynamicControlEnabled(enabled);
+        if (enabled) {
+            usbHostManager_->SetAllNonHubDevicesAuthorized(false);
+        }
     }
     auto dynamicWatchRet = WatchParameter(
         DYNAMIC_CONTROL_MODE_PARAM,
@@ -1367,10 +1371,16 @@ void UsbService::OnDynamicControlParamChanged(const char *key, const char *value
         return;
     }
     USB_HILOGI(MODULE_USB_SERVICE, "watch dynamic control param: get %{public}s=%{public}s", key, value);
-    bool enabled = (std::string(value) == "1");
-    if (usbHostManager_ != nullptr) {
-        usbHostManager_->SetDynamicControlEnabled(enabled);
+    if (usbHostManager_ == nullptr) {
+        return;
     }
+    bool enabled = (std::string(value) == "1");
+    if (usbHostManager_->IsDynamicControlEnabled() == enabled) {
+        return;
+    }
+    usbHostManager_->InitDynamicControlEnabled(enabled);
+    // Entering the mode disables every non-HUB device; leaving it enables them again.
+    usbHostManager_->SetAllNonHubDevicesAuthorized(!enabled);
 }
 
 int32_t UsbService::CheckDynamicControlPermission(const char *operation)
@@ -1400,74 +1410,68 @@ int32_t UsbService::ValidateDynamicControlDeviceRef(uint8_t busNum, uint8_t devA
     if (busNum == 0 || devAddr < USB_DEVICE_ADDR_MIN || devAddr > USB_DEVICE_ADDR_MAX) {
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control invalid busNum/devAddr: %{public}hhu/%{public}hhu", busNum,
                    devAddr);
-        return DYNAMIC_CONTROL_INVALID_PARAM;
+        return UEC_INTERFACE_INVALID_VALUE;
     }
     if (!usbHostManager_->GetTargetDevice(busNum, devAddr, dev)) {
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control target device not attached, bus:%{public}hhu dev:%{public}hhu",
                    busNum, devAddr);
-        return DYNAMIC_CONTROL_DEVICE_NOT_ATTACHED;
+        return UEC_INTERFACE_NAME_NOT_FOUND;
     }
-    return DYNAMIC_CONTROL_OK;
+    return UEC_OK;
 }
 
-int32_t UsbService::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, int32_t &bizResult)
+int32_t UsbService::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized)
 {
-    bizResult = DYNAMIC_CONTROL_OK;
-    int32_t permRet = CheckDynamicControlPermission("UsbDeviceAuthorize");
-    if (permRet != UEC_OK) {
-        return permRet;
+    int32_t ret = CheckDynamicControlPermission("UsbDeviceAuthorize");
+    if (ret != UEC_OK) {
+        return ret;
     }
     if (usbHostManager_ == nullptr) {
         USB_HILOGE(MODULE_USB_SERVICE, "UsbService::usbHostManager_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
     UsbDevice dev;
-    bizResult = ValidateDynamicControlDeviceRef(busNum, devAddr, dev);
-    if (bizResult != DYNAMIC_CONTROL_OK) {
-        return UEC_OK;
+    ret = ValidateDynamicControlDeviceRef(busNum, devAddr, dev);
+    if (ret != UEC_OK) {
+        return ret;
     }
     if (IsRootHub(dev)) {
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control cannot manage root HUB device");
-        bizResult = UEC_INTERFACE_INVALID_OPERATION;
-        return UEC_OK;
+        return UEC_INTERFACE_INVALID_OPERATION;
     }
-    int32_t ret = usbHostManager_->UsbDeviceAuthorize(busNum, devAddr, authorized, DYNAMIC_CONTROL_OPERATION_TYPE);
+    ret = usbHostManager_->UsbDeviceAuthorize(busNum, devAddr, authorized, DYNAMIC_CONTROL_OPERATION_TYPE);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control device authorize failed, ret:%{public}d", ret);
-        return ret;
     }
-    return UEC_OK;
+    return ret;
 }
 
 int32_t UsbService::UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uint8_t configId, uint8_t interfaceId,
-                                          bool authorized, int32_t &bizResult)
+                                          bool authorized)
 {
-    bizResult = DYNAMIC_CONTROL_OK;
-    int32_t permRet = CheckDynamicControlPermission("UsbInterfaceAuthorize");
-    if (permRet != UEC_OK) {
-        return permRet;
+    int32_t ret = CheckDynamicControlPermission("UsbInterfaceAuthorize");
+    if (ret != UEC_OK) {
+        return ret;
     }
     if (usbHostManager_ == nullptr) {
         USB_HILOGE(MODULE_USB_SERVICE, "UsbService::usbHostManager_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
     UsbDevice dev;
-    bizResult = ValidateDynamicControlDeviceRef(busNum, devAddr, dev);
-    if (bizResult != DYNAMIC_CONTROL_OK) {
-        return UEC_OK;
+    ret = ValidateDynamicControlDeviceRef(busNum, devAddr, dev);
+    if (ret != UEC_OK) {
+        return ret;
     }
     if (IsRootHub(dev)) {
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control cannot manage root HUB interface");
-        bizResult = UEC_INTERFACE_INVALID_OPERATION;
-        return UEC_OK;
+        return UEC_INTERFACE_INVALID_OPERATION;
     }
     const HDI::Usb::V1_0::UsbDev usbDev = {busNum, devAddr};
-    int32_t ret = usbHostManager_->UsbInterfaceAuthorize(usbDev, configId, interfaceId, authorized);
+    ret = usbHostManager_->UsbInterfaceAuthorize(usbDev, configId, interfaceId, authorized);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control interface authorize failed, ret:%{public}d", ret);
-        return ret;
     }
-    return UEC_OK;
+    return ret;
 }
 
 int32_t UsbService::RegDeviceControlCallback(const sptr<IRemoteObject> &cb)
@@ -1478,7 +1482,7 @@ int32_t UsbService::RegDeviceControlCallback(const sptr<IRemoteObject> &cb)
     }
     if (cb == nullptr) {
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control callback is nullptr");
-        return DYNAMIC_CONTROL_INVALID_PARAM;
+        return UEC_INTERFACE_INVALID_VALUE;
     }
     IRemoteObject *key = cb.GetRefPtr();
     {
@@ -1529,7 +1533,7 @@ int32_t UsbService::UnRegDeviceControlCallback(const sptr<IRemoteObject> &cb)
     }
     if (cb == nullptr) {
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control callback is nullptr");
-        return DYNAMIC_CONTROL_INVALID_PARAM;
+        return UEC_INTERFACE_INVALID_VALUE;
     }
     RemoveDeviceControlSubscriber(cb.GetRefPtr());
     return UEC_OK;
@@ -1572,11 +1576,12 @@ void UsbService::SendDeviceControlEvent(const sptr<IRemoteObject> &remote, const
 {
     MessageParcel data;
     MessageParcel reply;
-    if (!device.Marshalling(data)) {
+    UsbDevice eventDevice(device);
+    if (!eventDevice.Marshalling(data)) {
         USB_HILOGE(MODULE_USB_SERVICE, "marshal dynamic control event device failed");
         return;
     }
-    data.WriteInt32(static_cast<int32_t>(device.GetAuthorizeStatus()));
+    data.WriteInt32(static_cast<int32_t>(eventDevice.GetAuthorizeStatus()));
     data.WriteBool(attached);
     // Bound the synchronous callback so a slow subscriber cannot stall the USB
     // service event/hotplug path indefinitely.
