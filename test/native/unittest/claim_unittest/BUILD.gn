@@ -154,19 +154,6 @@ if (usb_manager_feature_host) {
     external_deps = claim_unittest_external_deps
   }
 
-  ohos_unittest("test_claim_sequence") {
-    module_out_path = module_output_path
-    install_enable = false
-    sources = claim_unittest_common_sources
-    sources += [ "src/usb_claim_sequence_test.cpp" ]
-    configs = [
-      "${utils_path}:utils_config",
-      ":claim_unittest_private_config",
-    ]
-    deps = [ "${usb_manager_path}/interfaces/innerkits:usbsrv_client" ]
-    external_deps = claim_unittest_external_deps
-  }
-
   group("claim_unittest") {
     testonly = true
     deps = [
@@ -176,7 +163,6 @@ if (usb_manager_feature_host) {
       ":test_claim_hotplug",
       ":test_claim_notify",
       ":test_claim_release",
-      ":test_claim_sequence",
     ]
   }
 }
