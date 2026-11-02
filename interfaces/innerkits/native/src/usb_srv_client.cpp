@@ -243,11 +243,16 @@ int32_t UsbSrvClient::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool a
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
     std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
-    int32_t ret = proxy_->UsbDeviceAuthorize(busNum, devAddr, authorized);
+    int32_t funcResult = UEC_OK;
+    int32_t ret = proxy_->UsbDeviceAuthorize(busNum, devAddr, authorized, funcResult);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbDeviceAuthorize failed ret = %{public}d!", ret);
+        return ret;
     }
-    return ret;
+    if (funcResult != UEC_OK) {
+        USB_HILOGE(MODULE_USB_INNERKIT, "UsbDeviceAuthorize result = %{public}d!", funcResult);
+    }
+    return funcResult;
 }
 
 int32_t UsbSrvClient::UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uint8_t configId, uint8_t interfaceId,
@@ -256,11 +261,16 @@ int32_t UsbSrvClient::UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uin
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
     std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
-    int32_t ret = proxy_->UsbInterfaceAuthorize(busNum, devAddr, configId, interfaceId, authorized);
+    int32_t funcResult = UEC_OK;
+    int32_t ret = proxy_->UsbInterfaceAuthorize(busNum, devAddr, configId, interfaceId, authorized, funcResult);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "UsbInterfaceAuthorize failed ret = %{public}d!", ret);
+        return ret;
     }
-    return ret;
+    if (funcResult != UEC_OK) {
+        USB_HILOGE(MODULE_USB_INNERKIT, "UsbInterfaceAuthorize result = %{public}d!", funcResult);
+    }
+    return funcResult;
 }
 
 int32_t UsbSrvClient::RegDeviceControlCallback(const sptr<IRemoteObject> &cb)

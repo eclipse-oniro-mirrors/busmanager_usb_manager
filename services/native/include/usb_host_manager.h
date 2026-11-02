@@ -125,6 +125,8 @@ public:
     int32_t UsbAttachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid);
     int32_t UsbDetachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid);
     int32_t ClearHalt(uint8_t busNum, uint8_t devAddr, uint8_t interfaceId, uint8_t endpointId);
+    // Acquires devicesMutex_ internally. Use this when the caller does not already hold it.
+    int32_t AuthorizeDevice(uint8_t busNum, uint8_t devAddr, bool authorized, const std::string &operationType);
     // Caller must hold devicesMutex_ for the duration of the call.
     int32_t UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, const std::string &operationType);
     int32_t UsbInterfaceAuthorize(

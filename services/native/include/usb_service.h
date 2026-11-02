@@ -113,9 +113,9 @@ public:
     int32_t ManageInterfaceType(const std::vector<UsbDeviceTypeInfo> &devTypeInfo, bool disable) override;
     int32_t ManageUsbType(const std::vector<UsbDeviceTypeInfo> &devTypeInfo, bool disable) override;
     int32_t ManageUsbSerialDevice(bool disable);
-    int32_t UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized) override;
+    int32_t UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, int32_t &funcResult) override;
     int32_t UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uint8_t configId, uint8_t interfaceId,
-                                  bool authorized) override;
+                                  bool authorized, int32_t &funcResult) override;
     int32_t GetAllDevices(std::vector<UsbDeviceInfo> &deviceInfos) override;
     int32_t RegDeviceControlCallback(const sptr<IRemoteObject> &cb) override;
     int32_t UnRegDeviceControlCallback(const sptr<IRemoteObject> &cb) override;

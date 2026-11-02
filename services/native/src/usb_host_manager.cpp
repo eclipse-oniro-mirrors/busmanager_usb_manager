@@ -1745,6 +1745,13 @@ void UsbHostManager::SetAllNonHubDevicesAuthorized(bool authorized)
     }
 }
 
+int32_t UsbHostManager::AuthorizeDevice(uint8_t busNum, uint8_t devAddr, bool authorized,
+                                        const std::string &operationType)
+{
+    std::unique_lock lock(devicesMutex_);
+    return UsbDeviceAuthorize(busNum, devAddr, authorized, operationType);
+}
+
 int32_t UsbHostManager::UsbDeviceAuthorize(
     uint8_t busNum, uint8_t devAddr, bool authorized, const std::string &operationType)
 {

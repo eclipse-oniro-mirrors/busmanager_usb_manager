@@ -300,6 +300,7 @@ public:
             }
         } else if (code == static_cast<uint32_t>(IUsbServerIpcCode::COMMAND_USB_DEVICE_AUTHORIZE) ||
                    code == static_cast<uint32_t>(IUsbServerIpcCode::COMMAND_USB_INTERFACE_AUTHORIZE)) {
+            reply.WriteInt32(UEC_OK);
             reply.WriteInt32(authorizeRet);
         } else {
             reply.WriteInt32(UEC_OK);
@@ -350,6 +351,21 @@ UsbDevice *CreateCompositeTestDevice(uint8_t busNum, uint8_t devAddr, bool inter
     config.SetInterfaces({interface});
     device->SetConfigs({config});
     return device;
+}
+
+int32_t CallUsbDeviceAuthorize(UsbService &service, uint8_t busNum, uint8_t devAddr, bool authorized)
+{
+    int32_t funcResult = UEC_OK;
+    int32_t ret = service.UsbDeviceAuthorize(busNum, devAddr, authorized, funcResult);
+    return (ret == UEC_OK) ? funcResult : ret;
+}
+
+int32_t CallUsbInterfaceAuthorize(UsbService &service, uint8_t busNum, uint8_t devAddr, uint8_t configId,
+                                  uint8_t interfaceId, bool authorized)
+{
+    int32_t funcResult = UEC_OK;
+    int32_t ret = service.UsbInterfaceAuthorize(busNum, devAddr, configId, interfaceId, authorized, funcResult);
+    return (ret == UEC_OK) ? funcResult : ret;
 }
 
 class UsbDynamicControlServiceTest : public testing::Test {
@@ -833,33 +849,33 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_DeviceAuthorize,
 {
     USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_DeviceAuthorize start");
     UsbService::SetCallerValidForTest(0);
-    EXPECT_EQ(service_->UsbDeviceAuthorize(1, 2, true), UEC_SERVICE_INVALID_OPERATION);
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, true), UEC_SERVICE_INVALID_OPERATION);
     UsbService::SetCallerValidForTest(1);
-    EXPECT_EQ(service_->UsbDeviceAuthorize(0, 2, true), UEC_INTERFACE_INVALID_VALUE);
-    EXPECT_EQ(service_->UsbDeviceAuthorize(1, 2, true), UEC_INTERFACE_NAME_NOT_FOUND);
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 0, 2, true), UEC_INTERFACE_INVALID_VALUE);
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, true), UEC_INTERFACE_NAME_NOT_FOUND);
 
     UsbDevice *device = CreateServiceTestDevice(1, 2);
     ASSERT_NE(device, nullptr);
     ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
-    EXPECT_EQ(service_->UsbDeviceAuthorize(1, 2, true), UEC_OK);
-    EXPECT_EQ(service_->UsbDeviceAuthorize(1, 2, false), UEC_OK);
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, true), UEC_OK);
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, false), UEC_OK);
 
     UsbDevice *rootHub = CreateServiceTestDevice(1, 1, BASE_CLASS_HUB);
     ASSERT_NE(rootHub, nullptr);
     ASSERT_TRUE(service_->usbHostManager_->AddDevice(rootHub));
-    EXPECT_EQ(service_->UsbDeviceAuthorize(1, 1, false), UEC_INTERFACE_INVALID_OPERATION);
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 1, false), UEC_INTERFACE_INVALID_OPERATION);
 
     UsbDevice *nonRootHub = CreateServiceTestDevice(1, 3, BASE_CLASS_HUB);
     ASSERT_NE(nonRootHub, nullptr);
     ASSERT_TRUE(service_->usbHostManager_->AddDevice(nonRootHub));
-    EXPECT_EQ(service_->UsbDeviceAuthorize(1, 3, false), UEC_OK);
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 3, false), UEC_OK);
 
     mock_->deviceRet = UEC_INTERFACE_INVALID_OPERATION;
-    EXPECT_EQ(service_->UsbDeviceAuthorize(1, 2, true), UEC_INTERFACE_INVALID_OPERATION);
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, true), UEC_INTERFACE_INVALID_OPERATION);
 
     auto host = service_->usbHostManager_;
     service_->usbHostManager_ = nullptr;
-    EXPECT_EQ(service_->UsbDeviceAuthorize(1, 2, true), UEC_SERVICE_INVALID_VALUE);
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, true), UEC_SERVICE_INVALID_VALUE);
     service_->usbHostManager_ = host;
 }
 
@@ -872,26 +888,26 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_InterfaceAuthori
 {
     USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_InterfaceAuthorize start");
     UsbService::SetCallerValidForTest(0);
-    EXPECT_EQ(service_->UsbInterfaceAuthorize(1, 2, 0, 0, true), UEC_SERVICE_INVALID_OPERATION);
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 0, 0, true), UEC_SERVICE_INVALID_OPERATION);
     UsbService::SetCallerValidForTest(1);
-    EXPECT_EQ(service_->UsbInterfaceAuthorize(1, 2, 0, 0, true), UEC_INTERFACE_NAME_NOT_FOUND);
-    EXPECT_EQ(service_->UsbInterfaceAuthorize(0, 2, 0, 0, true), UEC_INTERFACE_INVALID_VALUE);
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 0, 0, true), UEC_INTERFACE_NAME_NOT_FOUND);
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 0, 2, 0, 0, true), UEC_INTERFACE_INVALID_VALUE);
 
     UsbDevice *device = CreateServiceTestDevice(1, 2);
     ASSERT_NE(device, nullptr);
     ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
-    EXPECT_EQ(service_->UsbInterfaceAuthorize(1, 2, 0, 0, true), UEC_OK);
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 0, 0, true), UEC_OK);
     mock_->interfaceRet = UEC_INTERFACE_INVALID_OPERATION;
-    EXPECT_EQ(service_->UsbInterfaceAuthorize(1, 2, 0, 0, false), UEC_INTERFACE_INVALID_OPERATION);
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 0, 0, false), UEC_INTERFACE_INVALID_OPERATION);
 
     UsbDevice *rootHub = CreateServiceTestDevice(1, 1, BASE_CLASS_HUB);
     ASSERT_NE(rootHub, nullptr);
     ASSERT_TRUE(service_->usbHostManager_->AddDevice(rootHub));
-    EXPECT_EQ(service_->UsbInterfaceAuthorize(1, 1, 0, 0, false), UEC_INTERFACE_INVALID_OPERATION);
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 1, 0, 0, false), UEC_INTERFACE_INVALID_OPERATION);
 
     auto host = service_->usbHostManager_;
     service_->usbHostManager_ = nullptr;
-    EXPECT_EQ(service_->UsbInterfaceAuthorize(1, 2, 0, 0, true), UEC_SERVICE_INVALID_VALUE);
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 0, 0, true), UEC_SERVICE_INVALID_VALUE);
     service_->usbHostManager_ = host;
 }
 
@@ -1168,7 +1184,7 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_AuthorizeThenQue
     ASSERT_NE(device, nullptr);
     ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
     service_->usbHostManager_->InitDynamicControlEnabled(true);
-    EXPECT_EQ(service_->UsbDeviceAuthorize(1, 2, true), UEC_OK);
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, true), UEC_OK);
 
     std::vector<UsbDeviceInfo> infos;
     ASSERT_EQ(service_->GetAllDevices(infos), UEC_OK);
@@ -1246,9 +1262,9 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_AuthorizeIdempot
     UsbDevice *device = CreateServiceTestDevice(1, 2);
     ASSERT_NE(device, nullptr);
     ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
-    EXPECT_EQ(service_->UsbDeviceAuthorize(1, 2, false), UEC_OK);
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, false), UEC_OK);
     mock_->deviceCalls.clear();
-    EXPECT_EQ(service_->UsbDeviceAuthorize(1, 2, false), UEC_OK);
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, false), UEC_OK);
     EXPECT_TRUE(mock_->deviceCalls.empty());
 }
 
@@ -1264,7 +1280,7 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_InterfaceInvalid
     ASSERT_NE(device, nullptr);
     ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
     mock_->interfaceRet = UEC_INTERFACE_INVALID_VALUE;
-    EXPECT_EQ(service_->UsbInterfaceAuthorize(1, 2, 0xFF, 0xFF, true), UEC_INTERFACE_INVALID_VALUE);
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 0xFF, 0xFF, true), UEC_INTERFACE_INVALID_VALUE);
     ASSERT_EQ(mock_->interfaceCalls.size(), 1);
     EXPECT_EQ(mock_->interfaceCalls[0].configId, 0xFF);
     EXPECT_EQ(mock_->interfaceCalls[0].interfaceId, 0xFF);

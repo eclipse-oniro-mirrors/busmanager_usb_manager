@@ -1420,58 +1420,66 @@ int32_t UsbService::ValidateDynamicControlDeviceRef(uint8_t busNum, uint8_t devA
     return UEC_OK;
 }
 
-int32_t UsbService::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized)
+int32_t UsbService::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, int32_t &funcResult)
 {
-    int32_t ret = CheckDynamicControlPermission("UsbDeviceAuthorize");
-    if (ret != UEC_OK) {
-        return ret;
+    // IDL declares an int return value, generated as funcResult. Return the same code
+    // as the IPC status on failures so an abnormal path never reports UEC_OK.
+    funcResult = CheckDynamicControlPermission("UsbDeviceAuthorize");
+    if (funcResult != UEC_OK) {
+        return funcResult;
     }
     if (usbHostManager_ == nullptr) {
         USB_HILOGE(MODULE_USB_SERVICE, "UsbService::usbHostManager_ is nullptr");
-        return UEC_SERVICE_INVALID_VALUE;
+        funcResult = UEC_SERVICE_INVALID_VALUE;
+        return funcResult;
     }
     UsbDevice dev;
-    ret = ValidateDynamicControlDeviceRef(busNum, devAddr, dev);
-    if (ret != UEC_OK) {
-        return ret;
+    funcResult = ValidateDynamicControlDeviceRef(busNum, devAddr, dev);
+    if (funcResult != UEC_OK) {
+        return funcResult;
     }
     if (IsRootHub(dev)) {
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control cannot manage root HUB device");
-        return UEC_INTERFACE_INVALID_OPERATION;
+        funcResult = UEC_INTERFACE_INVALID_OPERATION;
+        return funcResult;
     }
-    ret = usbHostManager_->UsbDeviceAuthorize(busNum, devAddr, authorized, DYNAMIC_CONTROL_OPERATION_TYPE);
-    if (ret != UEC_OK) {
-        USB_HILOGE(MODULE_USB_SERVICE, "dynamic control device authorize failed, ret:%{public}d", ret);
+    funcResult = usbHostManager_->AuthorizeDevice(busNum, devAddr, authorized, DYNAMIC_CONTROL_OPERATION_TYPE);
+    if (funcResult != UEC_OK) {
+        USB_HILOGE(MODULE_USB_SERVICE, "dynamic control device authorize failed, ret:%{public}d", funcResult);
     }
-    return ret;
+    return funcResult;
 }
 
 int32_t UsbService::UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uint8_t configId, uint8_t interfaceId,
-                                          bool authorized)
+                                          bool authorized, int32_t &funcResult)
 {
-    int32_t ret = CheckDynamicControlPermission("UsbInterfaceAuthorize");
-    if (ret != UEC_OK) {
-        return ret;
+    // IDL declares an int return value, generated as funcResult. Return the same code
+    // as the IPC status on failures so an abnormal path never reports UEC_OK.
+    funcResult = CheckDynamicControlPermission("UsbInterfaceAuthorize");
+    if (funcResult != UEC_OK) {
+        return funcResult;
     }
     if (usbHostManager_ == nullptr) {
         USB_HILOGE(MODULE_USB_SERVICE, "UsbService::usbHostManager_ is nullptr");
-        return UEC_SERVICE_INVALID_VALUE;
+        funcResult = UEC_SERVICE_INVALID_VALUE;
+        return funcResult;
     }
     UsbDevice dev;
-    ret = ValidateDynamicControlDeviceRef(busNum, devAddr, dev);
-    if (ret != UEC_OK) {
-        return ret;
+    funcResult = ValidateDynamicControlDeviceRef(busNum, devAddr, dev);
+    if (funcResult != UEC_OK) {
+        return funcResult;
     }
     if (IsRootHub(dev)) {
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control cannot manage root HUB interface");
-        return UEC_INTERFACE_INVALID_OPERATION;
+        funcResult = UEC_INTERFACE_INVALID_OPERATION;
+        return funcResult;
     }
     const HDI::Usb::V1_0::UsbDev usbDev = {busNum, devAddr};
-    ret = usbHostManager_->UsbInterfaceAuthorize(usbDev, configId, interfaceId, authorized);
-    if (ret != UEC_OK) {
-        USB_HILOGE(MODULE_USB_SERVICE, "dynamic control interface authorize failed, ret:%{public}d", ret);
+    funcResult = usbHostManager_->UsbInterfaceAuthorize(usbDev, configId, interfaceId, authorized);
+    if (funcResult != UEC_OK) {
+        USB_HILOGE(MODULE_USB_SERVICE, "dynamic control interface authorize failed, ret:%{public}d", funcResult);
     }
-    return ret;
+    return funcResult;
 }
 
 int32_t UsbService::RegDeviceControlCallback(const sptr<IRemoteObject> &cb)
