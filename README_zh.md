@@ -17,6 +17,21 @@ USB服务框架如下图所示：
 2. USB Service：主要实现HAL层数据接收、解析、分发，前后台的策略管控，对该设备USB的管理，USB权限管控等。
 3. USB HAL层：提供给用户态可直接调用的驱动能力接口，按照功能分类三大类：DDK初始化类、对interface对象操作类、对request对象操作类，可以提供DDK初始化、interface绑定和释放，打开和关闭操作，request的申请和释放，同步和异步传输等。HAL层代码位于[drivers\_peripheral](https://gitcode.com/openharmony/drivers_peripheral/blob/master/README_zh.md)
 
+### 串口能力说明<a name="section15658513184020"></a>
+
+本仓 `services/native/src/serial_manager.cpp` 提供 USB 转串口的基础通信能力：端口列表查询、打开与关闭、同步读写，以及波特率、数据位、停止位、校验位等串口属性的读写；端口归属按 tokenId 校验，串口操作会上报审计事件。该模块在检测到 USB 转串口设备时启用。
+
+板载串口、更多串口类型，以及更完整的串口信号管理（RTS/CTS、DTR/DSR、flush/drain/断帧）由独立的串口管理组件提供，详见 [serial_manager](https://gitcode.com/openharmony-sig/busmanager_serial_manager)。
+
+| 能力维度 | 本仓 serial 模块 | serial_manager |
+| --- | --- | --- |
+| 设备范围 | USB 转串口（`ttyUSB`） | 板载串口与 USB 转串口 |
+| 对外接口 | `@ohos.usbManager.serial` | `@ohos.busManager.serial` |
+| 通信功能 | 同步/异步读写、属性配置 | 异步回调收发、信号与缓冲控制 |
+| 授权模型 | 按 tokenId 校验端口归属 | 应用级授权，授权结果持久化 |
+
+两者最终操作同一批 USB 转串口设备，但端口标识方式不同：本仓使用 `portId`（对应 USB 设备的 bus/dev、VID/PID、序列号），serial_manager 使用设备名。同一端口请勿同时由两个服务打开；新业务建议优先使用 serial_manager，存量 USB 业务可继续使用本仓能力。
+
 ## 目录<a name="section19472752217"></a>
 ```
 base/usb/usb_manager
@@ -141,6 +156,8 @@ usb.setCurrentFunctions(funType).then(data => {
 ```
 
 ## 相关仓<a name="section63151229062"></a>
+
+[serial\_manager](https://gitcode.com/openharmony-sig/busmanager_serial_manager)（通用串口管理组件）
 
 [驱动子系统](https://gitcode.com/openharmony/docs/blob/master/zh-cn/readme/%E9%A9%B1%E5%8A%A8%E5%AD%90%E7%B3%BB%E7%BB%9F.md)
 
