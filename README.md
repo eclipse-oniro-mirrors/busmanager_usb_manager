@@ -19,6 +19,21 @@ The architecture logically consists of three layers:
 2. USB Service: interacts with the HAL layer to receive, parse, and distribute data, manages foreground and background policies, and performs USB device management and right control.
 3. USB HAL: provides driver capability APIs that can be directly called in user mode. The APIs are classified into the DDK initialization class, interface operation class, and request operation class by function. They can be used to perform DDK initialization, bind/release and open/close an interface, allocate/release a request, and implement isochronous or non-isochronous transfer. The USB HAL code is stored in [drivers\_peripheral](https://gitcode.com/openharmony/drivers_peripheral/blob/master/README.md).
 
+### Serial Capability`<a name="section15658513184020"></a>`
+
+`services/native/src/serial_manager.cpp` in this repository provides basic communication over USB-to-serial ports: port enumeration, open and close, synchronous read and write, and read/write of serial attributes such as baud rate, data bits, stop bits, and parity. Port ownership is verified by tokenId, and serial operations are reported as audit events. The module is enabled when a USB-to-serial device is detected.
+
+On-board serial ports, additional port types, and full serial signal management (RTS/CTS, DTR/DSR, flush/drain/sendBrk) are provided by the dedicated serial management component. For details, see [serial_manager](https://gitcode.com/openharmony-sig/busmanager_serial_manager).
+
+| Capability | serial module in this repository | serial_manager |
+| --- | --- | --- |
+| Device scope | USB-to-serial ports (`ttyUSB`) | On-board serial ports and USB-to-serial ports |
+| External API | `@ohos.usbManager.serial` | `@ohos.busManager.serial` |
+| Communication | Synchronous/asynchronous read and write, attribute configuration | Callback-based transfer, signal and buffer control |
+| Authorization | Port ownership verified by tokenId | Application-level authorization, result persisted |
+
+Both components ultimately operate the same USB-to-serial devices, but identify ports differently: this repository uses a `portId` (derived from the USB bus/dev, VID/PID, and serial number), while serial_manager uses the device name. A port should not be opened by both services at the same time. New services are advised to use serial_manager, while existing USB services can continue to use the capabilities of this repository.
+
 ## Directory Structure`<a name="section19472752217"></a>`
 
 ```
@@ -166,6 +181,8 @@ usb.setCurrentFunctions(funType).then(data => {
 ```
 
 ## Repositories Involved`<a name="section63151229062"></a>`
+
+[serial\_manager](https://gitcode.com/openharmony-sig/busmanager_serial_manager) (general serial port management component)
 
 [Drive Subsystem](https://gitcode.com/openharmony/docs/blob/master/en/readme/driver.md)
 
