@@ -113,6 +113,10 @@ int32_t SerialManager::SerialOpen(int32_t portId)
 
     {
         std::lock_guard<std::mutex> guard(portTokenMapMutex_);
+        if (portTokenMap_.find(portId) != portTokenMap_.end()) {
+            USB_HILOGE(MODULE_USB_SERIAL, "%{public}s: The port has been opened", __func__);
+            return OHOS::USB::UEC_SERIAL_PORT_REPEAT_OPEN;
+        }
         portTokenMap_[portId] = IPCSkeleton::GetCallingTokenID();
     }
     ReportSerialOperationSecurityInfo(portId, SERIAL_OPEN, timeMs);
@@ -122,10 +126,10 @@ int32_t SerialManager::SerialOpen(int32_t portId)
 int32_t SerialManager::SerialClose(int32_t portId)
 {
     USB_HILOGI(MODULE_USB_SERIAL, "%{public}s: start", __func__);
-
+    std::map<int32_t, uint32_t>::iterator it = portTokenMap_.end();
     {
         std::lock_guard<std::mutex> guard(portTokenMapMutex_);
-        auto it = portTokenMap_.find(portId);
+        it = portTokenMap_.find(portId);
         if (it == portTokenMap_.end()) {
             USB_HILOGE(MODULE_USB_SERIAL, "%{public}s: The port is not open", __func__);
             return OHOS::USB::UEC_SERIAL_PORT_NOT_OPEN;
@@ -134,7 +138,6 @@ int32_t SerialManager::SerialClose(int32_t portId)
             USB_HILOGE(MODULE_USB_SERIAL, "%{public}s: The tokenId corresponding to the port is incorrect", __func__);
             return OHOS::USB::UEC_SERVICE_PERMISSION_DENIED;
         }
-        portTokenMap_.erase(it);
     }
 
     uint64_t timeMs = USB::UsbSecurityReport::GetCurrentTime();
@@ -142,6 +145,10 @@ int32_t SerialManager::SerialClose(int32_t portId)
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_SERIAL, "%{public}s: SerialClose failed ret = %{public}d", __func__, ret);
         return ErrorCodeWrap(ret);
+    }
+    {
+        std::lock_guard<std::mutex> guard(portTokenMapMutex_);
+        portTokenMap_.erase(it);
     }
     ReportSerialOperationSecurityInfo(portId, SERIAL_CLOSE, timeMs);
 

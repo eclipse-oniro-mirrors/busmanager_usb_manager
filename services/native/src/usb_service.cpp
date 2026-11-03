@@ -966,7 +966,7 @@ void UsbService::RegisterExclusiveCallback(const std::string &key, uint8_t busNu
         return;
     }
     sptr<ClaimDeathRecipient> recipient =
-        new ClaimDeathRecipient(this, busNum, devAddr, interfaceid, tokenId);
+        new ClaimDeathRecipient(busNum, devAddr, interfaceid, tokenId);
     if (recipient == nullptr || !cb->AsObject()->AddDeathRecipient(recipient)) {
         USB_HILOGE(MODULE_USB_HOST, "ClaimInterfaceExclusive add DeathRecipient failed");
         return;
@@ -3047,8 +3047,9 @@ void UsbService::UsbdDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &obj
 void UsbService::SerialDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &object)
 {
     USB_HILOGI(MODULE_USB_SERVICE, "UsbService SerialDeathRecipient enter");
-    service_->FreeTokenId(this->portId_, this->tokenId_);
-    service_->CancelSerialRight(this->portId_);
+    sptr<UsbService> service = UsbService::GetGlobalInstance();
+    service->FreeTokenId(this->portId_, this->tokenId_);
+    service->CancelSerialRight(this->portId_);
 }
 // LCOV_EXCL_STOP
 
@@ -3078,12 +3079,13 @@ void UsbService::ClaimDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &ob
 {
     USB_HILOGI(MODULE_USB_SERVICE, "ClaimDeathRecipient enter busNum=%{public}hhu devAddr=%{public}hhu "
         "interfaceid=%{public}hhu tokenId=%{public}u", busNum_, devAddr_, interfaceid_, tokenId_);
-    std::string key = service_->MakeClaimKey(busNum_, devAddr_, interfaceid_);
+    sptr<UsbService> service = UsbService::GetGlobalInstance();
+    std::string key = service->MakeClaimKey(busNum_, devAddr_, interfaceid_);
     bool needReleaseHdi = false;
     {
-        std::lock_guard<std::mutex> guard(service_->claimMutex_);
-        auto it = service_->claimStateMap_.find(key);
-        if (it == service_->claimStateMap_.end()) {
+        std::lock_guard<std::mutex> guard(service->claimMutex_);
+        auto it = service->claimStateMap_.find(key);
+        if (it == service->claimStateMap_.end()) {
             return;
         }
         if (it->second.exclusiveOwner != tokenId_) {
@@ -3094,11 +3096,11 @@ void UsbService::ClaimDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &ob
         it->second.claimRecipient = nullptr;
         if (!it->second.normalClaimed) {
             needReleaseHdi = true;
-            service_->claimStateMap_.erase(it);
+            service->claimStateMap_.erase(it);
         }
     }
-    if (needReleaseHdi && service_->usbHostManager_ != nullptr) {
-        service_->usbHostManager_->ReleaseInterface(busNum_, devAddr_, interfaceid_);
+    if (needReleaseHdi && service->usbHostManager_ != nullptr) {
+        service->usbHostManager_->ReleaseInterface(busNum_, devAddr_, interfaceid_);
     }
     USB_HILOGI(MODULE_USB_SERVICE, "ClaimDeathRecipient exit");
 }
@@ -3238,7 +3240,7 @@ int32_t UsbService::SerialOpen(int32_t portId, const sptr<IRemoteObject> &serial
     }
 
     uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
-    sptr<UsbService::SerialDeathRecipient> serialRecipient_ = new SerialDeathRecipient(this, portId, tokenId);
+    sptr<UsbService::SerialDeathRecipient> serialRecipient_ = new SerialDeathRecipient(portId, tokenId);
     if (serialRecipient_ == nullptr) {
         USB_HILOGE(MODULE_USB_SERVICE, "%{public}s: serialRecipient_ is nullptr", __func__);
         ReportUsbSerialOperationFaultSysEvent(portId, "SerialOpen", UEC_SERVICE_INVALID_VALUE,
@@ -3255,10 +3257,14 @@ int32_t UsbService::SerialOpen(int32_t portId, const sptr<IRemoteObject> &serial
 
     ret = usbSerialManager_->SerialOpen(portId);
     if (ret != UEC_OK) {
+        serialRemote->RemoveDeathRecipient(serialRecipient_);
         USB_HILOGE(MODULE_USB_SERVICE, "%{public}s: SerialOpen failed", __func__);
         ReportUsbSerialOperationFaultSysEvent(portId, "SerialOpen", ret, "SerialOpen failed");
         return ret;
     }
+    std::lock_guard<std::mutex> guard(serialClientMutex_);
+    serialClientInfo info = {serialRemote, serialRecipient_};
+    serialClientMap_[portId] = info;
 
     ReportUsbSerialOperationSysEvent(portId, "SerialOpen");
     return UEC_OK;
@@ -3281,6 +3287,14 @@ int32_t UsbService::SerialClose(int32_t portId)
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_SERVICE, "%{public}s: SerialClose failed", __func__);
         ReportUsbSerialOperationFaultSysEvent(portId, "SerialClose", ret, "SerialClose failed");
+    }
+    std::lock_guard<std::mutex> guard(serialClientMutex_);
+    auto it = serialClientMap_.find(portId);
+    if (it != serialClientMap_.end()) {
+        if (it->second.serialRemote != nullptr && it->second.serialRecipient != nullptr) {
+            it->second.serialRemote->RemoveDeathRecipient(it->second.serialRecipient);
+        }
+        serialClientMap_.erase(it);
     }
     return ret;
 }
