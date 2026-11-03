@@ -27,6 +27,9 @@
 #include "usb_server_proxy.h"
 #include "usb_service.h"
 #include "usb_srv_client.h"
+#ifdef USB_MANAGER_PASS_THROUGH
+#include "v2_0/usb_host_interface_proxy.h"
+#endif
 
 using namespace testing::ext;
 using namespace OHOS::USB;
@@ -263,6 +266,16 @@ public:
 class MockDeviceControlRemote : public IPCObjectStub {
 public:
     MockDeviceControlRemote() : IPCObjectStub(u"MockDeviceControlRemote") {}
+    bool AddDeathRecipient(const sptr<IRemoteObject::DeathRecipient> &recipient) override
+    {
+        (void)recipient;
+        return true;
+    }
+    bool RemoveDeathRecipient(const sptr<IRemoteObject::DeathRecipient> &recipient) override
+    {
+        (void)recipient;
+        return true;
+    }
     int SendRequest(uint32_t code, MessageParcel &data, MessageParcel &reply, MessageOption &option) override
     {
         lastCode = code;
@@ -284,6 +297,21 @@ public:
     int32_t sendRet = 0;
     int32_t sendCount = 0;
 };
+
+#ifdef USB_MANAGER_PASS_THROUGH
+class MockHdiRemote : public IPCObjectStub {
+public:
+    MockHdiRemote() : IPCObjectStub(u"MockHdiRemote") {}
+    int SendRequest(uint32_t code, MessageParcel &data, MessageParcel &reply, MessageOption &option) override
+    {
+        (void)code;
+        (void)data;
+        (void)reply;
+        (void)option;
+        return HDF_SUCCESS;
+    }
+};
+#endif
 
 class MockUsbServerRemote : public IPCObjectStub {
 public:
@@ -379,6 +407,13 @@ public:
         mock_ = new (std::nothrow) MockUsbDeviceInterface();
         ASSERT_NE(mock_, nullptr);
         service_->usbHostManager_->usbDeviceInterface_ = mock_;
+#ifdef USB_MANAGER_PASS_THROUGH
+        hdiRemote_ = new (std::nothrow) MockHdiRemote();
+        ASSERT_NE(hdiRemote_, nullptr);
+        service_->usbHostManager_->usbHostInterface_ =
+            new (std::nothrow) OHOS::HDI::Usb::V2_0::UsbHostInterfaceProxy(hdiRemote_);
+        ASSERT_NE(service_->usbHostManager_->usbHostInterface_, nullptr);
+#endif
     }
 
     void TearDown() override
@@ -390,6 +425,9 @@ public:
 
     sptr<UsbService> service_;
     sptr<MockUsbDeviceInterface> mock_;
+#ifdef USB_MANAGER_PASS_THROUGH
+    sptr<MockHdiRemote> hdiRemote_;
+#endif
 };
 
 constexpr uint8_t DYN_TEST_BUS_NUM_1 = 1;
