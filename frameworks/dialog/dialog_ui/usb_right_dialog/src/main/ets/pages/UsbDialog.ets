@@ -17,6 +17,7 @@ import { AlertDialog } from '@ohos.arkui.advanced.Dialog'
 import usbMgr from '@ohos.usbManager'
 import { terminateDialog } from '../util/DialogUtil';
 import serialManager from '@ohos.usbManager.serial'
+import uiMaterial from '@ohos.arkui.uiMaterial'
 
 @Entry
 @Component
@@ -60,6 +61,9 @@ struct IndexHapComponent {
         }
       },
     }),
+    systemMaterial: new uiMaterial.ImmersiveMaterial({ style:uiMaterial.ImmersiveStyle.ULTRA_THICK }),
+    edgeLightMode:EdgeLightMode.EDGELIGHT_AUTO,
+    distortionMode:DistortionMode.DISTORTION_AUTO,
     autoCancel: false,
     cancel: () => {
       console.info('USBRight dialog canceled !');
