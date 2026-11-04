@@ -244,12 +244,11 @@ private:
 
     class SerialDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
-        SerialDeathRecipient(UsbService *service, int32_t portId, uint32_t tokenId)
-            : service_(service), portId_(portId), tokenId_(tokenId){};
+        SerialDeathRecipient(int32_t portId, uint32_t tokenId)
+            : portId_(portId), tokenId_(tokenId){};
         ~SerialDeathRecipient() {};
         void OnRemoteDied(const wptr<IRemoteObject> &object) override;
     private:
-        UsbService *service_;
         int32_t portId_;
         uint32_t tokenId_;
     };
@@ -276,14 +275,13 @@ private:
 
     class ClaimDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
-        ClaimDeathRecipient(UsbService *service, uint8_t busNum, uint8_t devAddr, uint8_t interfaceid,
+        ClaimDeathRecipient(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid,
             uint32_t tokenId)
-            : service_(service), busNum_(busNum), devAddr_(devAddr),
+            : busNum_(busNum), devAddr_(devAddr),
               interfaceid_(interfaceid), tokenId_(tokenId) {};
         ~ClaimDeathRecipient() {};
         void OnRemoteDied(const wptr<IRemoteObject> &object) override;
     private:
-        UsbService *service_;
         uint8_t busNum_;
         uint8_t devAddr_;
         uint8_t interfaceid_;
@@ -394,6 +392,12 @@ private:
     sptr<OHOS::HDI::Usb::Serial::V1_0::ISerialInterface> seriald_ = nullptr;
     uint32_t unloadSelfTimerId_ {UINT32_MAX};
     sptr<IRemoteObject::DeathRecipient> recipient_;
+    struct serialClientInfo {
+        sptr<IRemoteObject> serialRemote;
+        sptr<UsbService::SerialDeathRecipient> serialRecipient;
+    };
+    std::map<int32_t, serialClientInfo> serialClientMap_;
+    std::mutex serialClientMutex_;
 };
 } // namespace USB
 } // namespace OHOS
