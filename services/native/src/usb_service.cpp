@@ -3071,6 +3071,14 @@ void UsbService::AccessoryDeathRecipient::OnRemoteDied(const wptr<IRemoteObject>
 void UsbService::FreeTokenId(int32_t portId, uint32_t tokenId)
 {
     usbSerialManager_->FreeTokenId(portId, tokenId);
+    std::lock_guard<std::mutex> guard(serialClientMutex_);
+    auto it = serialClientMap_.find(portId);
+    if (it != serialClientMap_.end()) {
+        if (it->second.serialRemote != nullptr && it->second.serialRecipient != nullptr) {
+            it->second.serialRemote->RemoveDeathRecipient(it->second.serialRecipient);
+        }
+        serialClientMap_.erase(it);
+    }
 }
 // LCOV_EXCL_STOP
 
