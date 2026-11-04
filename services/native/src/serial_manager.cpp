@@ -107,17 +107,17 @@ int32_t SerialManager::SerialOpen(int32_t portId)
     uint64_t timeMs = USB::UsbSecurityReport::GetCurrentTime();
     int32_t ret = serial_->SerialOpen(portId);
     if (ret != UEC_OK) {
+        std::lock_guard<std::mutex> guard(portTokenMapMutex_);
+        if (portTokenMap_.find(portId) != portTokenMap_.end()) {
+            USB_HILOGE(MODULE_USB_SERIAL, "%{public}s: The port has been opened", __func__);
+            return OHOS::USB::UEC_SERIAL_PORT_REPEAT_OPEN;
+        }
         USB_HILOGE(MODULE_USB_SERIAL, "%{public}s: SerialOpen failed ret = %{public}d", __func__, ret);
         return ErrorCodeWrap(ret);
     }
 
     {
         std::lock_guard<std::mutex> guard(portTokenMapMutex_);
-        if (portTokenMap_.find(portId) != portTokenMap_.end()) {
-            serial_->SerialClose(portId);
-            USB_HILOGE(MODULE_USB_SERIAL, "%{public}s: The port has been opened", __func__);
-            return OHOS::USB::UEC_SERIAL_PORT_REPEAT_OPEN;
-        }
         portTokenMap_[portId] = IPCSkeleton::GetCallingTokenID();
     }
     ReportSerialOperationSecurityInfo(portId, SERIAL_OPEN, timeMs);
@@ -149,7 +149,7 @@ int32_t SerialManager::SerialClose(int32_t portId)
     {
         std::lock_guard<std::mutex> guard(portTokenMapMutex_);
         auto it = portTokenMap_.find(portId);
-        if (it != portTokenMap_.end()) {
+        if (it != portTokenMap_.end() && it->second == IPCSkeleton::GetCallingTokenID()) {
             portTokenMap_.erase(it);
         }
     }
