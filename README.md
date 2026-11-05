@@ -28,7 +28,7 @@ On-board serial ports, additional port types, and full serial signal management 
 | Capability | serial module in this repository | serial_manager |
 | --- | --- | --- |
 | Device scope | USB-to-serial ports (`ttyUSB`) | On-board serial ports and USB-to-serial ports |
-| External API | `@ohos.usbManager.serial` | `@ohos.busManager.serial` |
+| External API | USB serial APIs of usb_manager | `@ohos.busManager.serial` |
 | Communication | Synchronous/asynchronous read and write, attribute configuration | Callback-based transfer, signal and buffer control |
 | Authorization | Port ownership verified by tokenId | Application-level authorization, result persisted |
 
