@@ -26,7 +26,7 @@ USB服务框架如下图所示：
 | 能力维度 | 本仓 serial 模块 | serial_manager |
 | --- | --- | --- |
 | 设备范围 | USB 转串口（`ttyUSB`） | 板载串口与 USB 转串口 |
-| 对外接口 | `@ohos.usbManager.serial` | `@ohos.busManager.serial` |
+| 对外接口 | usb_manager 的 USB 串口 API | `@ohos.busManager.serial` |
 | 通信功能 | 同步/异步读写、属性配置 | 异步回调收发、信号与缓冲控制 |
 | 授权模型 | 按 tokenId 校验端口归属 | 应用级授权，授权结果持久化 |
 
