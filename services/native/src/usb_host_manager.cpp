@@ -42,6 +42,8 @@
 #include "usbd_transfer_callback_impl.h"
 #include "usb_napi_errors.h"
 #include "accesstoken_kit.h"
+#undef INVALID_STRING_VALUE
+#include "battery_srv_client.h"
 #include "usb_connection_notifier.h"
 #include "securec.h"
 #include "usb_security_report.h"
@@ -1324,7 +1326,14 @@ bool UsbHostManager::PublishCommonEvent(const std::string &event, UsbDevice &dev
         if (event == CommonEventSupport::COMMON_EVENT_USB_DEVICE_DETACHED) {
             UsbConnectionNotifier::GetInstance()->CancelNotification(true);
         } else {
-            UsbConnectionNotifier::GetInstance()->SendNotification(USB_FUNC_REVERSE_CHARGE);
+            auto chargingStatus = OHOS::PowerMgr::BatterySrvClient::GetInstance().GetChargingStatus();
+            if (chargingStatus == OHOS::PowerMgr::BatteryChargeState::CHARGE_STATE_ENABLE ||
+                chargingStatus == OHOS::PowerMgr::BatteryChargeState::CHARGE_STATE_DISABLE ||
+                chargingStatus == OHOS::PowerMgr::BatteryChargeState::CHARGE_STATE_FULL) {
+                USB_HILOGI(MODULE_USB_HOST, "battery is charging, skip reverse charge notification");
+            } else {
+                UsbConnectionNotifier::GetInstance()->SendNotification(USB_FUNC_REVERSE_CHARGE);
+            }
         }
     }
     USB_HILOGI(MODULE_USB_HOST, "send %{public}s broadcast device:%{public}s", event.c_str(),

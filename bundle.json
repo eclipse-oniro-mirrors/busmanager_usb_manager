@@ -65,7 +65,8 @@
                 "external_device_manager",
                 "eventhandler",
                 "api_metrics",
-                "image_framework"
+                "image_framework",
+                "battery_manager"
             ]
         },
         "build": {
