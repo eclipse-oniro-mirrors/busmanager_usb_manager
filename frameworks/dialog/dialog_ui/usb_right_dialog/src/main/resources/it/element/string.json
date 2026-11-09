@@ -135,7 +135,7 @@
         },
         {
             "name":"USB_hdc_notifier_content",
-            "value":"Tocca per disattivare il debug USB.",
+            "value":"Tocca per disabilitare il debug USB.",
             "attr":{
                 "priority":"LT"
             }
