@@ -2,7 +2,7 @@
     "string":[
         {
             "name":"USB_hdc_notifier_title",
-            "value":"เริ่มต้นการแก้ไขข้อบกพร่องของ USB แล้ว",
+            "value":"เริ่มต้นการแก้ไขข้อบกพร่อง USB แล้ว",
             "attr":{
                 "priority":"LT"
             }
@@ -135,7 +135,7 @@
         },
         {
             "name":"USB_hdc_notifier_content",
-            "value":"แตะเพื่อปิดใช้งานการแก้ไขข้อบกพร่องของ USB",
+            "value":"แตะเพื่อปิดใช้งานการแก้ไขข้อบกพร่อง USB",
             "attr":{
                 "priority":"LT"
             }
