@@ -151,7 +151,7 @@
             "name":"USB_hdc_notifier_content",
             "value":"Chạm để vô hiệu hóa gỡ lỗi USB.",
             "attr":{
-                "priority":"translate"
+                "priority":"LT"
             }
         },
         {

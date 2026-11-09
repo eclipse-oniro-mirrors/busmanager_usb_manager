@@ -229,7 +229,7 @@ ohos_fuzztest("UsbMgrParseConfigDescriptorsFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -329,7 +329,7 @@ ohos_fuzztest("UsbMgrSetPortRoleFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -360,7 +360,7 @@ ohos_fuzztest("UsbMgrGetPortsFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -391,7 +391,7 @@ ohos_fuzztest("UsbMgrSetCurrentFunctionsFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -424,7 +424,7 @@ ohos_fuzztest("UsbMgrUsbFunctionsFromStringFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -455,7 +455,7 @@ ohos_fuzztest("UsbMgrUsbFunctionsToStringFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -583,7 +583,7 @@ ohos_fuzztest("UsbMgrClearHaltFuzzTest") {
     "ability_base:want",
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "bundle_framework:appexecfwk_base",
     "c_utils:utils",
@@ -621,7 +621,7 @@ ohos_fuzztest("UsbMgrAttachKernelDriverFuzzTest") {
     "ability_base:want",
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "bundle_framework:appexecfwk_base",
     "c_utils:utils",
@@ -661,7 +661,7 @@ ohos_fuzztest("UsbMgrDetachKernelDriverFuzzTest") {
     "ability_base:want",
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "bundle_framework:appexecfwk_base",
     "c_utils:utils",
@@ -719,7 +719,7 @@ ohos_fuzztest("UsbMgrBulkTransferWriteFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -750,7 +750,7 @@ ohos_fuzztest("UsbMgrControlTransferFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -904,7 +904,7 @@ ohos_fuzztest("UsbMgrParallelizeFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.2",
@@ -965,7 +965,7 @@ ohos_fuzztest("UsbMgrPrivateGetTransferTypeStringFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -1004,7 +1004,7 @@ ohos_fuzztest("UsbMgrPrivateSetPhyConnectFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -1048,7 +1048,7 @@ ohos_fuzztest("UsbMgrPrivateFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -1179,7 +1179,7 @@ ohos_fuzztest("UsbMgrUnRegBulkCallbackFuzzTest") {
   external_deps = [
     "ability_base:want",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "bundle_framework:appexecfwk_base",
     "c_utils:utils",
@@ -1217,7 +1217,7 @@ ohos_fuzztest("UsbMgrBulkReadFuzzTest") {
   external_deps = [
     "ability_base:want",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "bundle_framework:appexecfwk_base",
     "c_utils:utils",
@@ -1255,7 +1255,7 @@ ohos_fuzztest("UsbMgrBulkWriteFuzzTest") {
   external_deps = [
     "ability_base:want",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "bundle_framework:appexecfwk_base",
     "c_utils:utils",
@@ -1293,7 +1293,7 @@ ohos_fuzztest("UsbMgrBulkCancelFuzzTest") {
   external_deps = [
     "ability_base:want",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "bundle_framework:appexecfwk_base",
     "c_utils:utils",
@@ -1334,7 +1334,7 @@ ohos_fuzztest("UsbMgrFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.2",
@@ -1368,7 +1368,7 @@ ohos_fuzztest("UsbMgrExFuzzTest") {
     "ability_base:want",
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "bundle_framework:appexecfwk_base",
     "c_utils:utils",
@@ -1449,7 +1449,7 @@ ohos_fuzztest("UsbMgrManageDevicePolicyFuzzTest") {
     "ability_base:want",
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "bundle_framework:appexecfwk_base",
     "c_utils:utils",
@@ -1485,7 +1485,7 @@ ohos_fuzztest("UsbMgrManageManageInterfaceTypeFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -1540,7 +1540,7 @@ ohos_fuzztest("UsbMgrGetCurrentFunctionsFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -1622,7 +1622,7 @@ ohos_fuzztest("UsbMgrSubmitTransferFuzzTest") {
   external_deps = [
     "ability_base:want",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "bundle_framework:appexecfwk_base",
     "c_utils:utils",
@@ -1661,7 +1661,7 @@ ohos_fuzztest("UsbMgrCancelTransferFuzzTest") {
   external_deps = [
     "ability_base:want",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "bundle_framework:appexecfwk_base",
     "c_utils:utils",
@@ -1904,7 +1904,7 @@ ohos_fuzztest("UsbMgrSerialSetAttributeFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -1963,7 +1963,7 @@ ohos_fuzztest("UsbMgrOpenDeviceFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -2000,7 +2000,7 @@ ohos_fuzztest("UsbMgrAddRightFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -2037,7 +2037,7 @@ ohos_fuzztest("UsbMgrAddAccessoryRightFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -2074,7 +2074,7 @@ ohos_fuzztest("UsbMgrHasAccessoryRightFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -2111,7 +2111,7 @@ ohos_fuzztest("UsbMgrRequestAccessoryRightFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -2148,7 +2148,7 @@ ohos_fuzztest("UsbMgrCancelAccessoryRightFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -2185,7 +2185,7 @@ ohos_fuzztest("UsbMgrGetAccessoryListFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -2222,7 +2222,7 @@ ohos_fuzztest("UsbMgrOpenAccessoryFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -2259,7 +2259,7 @@ ohos_fuzztest("UsbMgrCloseAccessoryFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
@@ -2297,7 +2297,7 @@ ohos_fuzztest("UsbMgrRegConnectionListenerFuzzTest") {
     "ability_base:want",
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "bundle_framework:appexecfwk_base",
     "c_utils:utils",
@@ -2340,7 +2340,7 @@ ohos_fuzztest("UsbMgrUnRegConnectionListenerFuzzTest") {
     "ability_base:want",
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "bundle_framework:appexecfwk_base",
     "c_utils:utils",
@@ -2389,7 +2389,7 @@ ohos_fuzztest("UsbMgrPrivateClaimFuzzTest") {
   external_deps = [
     "ability_runtime:ability_manager",
     "access_token:libaccesstoken_sdk",
-    "access_token:libnativetoken",
+    "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.0",
