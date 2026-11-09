@@ -149,9 +149,9 @@
         },
         {
             "name":"USB_hdc_notifier_content",
-            "value":"Toca para deshabilitar la depuración USB.",
+            "value":"Pulsa para deshabilitar la depuración USB.",
             "attr":{
-                "priority":"LT"
+                "priority":"translate"
             }
         },
         {

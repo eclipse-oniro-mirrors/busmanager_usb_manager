@@ -158,14 +158,14 @@
             "name":"USB_hdc_notifier_title",
             "value":"USB debugging started",
             "attr":{
-                "priority":"LT"
+                "priority":"translate"
             }
         },
         {
             "name":"USB_hdc_notifier_content",
             "value":"Tap to disable USB debugging.",
             "attr":{
-                "priority":"LT"
+                "priority":"translate"
             }
         },
         {
