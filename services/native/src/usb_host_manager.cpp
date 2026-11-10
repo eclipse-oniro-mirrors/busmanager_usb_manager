@@ -1493,7 +1493,8 @@ static std::string Utf16leToUtf8(char *utf16leBytes, size_t length)
     }
     size_t charCount = length / HALF;
     // check and skip BOM
-    if (charCount > 0 && utf16leBytes[0] == 0xFF && utf16leBytes[1] == 0xFE) {
+    if (charCount > 0 && static_cast<unsigned char>(utf16leBytes[0]) == 0xFF &&
+        static_cast<unsigned char>(utf16leBytes[1]) == 0xFE) {
         charCount--;
         utf16leBytes += BOM_BYTE_COUNT;
         length -= BOM_BYTE_COUNT;
