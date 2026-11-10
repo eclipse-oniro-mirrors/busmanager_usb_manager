@@ -84,6 +84,21 @@ usb_manager/
 
 ## When to read deeper documentation
 
+### Knowledge docs routing (docs/knowledge, six-file plugin structure)
+
+System-generated knowledge base covering business, architecture, standards, terminology, entities and technical mechanisms. Route to it by question type:
+
+| Question | Read first |
+| --- | --- |
+| Business positioning, responsibility boundaries, upstream/downstream | [docs/knowledge/business-context.md](docs/knowledge/business-context.md) |
+| Architecture, call chains, layering, concurrency boundaries | [docs/knowledge/architecture.md](docs/knowledge/architecture.md) |
+| Domain constraints before changing code | [docs/knowledge/coding-standards.md](docs/knowledge/coding-standards.md) |
+| Terminology and easily confused concepts (deviceName dual encoding, pass-through vs HAL, three error-code systems, gadget functions) | [docs/knowledge/glossary.md](docs/knowledge/glossary.md) |
+| Entities, states, relationships, lifecycles (UsbDevice, right records, claim state, serial/accessory sessions, functions, ports) | [docs/knowledge/usbmgr-Entity.md](docs/knowledge/usbmgr-Entity.md) |
+| Technical mechanisms: principles, usage and constraints (SA/IPC, HDI dual-mode, hot-plug, permission dialog, EDM policy, transfers, gadget, port, serial, DFX) | [docs/knowledge/usbmgr-Technology.md](docs/knowledge/usbmgr-Technology.md) |
+
+On-demand reading order: for permission-flow tasks read business-context.md then usbmgr-Technology.md (permission dialog section); for API/IPC changes read coding-standards.md then architecture.md (constraints); look up single terms in glossary.md directly.
+
 **Task-based routing:**
 - Adding/modifying public APIs → Read `README.md` "Available APIs" section
 - Changing permission flow → Read `services/native/src/usb_right_manager.cpp` and `services/native/src/usb_right_db_helper.cpp`
