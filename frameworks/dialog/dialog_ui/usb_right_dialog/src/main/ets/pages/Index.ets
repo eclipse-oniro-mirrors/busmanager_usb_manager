@@ -25,7 +25,7 @@ import Want from '@ohos.app.ability.Want';
 import deviceInfo from '@ohos.deviceInfo';
 import { SelectDialog, SheetInfoEx } from '../components/dialog';
 import systemParameterEnhance from '@ohos.systemParameterEnhance';
-import uiMaterial from '@ohos.arkui.uiMaterial'
+import uiMaterial from '@ohos.arkui.uiMaterial';
 let TAG: string = 'UsbService';
 let USBSERVICESWITCH_ID_DEFAULT : number = -1;
 let USBSERVICESWITCH_ID_CHARGE_ONLY : number = -1;
