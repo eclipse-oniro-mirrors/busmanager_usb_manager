@@ -317,6 +317,9 @@ private:
     int32_t PreCallFunction();
     int32_t InitUsbRight();
     bool IsCallerValid();
+    // Native-only check (root/EDM SA). Used by the legacy EDM ManageXxx interfaces;
+    // HAP callers are not accepted there.
+    bool IsCallerNativeValid();
     void DumpHelp(int32_t fd);
     void OnAddSystemAbility(int32_t systemAbilityId, const std::string &deviceId) override;
     bool InitSerial();

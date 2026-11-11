@@ -87,6 +87,8 @@ static const std::filesystem::path TTYACM_PATH = "/sys/class/tty";
 static const std::string TTYACM_PREFIX = "ttyACM";
 constexpr const pid_t ROOT_UID = 0;
 constexpr const pid_t EDM_UID = 3057;
+// Test-only override for IsCallerValid()/IsCallerNativeValid(): <0 keeps the production
+// token/UID checks, 0/1 forces the result. Set exclusively via SetCallerValidForTest().
 std::atomic<int32_t> g_callerValidForTest{-1};
 } // namespace
 auto g_serviceInstance = DelayedSpSingleton<UsbService>::GetInstance();
@@ -1138,7 +1140,7 @@ int32_t UsbService::SetActiveConfig(uint8_t busNum, uint8_t devAddr, uint8_t con
 
 int32_t UsbService::ManageGlobalInterface(bool disable)
 {
-    if (!IsCallerValid()) {
+    if (!IsCallerNativeValid()) {
         USB_HILOGE(MODULE_USB_HOST, "not root or edm process.");
         return UEC_SERVICE_INVALID_OPERATION;
     }
@@ -1151,7 +1153,7 @@ int32_t UsbService::ManageGlobalInterface(bool disable)
 
 int32_t UsbService::ManageDevice(int32_t vendorId, int32_t productId, bool disable)
 {
-    if (!IsCallerValid()) {
+    if (!IsCallerNativeValid()) {
         USB_HILOGE(MODULE_USB_HOST, "not root or edm process.");
         return UEC_SERVICE_INVALID_OPERATION;
     }
@@ -1176,7 +1178,7 @@ void UsbService::UsbDeviceIdChange(const std::vector<UsbDeviceIdInfo> &deviceIdI
 
 int32_t UsbService::ManageDevicePolicy(const std::vector<UsbDeviceIdInfo> &trustList)
 {
-    if (!IsCallerValid()) {
+    if (!IsCallerNativeValid()) {
         USB_HILOGE(MODULE_USB_HOST, "not root or edm process.");
         return UEC_SERVICE_INVALID_OPERATION;
     }
@@ -1191,7 +1193,7 @@ int32_t UsbService::ManageDevicePolicy(const std::vector<UsbDeviceIdInfo> &trust
 
 int32_t UsbService::ManageInterfaceType(const std::vector<UsbDeviceTypeInfo> &devTypeInfo, bool disable)
 {
-    if (!IsCallerValid()) {
+    if (!IsCallerNativeValid()) {
         USB_HILOGE(MODULE_USB_HOST, "not root or edm process.");
         return UEC_SERVICE_INVALID_OPERATION;
     }
@@ -1206,7 +1208,7 @@ int32_t UsbService::ManageInterfaceType(const std::vector<UsbDeviceTypeInfo> &de
 
 int32_t UsbService::ManageUsbType(const std::vector<UsbDeviceTypeInfo> &devTypeInfo, bool disable)
 {
-    if (!IsCallerValid()) {
+    if (!IsCallerNativeValid()) {
         USB_HILOGE(MODULE_USB_HOST, "not root or edm process.");
         return UEC_SERVICE_INVALID_OPERATION;
     }
@@ -1389,6 +1391,18 @@ int32_t UsbService::CheckDynamicControlPermission(const char *operation)
         USB_HILOGE(MODULE_USB_SERVICE, "%{public}s: not root or edm process", operation);
         return UEC_SERVICE_INVALID_OPERATION;
     }
+    // Native callers (root/EDM SA) are trusted by IsCallerValid; HAP callers holding the
+    // EDM-granted USB management permission are also accepted.
+    AccessTokenID callerToken = IPCSkeleton::GetCallingTokenID();
+    auto callerTokenType = AccessTokenKit::GetTokenType(callerToken);
+    if (callerTokenType == TypeATokenTypeEnum::TOKEN_HAP) {
+        int32_t permRet = AccessTokenKit::VerifyAccessToken(callerToken, ENTERPRISE_MANAGE_USB_PERMISSION);
+        if (permRet != PermissionState::PERMISSION_GRANTED) {
+            USB_HILOGE(MODULE_USB_SERVICE, "%{public}s: no %s permission", operation,
+                ENTERPRISE_MANAGE_USB_PERMISSION);
+            return UEC_SERVICE_INVALID_OPERATION;
+        }
+    }
     return UEC_OK;
 }
 
@@ -1415,7 +1429,8 @@ int32_t UsbService::ValidateDynamicControlDeviceRef(uint8_t busNum, uint8_t devA
     if (!usbHostManager_->GetTargetDevice(busNum, devAddr, dev)) {
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control target device not attached, bus:%{public}hhu dev:%{public}hhu",
                    busNum, devAddr);
-        return UEC_INTERFACE_NAME_NOT_FOUND;
+        // A detached target reports the same code as a ROOT-HUB rejection.
+        return UEC_INTERFACE_INVALID_OPERATION;
     }
     return UEC_OK;
 }
@@ -1604,6 +1619,12 @@ void UsbService::NotifyDeviceControlEvent(const UsbDevice &device, bool attached
 {
     auto subscribers = GetDeviceControlSubscribers();
     if (subscribers.empty()) {
+        return;
+    }
+    // Re-verify the caller: a subscriber may outlive a policy change, and the
+    // payload carries device details.
+    if (!IsCallerValid()) {
+        USB_HILOGW(MODULE_USB_SERVICE, "skip device control event: caller no longer authorized");
         return;
     }
     for (auto &remote : subscribers) {
@@ -3487,13 +3508,30 @@ void UsbService::SetCallerValidForTest(int32_t value)
 
 bool UsbService::IsCallerValid()
 {
-    int32_t override = g_callerValidForTest.load();
-    if (override >= 0) {
-        return override == 1;
+    int32_t callerOverride = g_callerValidForTest.load();
+    if (callerOverride >= 0) {
+        return callerOverride == 1;
     }
-    OHOS::Security::AccessToken::AccessTokenID callerToken = IPCSkeleton::GetCallingTokenID();
-    auto callerTokenType = OHOS::Security::AccessToken::AccessTokenKit::GetTokenType(callerToken);
-    if (callerTokenType == OHOS::Security::AccessToken::TypeATokenTypeEnum::TOKEN_NATIVE) {
+    AccessTokenID callerToken = IPCSkeleton::GetCallingTokenID();
+    auto callerTokenType = AccessTokenKit::GetTokenType(callerToken);
+    if (callerTokenType == TypeATokenTypeEnum::TOKEN_NATIVE) {
+        pid_t callerUid = IPCSkeleton::GetCallingUid();
+        return callerUid == ROOT_UID || callerUid == EDM_UID;
+    }
+    // A HAP caller is pre-accepted here; the ENTERPRISE_MANAGE_USB permission is
+    // enforced per-operation in CheckDynamicControlPermission().
+    return callerTokenType == TypeATokenTypeEnum::TOKEN_HAP;
+}
+
+bool UsbService::IsCallerNativeValid()
+{
+    int32_t callerOverride = g_callerValidForTest.load();
+    if (callerOverride >= 0) {
+        return callerOverride == 1;
+    }
+    AccessTokenID callerToken = IPCSkeleton::GetCallingTokenID();
+    auto callerTokenType = AccessTokenKit::GetTokenType(callerToken);
+    if (callerTokenType == TypeATokenTypeEnum::TOKEN_NATIVE) {
         pid_t callerUid = IPCSkeleton::GetCallingUid();
         return callerUid == ROOT_UID || callerUid == EDM_UID;
     }

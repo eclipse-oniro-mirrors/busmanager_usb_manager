@@ -436,14 +436,14 @@ constexpr uint8_t DYN_TEST_BUS_NUM_2 = 2;
 constexpr uint8_t DYN_TEST_DEV_ADDR_2 = 2;
 
 /**
- * @brief Unit tests for USB dynamic control mode (requirement 20260813045248).
+ * @brief Unit tests for USB dynamic control mode.
  *
  * Covered acceptance criteria:
  * - AC-1.2: dynamic control mode keeps the legacy behaviour when it is disabled.
  * - AC-3.1: full device query returns devices that the existing query filters out.
  * - AC-2.1 / AC-2.2: attach and detach events are delivered to the subscribed sink.
- * - Error code contract: parameter out of range / target device not attached reuse the
- *   existing enums UEC_INTERFACE_INVALID_VALUE / UEC_INTERFACE_NAME_NOT_FOUND.
+ * - Error code contract: parameter out of range uses UEC_INTERFACE_INVALID_VALUE; a
+ *   detached target reports UEC_INTERFACE_INVALID_OPERATION.
  */
 class UsbDynamicControlTest : public testing::Test {
 public:
@@ -495,7 +495,7 @@ UsbDevice *UsbDynamicControlTest::CreateTestDevice(uint8_t busNum, uint8_t devAd
     device->SetProtocol(0x00);
     device->SetProductName("DynamicControlTestDevice");
     device->SetManufacturerName("TestManufacturer");
-    device->SetmSerial("SN20260813045248");
+    device->SetmSerial("SN00000000000001");
     device->SetVersion("1.0.0");
     device->SetAuthorizeStatus(status);
     return device;
@@ -534,8 +534,8 @@ HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_ErrorCodeContract, TestSize.Le
     EXPECT_NE(UEC_INTERFACE_INVALID_VALUE, UEC_OK);
     EXPECT_NE(UEC_INTERFACE_NAME_NOT_FOUND, UEC_OK);
     EXPECT_NE(UEC_INTERFACE_INVALID_OPERATION, UEC_OK);
-    // parameter name is a single point of truth, pending COND-02 contract freeze
-    EXPECT_STREQ(DYNAMIC_CONTROL_MODE_PARAM, "persist.edm.usb_dynamic_control_enable");
+    // mode parameter name matches the value written by the EDM side
+    EXPECT_STREQ(DYNAMIC_CONTROL_MODE_PARAM, "persist.edm.usb.intercept_enable");
 }
 
 /**
@@ -867,14 +867,14 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_ParamChanged, Te
 {
     USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_ParamChanged start");
     service_->OnDynamicControlParamChanged(nullptr, nullptr);
-    service_->OnDynamicControlParamChanged("persist.edm.usb_dynamic_control_enable", "1");
+    service_->OnDynamicControlParamChanged("persist.edm.usb.intercept_enable", "true");
     EXPECT_TRUE(service_->usbHostManager_->IsDynamicControlEnabled());
-    service_->OnDynamicControlParamChanged("persist.edm.usb_dynamic_control_enable", "0");
+    service_->OnDynamicControlParamChanged("persist.edm.usb.intercept_enable", "false");
     EXPECT_FALSE(service_->usbHostManager_->IsDynamicControlEnabled());
 
     auto host = service_->usbHostManager_;
     service_->usbHostManager_ = nullptr;
-    service_->OnDynamicControlParamChanged("persist.edm.usb_dynamic_control_enable", "1");
+    service_->OnDynamicControlParamChanged("persist.edm.usb.intercept_enable", "true");
     service_->usbHostManager_ = host;
 }
 
@@ -890,7 +890,7 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_DeviceAuthorize,
     EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, true), UEC_SERVICE_INVALID_OPERATION);
     UsbService::SetCallerValidForTest(1);
     EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 0, 2, true), UEC_INTERFACE_INVALID_VALUE);
-    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, true), UEC_INTERFACE_NAME_NOT_FOUND);
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, true), UEC_INTERFACE_INVALID_OPERATION);
 
     UsbDevice *device = CreateServiceTestDevice(1, 2);
     ASSERT_NE(device, nullptr);
@@ -928,7 +928,7 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_InterfaceAuthori
     UsbService::SetCallerValidForTest(0);
     EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 0, 0, true), UEC_SERVICE_INVALID_OPERATION);
     UsbService::SetCallerValidForTest(1);
-    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 0, 0, true), UEC_INTERFACE_NAME_NOT_FOUND);
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 0, 0, true), UEC_INTERFACE_INVALID_OPERATION);
     EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 0, 2, 0, 0, true), UEC_INTERFACE_INVALID_VALUE);
 
     UsbDevice *device = CreateServiceTestDevice(1, 2);
@@ -979,6 +979,9 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_Callbacks, TestS
 
     EXPECT_EQ(service_->UnRegDeviceControlCallback(nullptr), UEC_INTERFACE_INVALID_VALUE);
     EXPECT_EQ(service_->UnRegDeviceControlCallback(remote), UEC_OK);
+    // Event delivery re-checks the caller (defense in depth); restore the authorized
+    // override before triggering a notification.
+    UsbService::SetCallerValidForTest(1);
     UsbDevice *device2 = CreateServiceTestDevice(1, 4);
     ASSERT_NE(device2, nullptr);
     service_->NotifyDeviceControlEvent(*device2, false);
@@ -1055,14 +1058,14 @@ HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_DeviceTypeMatrix, TestSize.Lev
 
 /**
  * @tc.name: UsbDynamicControl_RealUsbSmoke
- * @tc.desc: optional real-USB smoke test; skipped unless RM006_REAL_USB_TEST=1
+ * @tc.desc: optional real-USB smoke test; skipped unless USB_DYN_CTRL_REAL_TEST=1
  * @tc.type: FUNC
  */
 HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_RealUsbSmoke, TestSize.Level1)
 {
-    const char *enabled = getenv("RM006_REAL_USB_TEST");
+    const char *enabled = getenv("USB_DYN_CTRL_REAL_TEST");
     if (enabled == nullptr || std::string(enabled) != "1") {
-        GTEST_SKIP() << "set RM006_REAL_USB_TEST=1 and connect USB hardware to run";
+        GTEST_SKIP() << "set USB_DYN_CTRL_REAL_TEST=1 and connect USB hardware to run";
     }
     std::vector<UsbDevice> devices;
     EXPECT_EQ(usbHostManager_->GetDevices(devices), UEC_OK);

@@ -61,14 +61,15 @@ inline bool IsDynamicControlExcludedDevice(int32_t baseClass)
 
 inline bool IsRootHub(const UsbDevice &device)
 {
-    // Provisional: USB root hubs are normally address 1 on their bus. Non-root hubs
-    // remain controllable through the dynamic control inner APIs.
+    // USB root hubs are normally address 1 on their bus; non-root hubs stay
+    // manageable through the dynamic control inner APIs.
     return device.GetClass() == BASE_CLASS_HUB && device.GetDevAddr() == ROOT_HUB_ADDRESS;
 }
 constexpr int32_t DEVICE_CONTROL_EVENT_CODE = 1;
 constexpr int32_t DEVICE_CONTROL_EVENT_TIMEOUT_MS = 200;
 constexpr char DYNAMIC_CONTROL_OPERATION_TYPE[] = "DynamicControl";
 constexpr char DYNAMIC_CONTROL_MODE_PARAM[] = "persist.edm.usb.intercept_enable";
+constexpr char ENTERPRISE_MANAGE_USB_PERMISSION[] = "ohos.permission.ENTERPRISE_MANAGE_USB";
 struct DeviceClassUsage {
     uint8_t usage;
     std::string description;

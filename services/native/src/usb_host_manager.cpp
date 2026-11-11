@@ -12,7 +12,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <charconv>
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -117,26 +116,6 @@ constexpr int32_t STORAGE_BASE_CLASS = 8;
 constexpr int32_t GET_EDM_STORAGE_DISABLE_TYPE = 2;
 constexpr int32_t RANDOM_VALUE_INDICATE = -1;
 constexpr int32_t BASE_CLASS_AUDIO = 0x01;
-
-bool ParseDeviceName(const std::string &name, uint8_t &busNum, uint8_t &devAddr)
-{
-    auto pos = name.find('-');
-    if (pos == std::string::npos || pos == 0 || pos + 1 >= name.size()) {
-        return false;
-    }
-    unsigned int bus = 0;
-    unsigned int addr = 0;
-    auto busResult = std::from_chars(name.data(), name.data() + pos, bus);
-    auto addrResult = std::from_chars(name.data() + pos + 1, name.data() + name.size(), addr);
-    if (busResult.ec != std::errc() || addrResult.ec != std::errc() || busResult.ptr != name.data() + pos ||
-        addrResult.ptr != name.data() + name.size() || bus > UINT8_MAX || addr > UINT8_MAX) {
-        return false;
-    }
-    busNum = static_cast<uint8_t>(bus);
-    devAddr = static_cast<uint8_t>(addr);
-    return true;
-}
-
 constexpr int32_t RETRY_NUM = 10;
 constexpr uint32_t RETRY_INTERVAL = 100;
 constexpr uint32_t USB_PATH_LENGTH = 64;
@@ -144,6 +123,8 @@ constexpr const char* USB_DEV_FS_PATH = "/dev/bus/usb";
 #ifdef USB_MANAGER_PASS_THROUGH
 const std::string SERVICE_NAME = "usb_host_interface_service";
 #endif // USB_MANAGER_PASS_THROUGH
+// Test-only override for IsEdmEnabled(): <0 keeps the production parameter path,
+// 0/1 forces the result. Set exclusively via SetEdmEnabledForTest() from unit tests.
 std::atomic<int32_t> g_edmEnabledForTest{-1};
 
 UsbHostManager::UsbHostManager(SystemAbility *systemAbility)
@@ -1340,8 +1321,8 @@ bool UsbHostManager::DelDevice(uint8_t busNum, uint8_t devNum)
         devices_.erase(iter);
         remaining = devices_.size();
     }
-    // Local trial: notify subscribers and publish the common event outside devicesMutex_
-    // so a slow subscriber cannot block device enumeration/removal.
+    // Notify subscribers and publish the common event outside devicesMutex_ so a slow
+    // subscriber cannot block device enumeration/removal.
     UsbDevice detachedDevice(*devOld);
     delete devOld;
     NotifyDeviceDetached(detachedDevice, wasEnabled);
@@ -1691,9 +1672,9 @@ void UsbHostManager::SetEdmEnabledForTest(int32_t value)
 
 bool UsbHostManager::IsEdmEnabled()
 {
-    int32_t override = g_edmEnabledForTest.load();
-    if (override >= 0) {
-        return override == 1;
+    int32_t edmOverride = g_edmEnabledForTest.load();
+    if (edmOverride >= 0) {
+        return edmOverride == 1;
     }
     std::string edmParaValue = OHOS::system::GetParameter("persist.edm.enterprise_config_enable", "false");
     USB_HILOGI(MODULE_USB_HOST, "edmParaValue enterprise_config_enable value is %{public}s", edmParaValue.c_str());
@@ -1718,29 +1699,24 @@ void UsbHostManager::SetDeviceControlEventSink(const std::function<void(const Us
 
 void UsbHostManager::SetAllNonHubDevicesAuthorized(bool authorized)
 {
-    std::vector<std::pair<uint8_t, uint8_t>> pendingDevices;
-    {
-        std::shared_lock lock(devicesMutex_);
-        for (auto it = devices_.begin(); it != devices_.end(); ++it) {
-            UsbDevice *dev = it->second;
-            if (dev == nullptr || IsDynamicControlExcludedDevice(dev->GetClass())) {
-                continue;
-            }
-            if (dev->GetAuthorizeStatus() == (authorized ? ENABLED : DISABLED)) {
-                continue;
-            }
-            pendingDevices.push_back(std::make_pair(dev->GetBusNum(), dev->GetDevAddr()));
+    // One lock for the whole batch: UsbDeviceAuthorize() requires the caller to hold
+    // devicesMutex_, and per-device locking would multiply its 50ms pause.
+    std::unique_lock lock(devicesMutex_);
+    for (auto it = devices_.begin(); it != devices_.end(); ++it) {
+        UsbDevice *dev = it->second;
+        if (dev == nullptr || IsDynamicControlExcludedDevice(dev->GetClass())) {
+            continue;
         }
-    }
-    for (auto &device : pendingDevices) {
-        // UsbDeviceAuthorize() expects the caller to hold devicesMutex_.
-        std::unique_lock lock(devicesMutex_);
-        int32_t ret = UsbDeviceAuthorize(device.first, device.second, authorized, DYNAMIC_CONTROL_OPERATION_TYPE);
+        if (dev->GetAuthorizeStatus() == (authorized ? ENABLED : DISABLED)) {
+            continue;
+        }
+        int32_t ret = UsbDeviceAuthorize(dev->GetBusNum(), dev->GetDevAddr(), authorized,
+                                         DYNAMIC_CONTROL_OPERATION_TYPE);
         if (ret != UEC_OK) {
             USB_HILOGE(
                 MODULE_USB_HOST,
                 "dynamic mode %{public}s non-HUB device failed, bus:%{public}hhu dev:%{public}hhu ret:%{public}d",
-                authorized ? "enable" : "disable", device.first, device.second, ret);
+                authorized ? "enable" : "disable", dev->GetBusNum(), dev->GetDevAddr(), ret);
         }
     }
 }
