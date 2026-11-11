@@ -16,7 +16,7 @@
 import { AlertDialog } from '@ohos.arkui.advanced.Dialog'
 import { terminateDialog } from '../util/DialogUtil';
 import serial from '@ohos.busManager.serial'
-import uiMaterial from '@ohos.arkui.uiMaterial'
+import uiMaterial from '@ohos.arkui.uiMaterial';
 
 @Entry
 @Component
