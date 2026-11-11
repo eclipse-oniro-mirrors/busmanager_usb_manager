@@ -335,9 +335,9 @@ void UsbService::OnStart()
         USB_HILOGE(MODULE_USB_SERVICE, "failed to watch usb_serial_disable parameter");
     }
 
-    std::string dynamicControlValue = OHOS::system::GetParameter(DYNAMIC_CONTROL_MODE_PARAM, "0");
+    std::string dynamicControlValue = OHOS::system::GetParameter(DYNAMIC_CONTROL_MODE_PARAM, "false");
     if (usbHostManager_ != nullptr) {
-        bool enabled = (dynamicControlValue == "1");
+        bool enabled = (dynamicControlValue == "true");
         usbHostManager_->InitDynamicControlEnabled(enabled);
         if (enabled) {
             usbHostManager_->SetAllNonHubDevicesAuthorized(false);
@@ -1374,7 +1374,7 @@ void UsbService::OnDynamicControlParamChanged(const char *key, const char *value
     if (usbHostManager_ == nullptr) {
         return;
     }
-    bool enabled = (std::string(value) == "1");
+    bool enabled = (std::string(value) == "true");
     if (usbHostManager_->IsDynamicControlEnabled() == enabled) {
         return;
     }

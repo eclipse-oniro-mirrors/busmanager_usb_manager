@@ -68,7 +68,7 @@ inline bool IsRootHub(const UsbDevice &device)
 constexpr int32_t DEVICE_CONTROL_EVENT_CODE = 1;
 constexpr int32_t DEVICE_CONTROL_EVENT_TIMEOUT_MS = 200;
 constexpr char DYNAMIC_CONTROL_OPERATION_TYPE[] = "DynamicControl";
-constexpr char DYNAMIC_CONTROL_MODE_PARAM[] = "persist.edm.usb_dynamic_control_enable";
+constexpr char DYNAMIC_CONTROL_MODE_PARAM[] = "persist.edm.usb.intercept_enable";
 struct DeviceClassUsage {
     uint8_t usage;
     std::string description;
