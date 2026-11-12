@@ -123,9 +123,10 @@ constexpr const char* USB_DEV_FS_PATH = "/dev/bus/usb";
 #ifdef USB_MANAGER_PASS_THROUGH
 const std::string SERVICE_NAME = "usb_host_interface_service";
 #endif // USB_MANAGER_PASS_THROUGH
-// Test-only override for IsEdmEnabled(): <0 keeps the production parameter path,
-// 0/1 forces the result. Set exclusively via SetEdmEnabledForTest() from unit tests.
+#ifdef USB_SERVICE_TEST
+// Test-only override: <0 uses the production parameter path, 0/1 forces the result.
 std::atomic<int32_t> g_edmEnabledForTest{-1};
+#endif // USB_SERVICE_TEST
 
 UsbHostManager::UsbHostManager(SystemAbility *systemAbility)
 {
@@ -226,8 +227,7 @@ void UsbHostManager::UsbEdmLoadCallback::OnLoadSystemAbilityFail(int32_t systemA
 
 void UsbHostManager::ExecuteStrategy()
 {
-    // Dynamic control is mutually exclusive with the EDM policy flow. Newly attached
-    // devices are evaluated in AddDevice() only.
+    // Dynamic control bypasses the EDM policy flow; new devices are handled in AddDevice().
     if (IsDynamicControlEnabled()) {
         return;
     }
@@ -1271,6 +1271,7 @@ void UsbHostManager::NotifyDeviceDetached(UsbDevice &device, bool wasEnabled)
             USB_HILOGW(MODULE_USB_HOST, "send device detached broadcast failed");
         }
     }
+    std::shared_lock<std::shared_mutex> lock(deviceControlEventSinkMutex_);
     if (deviceControlEventSink_ != nullptr) {
         deviceControlEventSink_(device, false);
     }
@@ -1287,6 +1288,7 @@ void UsbHostManager::NotifyDeviceAttached(const UsbDevice &device, bool wasDisab
             USB_HILOGW(MODULE_USB_HOST, "send device attached broadcast failed");
         }
     }
+    std::shared_lock<std::shared_mutex> lock(deviceControlEventSinkMutex_);
     if (deviceControlEventSink_ != nullptr) {
         deviceControlEventSink_(device, true);
     }
@@ -1357,8 +1359,6 @@ bool UsbHostManager::AddDevice(UsbDevice *dev)
     uint8_t busNum = dev->GetBusNum();
     uint8_t devNum = dev->GetDevAddr();
     std::string name = std::to_string(busNum) + "-" + std::to_string(devNum);
-    // Scoped locks only: no explicit unlock() calls, so the lock state can never
-    // diverge from the scope (a mismatched unlock throws std::system_error).
     {
         std::unique_lock lock(devicesMutex_);
         MAP_STR_DEVICE::iterator iter = devices_.find(name);
@@ -1670,17 +1670,21 @@ std::string UsbHostManager::GetDevStringValFromIdx(uint8_t busNum, uint8_t devAd
     return strDesc;
 }
 
+#ifdef USB_SERVICE_TEST
 void UsbHostManager::SetEdmEnabledForTest(int32_t value)
 {
     g_edmEnabledForTest.store(value);
 }
+#endif // USB_SERVICE_TEST
 
 bool UsbHostManager::IsEdmEnabled()
 {
+#ifdef USB_SERVICE_TEST
     int32_t edmOverride = g_edmEnabledForTest.load();
     if (edmOverride >= 0) {
         return edmOverride == 1;
     }
+#endif // USB_SERVICE_TEST
     std::string edmParaValue = OHOS::system::GetParameter("persist.edm.enterprise_config_enable", "false");
     USB_HILOGI(MODULE_USB_HOST, "edmParaValue enterprise_config_enable value is %{public}s", edmParaValue.c_str());
     return edmParaValue == "true";
@@ -1699,13 +1703,12 @@ void UsbHostManager::InitDynamicControlEnabled(bool enabled)
 
 void UsbHostManager::SetDeviceControlEventSink(const std::function<void(const UsbDevice &device, bool attached)> &sink)
 {
+    std::unique_lock<std::shared_mutex> lock(deviceControlEventSinkMutex_);
     deviceControlEventSink_ = sink;
 }
 
 void UsbHostManager::SetAllNonHubDevicesAuthorized(bool authorized)
 {
-    // One lock for the whole batch: UsbDeviceAuthorize() requires the caller to hold
-    // devicesMutex_, and per-device locking would multiply its 50ms pause.
     std::unique_lock lock(devicesMutex_);
     for (auto it = devices_.begin(); it != devices_.end(); ++it) {
         UsbDevice *dev = it->second;
@@ -1780,7 +1783,7 @@ int32_t UsbHostManager::UsbDeviceAuthorize(
             USB_HILOGW(MODULE_USB_HOST, "send device attached/detached broadcast failed");
         }
     }
-    iterDev->second->SetAuthorizeStatus(authorized ? ENABLED : DISABLED); // authorized==true -> ENABLED
+    iterDev->second->SetAuthorizeStatus(authorized ? ENABLED : DISABLED);
     std::this_thread::sleep_for(std::chrono::milliseconds(MANAGE_INTERFACE_INTERVAL));
     return UEC_OK;
 }
@@ -2396,8 +2399,7 @@ bool UsbHostManager::IsUsbSerialDevice(UsbDevice &dev)
 int32_t UsbHostManager::ManageUsbSerialDevice(bool disable)
 {
     USB_HILOGI(MODULE_USB_HOST, "%{public}s: enter", __func__);
-    // Scoped lock: strategy execution below must run without devicesMutex_ held
-    // (it re-enters the policy flow which takes the same lock).
+    // Release the lock before strategy execution, which re-enters the policy flow.
     {
         std::shared_lock lock(devicesMutex_);
         for (auto &dev : serialDevices_) {

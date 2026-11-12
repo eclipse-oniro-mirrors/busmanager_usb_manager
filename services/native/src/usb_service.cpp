@@ -87,9 +87,10 @@ static const std::filesystem::path TTYACM_PATH = "/sys/class/tty";
 static const std::string TTYACM_PREFIX = "ttyACM";
 constexpr const pid_t ROOT_UID = 0;
 constexpr const pid_t EDM_UID = 3057;
-// Test-only override for IsCallerValid()/IsCallerNativeValid(): <0 keeps the production
-// token/UID checks, 0/1 forces the result. Set exclusively via SetCallerValidForTest().
+#ifdef USB_SERVICE_TEST
+// Test-only override: <0 uses the production token/UID checks, 0/1 forces the result.
 std::atomic<int32_t> g_callerValidForTest{-1};
+#endif // USB_SERVICE_TEST
 } // namespace
 auto g_serviceInstance = DelayedSpSingleton<UsbService>::GetInstance();
 const bool G_REGISTER_RESULT =
@@ -129,8 +130,7 @@ UsbService::UsbService() : SystemAbility(USB_SYSTEM_ABILITY_ID, true)
 UsbService::~UsbService()
 {
 #ifdef USB_MANAGER_FEATURE_HOST
-    // The event sink captures this service. Clear it before member destruction so a
-    // late host-manager event cannot call back into a partially destroyed UsbService.
+    // Clear the sink before member destruction to avoid calling into a destroyed service.
     if (usbHostManager_ != nullptr) {
         usbHostManager_->SetDeviceControlEventSink(nullptr);
     }
@@ -1140,7 +1140,7 @@ int32_t UsbService::SetActiveConfig(uint8_t busNum, uint8_t devAddr, uint8_t con
 
 int32_t UsbService::ManageGlobalInterface(bool disable)
 {
-    if (!IsCallerNativeValid()) {
+    if (!IsCallerValid()) {
         USB_HILOGE(MODULE_USB_HOST, "not root or edm process.");
         return UEC_SERVICE_INVALID_OPERATION;
     }
@@ -1153,7 +1153,7 @@ int32_t UsbService::ManageGlobalInterface(bool disable)
 
 int32_t UsbService::ManageDevice(int32_t vendorId, int32_t productId, bool disable)
 {
-    if (!IsCallerNativeValid()) {
+    if (!IsCallerValid()) {
         USB_HILOGE(MODULE_USB_HOST, "not root or edm process.");
         return UEC_SERVICE_INVALID_OPERATION;
     }
@@ -1178,7 +1178,7 @@ void UsbService::UsbDeviceIdChange(const std::vector<UsbDeviceIdInfo> &deviceIdI
 
 int32_t UsbService::ManageDevicePolicy(const std::vector<UsbDeviceIdInfo> &trustList)
 {
-    if (!IsCallerNativeValid()) {
+    if (!IsCallerValid()) {
         USB_HILOGE(MODULE_USB_HOST, "not root or edm process.");
         return UEC_SERVICE_INVALID_OPERATION;
     }
@@ -1193,7 +1193,7 @@ int32_t UsbService::ManageDevicePolicy(const std::vector<UsbDeviceIdInfo> &trust
 
 int32_t UsbService::ManageInterfaceType(const std::vector<UsbDeviceTypeInfo> &devTypeInfo, bool disable)
 {
-    if (!IsCallerNativeValid()) {
+    if (!IsCallerValid()) {
         USB_HILOGE(MODULE_USB_HOST, "not root or edm process.");
         return UEC_SERVICE_INVALID_OPERATION;
     }
@@ -1208,7 +1208,7 @@ int32_t UsbService::ManageInterfaceType(const std::vector<UsbDeviceTypeInfo> &de
 
 int32_t UsbService::ManageUsbType(const std::vector<UsbDeviceTypeInfo> &devTypeInfo, bool disable)
 {
-    if (!IsCallerNativeValid()) {
+    if (!IsCallerValid()) {
         USB_HILOGE(MODULE_USB_HOST, "not root or edm process.");
         return UEC_SERVICE_INVALID_OPERATION;
     }
@@ -1381,7 +1381,6 @@ void UsbService::OnDynamicControlParamChanged(const char *key, const char *value
         return;
     }
     usbHostManager_->InitDynamicControlEnabled(enabled);
-    // Entering the mode disables every non-HUB device; leaving it enables them again.
     usbHostManager_->SetAllNonHubDevicesAuthorized(!enabled);
 }
 
@@ -1390,18 +1389,6 @@ int32_t UsbService::CheckDynamicControlPermission(const char *operation)
     if (!IsCallerValid()) {
         USB_HILOGE(MODULE_USB_SERVICE, "%{public}s: not root or edm process", operation);
         return UEC_SERVICE_INVALID_OPERATION;
-    }
-    // Native callers (root/EDM SA) are trusted by IsCallerValid; HAP callers holding the
-    // EDM-granted USB management permission are also accepted.
-    AccessTokenID callerToken = IPCSkeleton::GetCallingTokenID();
-    auto callerTokenType = AccessTokenKit::GetTokenType(callerToken);
-    if (callerTokenType == TypeATokenTypeEnum::TOKEN_HAP) {
-        int32_t permRet = AccessTokenKit::VerifyAccessToken(callerToken, ENTERPRISE_MANAGE_USB_PERMISSION);
-        if (permRet != PermissionState::PERMISSION_GRANTED) {
-            USB_HILOGE(MODULE_USB_SERVICE, "%{public}s: no %s permission", operation,
-                ENTERPRISE_MANAGE_USB_PERMISSION);
-            return UEC_SERVICE_INVALID_OPERATION;
-        }
     }
     return UEC_OK;
 }
@@ -1437,8 +1424,6 @@ int32_t UsbService::ValidateDynamicControlDeviceRef(uint8_t busNum, uint8_t devA
 
 int32_t UsbService::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, int32_t &funcResult)
 {
-    // IDL declares an int return value, generated as funcResult. Return the same code
-    // as the IPC status on failures so an abnormal path never reports UEC_OK.
     funcResult = CheckDynamicControlPermission("UsbDeviceAuthorize");
     if (funcResult != UEC_OK) {
         return funcResult;
@@ -1468,8 +1453,6 @@ int32_t UsbService::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool aut
 int32_t UsbService::UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uint8_t configId, uint8_t interfaceId,
                                           bool authorized, int32_t &funcResult)
 {
-    // IDL declares an int return value, generated as funcResult. Return the same code
-    // as the IPC status on failures so an abnormal path never reports UEC_OK.
     funcResult = CheckDynamicControlPermission("UsbInterfaceAuthorize");
     if (funcResult != UEC_OK) {
         return funcResult;
@@ -1606,8 +1589,7 @@ void UsbService::SendDeviceControlEvent(const sptr<IRemoteObject> &remote, const
     }
     data.WriteInt32(static_cast<int32_t>(eventDevice.GetAuthorizeStatus()));
     data.WriteBool(attached);
-    // Bound the synchronous callback so a slow subscriber cannot stall the USB
-    // service event/hotplug path indefinitely.
+    // Bound the synchronous callback so a slow subscriber cannot stall hotplug.
     MessageOption option(MessageOption::TF_SYNC, DEVICE_CONTROL_EVENT_TIMEOUT_MS);
     int32_t ret = remote->SendRequest(DEVICE_CONTROL_EVENT_CODE, data, reply, option);
     if (ret != UEC_OK) {
@@ -1621,12 +1603,7 @@ void UsbService::NotifyDeviceControlEvent(const UsbDevice &device, bool attached
     if (subscribers.empty()) {
         return;
     }
-    // Re-verify the caller: a subscriber may outlive a policy change, and the
-    // payload carries device details.
-    if (!IsCallerValid()) {
-        USB_HILOGW(MODULE_USB_SERVICE, "skip device control event: caller no longer authorized");
-        return;
-    }
+    // Subscription was authorized at registration; the hotplug thread has no subscriber token.
     for (auto &remote : subscribers) {
         SendDeviceControlEvent(remote, device, attached);
     }
@@ -3501,34 +3478,21 @@ int32_t UsbService::DeviceEvent(const HDI::Usb::V1_0::USBDeviceInfo &info)
 }
 // LCOV_EXCL_STOP
 
+#ifdef USB_SERVICE_TEST
 void UsbService::SetCallerValidForTest(int32_t value)
 {
     g_callerValidForTest.store(value);
 }
+#endif // USB_SERVICE_TEST
 
 bool UsbService::IsCallerValid()
 {
+#ifdef USB_SERVICE_TEST
     int32_t callerOverride = g_callerValidForTest.load();
     if (callerOverride >= 0) {
         return callerOverride == 1;
     }
-    AccessTokenID callerToken = IPCSkeleton::GetCallingTokenID();
-    auto callerTokenType = AccessTokenKit::GetTokenType(callerToken);
-    if (callerTokenType == TypeATokenTypeEnum::TOKEN_NATIVE) {
-        pid_t callerUid = IPCSkeleton::GetCallingUid();
-        return callerUid == ROOT_UID || callerUid == EDM_UID;
-    }
-    // A HAP caller is pre-accepted here; the ENTERPRISE_MANAGE_USB permission is
-    // enforced per-operation in CheckDynamicControlPermission().
-    return callerTokenType == TypeATokenTypeEnum::TOKEN_HAP;
-}
-
-bool UsbService::IsCallerNativeValid()
-{
-    int32_t callerOverride = g_callerValidForTest.load();
-    if (callerOverride >= 0) {
-        return callerOverride == 1;
-    }
+#endif // USB_SERVICE_TEST
     AccessTokenID callerToken = IPCSkeleton::GetCallingTokenID();
     auto callerTokenType = AccessTokenKit::GetTokenType(callerToken);
     if (callerTokenType == TypeATokenTypeEnum::TOKEN_NATIVE) {

@@ -579,7 +579,10 @@ ohos_unittest("test_usbhostmanagercase") {
     "${utils_path}:utils_config",
     ":module_private_config",
   ]
-  defines = [ "private=public" ]
+  defines = [
+    "private=public",
+    "USB_SERVICE_TEST",
+  ]
   if (usb_manager_pass_through) {
     defines += [
       "USB_MANAGER_PASS_THROUGH",

@@ -89,7 +89,9 @@ public:
         return ready_;
     }
     static sptr<UsbService> GetGlobalInstance();
+#ifdef USB_SERVICE_TEST
     static void SetCallerValidForTest(int32_t value);
+#endif // USB_SERVICE_TEST
 #ifndef USB_MANAGER_PASS_THROUGH
     int32_t SetUsbd(const sptr<HDI::Usb::V1_2::IUsbInterface> &usbd);
 #endif // USB_MANAGER_PASS_THROUGH
@@ -316,10 +318,8 @@ private:
     void WaitUsbdService();
     int32_t PreCallFunction();
     int32_t InitUsbRight();
+    // Native-only check (root/EDM SA). HAP callers are not accepted.
     bool IsCallerValid();
-    // Native-only check (root/EDM SA). Used by the legacy EDM ManageXxx interfaces;
-    // HAP callers are not accepted there.
-    bool IsCallerNativeValid();
     void DumpHelp(int32_t fd);
     void OnAddSystemAbility(int32_t systemAbilityId, const std::string &deviceId) override;
     bool InitSerial();

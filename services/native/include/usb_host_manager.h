@@ -19,6 +19,7 @@
 #include <atomic>
 #include <map>
 #include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <vector>
 #include <functional>
@@ -69,7 +70,6 @@ constexpr int32_t DEVICE_CONTROL_EVENT_CODE = 1;
 constexpr int32_t DEVICE_CONTROL_EVENT_TIMEOUT_MS = 200;
 constexpr char DYNAMIC_CONTROL_OPERATION_TYPE[] = "DynamicControl";
 constexpr char DYNAMIC_CONTROL_MODE_PARAM[] = "persist.edm.usb.intercept_enable";
-constexpr char ENTERPRISE_MANAGE_USB_PERMISSION[] = "ohos.permission.ENTERPRISE_MANAGE_USB";
 struct DeviceClassUsage {
     uint8_t usage;
     std::string description;
@@ -98,15 +98,15 @@ public:
     void ExecuteStrategy();
     // Thread-safe query of the persist-mode flag; does not take devicesMutex_.
     bool IsDynamicControlEnabled() const;
+#ifdef USB_SERVICE_TEST
     static void SetEdmEnabledForTest(int32_t value);
-    // Sets the dynamic control mode flag. Applying the policy to existing devices is the
-    // caller's responsibility (startup or the persist-parameter watcher).
+#endif // USB_SERVICE_TEST
     void InitDynamicControlEnabled(bool enabled);
-    // Disables or enables all non-HUB devices for the dynamic control mode. Caller must
-    // not hold devicesMutex_.
+    // Applies to all non-HUB devices; caller must not hold devicesMutex_.
     void SetAllNonHubDevicesAuthorized(bool authorized);
-    // Registers the management event sink. The sink is invoked without devicesMutex_ and
-    // must not synchronously re-enter UsbHostManager.
+    // Registers the management event sink. The sink is invoked without devicesMutex_ while
+    // deviceControlEventSinkMutex_ is held, so a concurrent SetDeviceControlEventSink()
+    // waits for in-flight callbacks. The sink must not call SetDeviceControlEventSink().
     void SetDeviceControlEventSink(const std::function<void(const UsbDevice &device, bool attached)> &sink);
     void SetSerialManager(std::shared_ptr<SERIAL::SerialManager> serialManager);
 
@@ -126,7 +126,7 @@ public:
     int32_t UsbAttachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid);
     int32_t UsbDetachKernelDriver(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid);
     int32_t ClearHalt(uint8_t busNum, uint8_t devAddr, uint8_t interfaceId, uint8_t endpointId);
-    // Acquires devicesMutex_ internally. Use this when the caller does not already hold it.
+    // Acquires devicesMutex_ internally.
     int32_t AuthorizeDevice(uint8_t busNum, uint8_t devAddr, bool authorized, const std::string &operationType);
     // Caller must hold devicesMutex_ for the duration of the call.
     int32_t UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, const std::string &operationType);
@@ -134,8 +134,7 @@ public:
         const HDI::Usb::V1_0::UsbDev &dev, uint8_t configId, uint8_t interfaceId, bool authorized);
 
     int32_t GetDevices(std::vector<UsbDevice> &deviceList);
-    // Returns all enumerated devices, including DISABLED ones. Authorization is enforced by
-    // the service layer; this method performs no permission check.
+    // Returns all enumerated devices, including DISABLED ones; no permission check.
     int32_t GetAllDevices(std::vector<UsbDeviceInfo> &deviceInfos);
     int32_t GetDeviceInfo(uint8_t busNum, uint8_t devAddr, UsbDevice &dev);
     int32_t GetDeviceInfoDescriptor(
@@ -229,6 +228,7 @@ private:
     SystemAbility *systemAbility_;
     bool isPermTypePolicy_ = false;
     std::atomic<bool> isDynamicControlEnabled_{false};
+    std::shared_mutex deviceControlEventSinkMutex_;
     std::function<void(const UsbDevice &device, bool attached)> deviceControlEventSink_ = nullptr;
     std::mutex mutex_;
     std::shared_mutex devicesMutex_;
