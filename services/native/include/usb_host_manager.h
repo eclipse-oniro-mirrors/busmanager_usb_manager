@@ -182,7 +182,7 @@ private:
     std::shared_ptr<UsbRightManager> usbRightManager_;
     std::shared_ptr<SERIAL::SerialManager> usbSerialManager_ = nullptr;
     std::vector<HDI::Usb::V1_0::UsbDev> serialDevices_;
-    sptr<HDI::Usb::V1_0::IUsbdBulkCallback> hdiCb_ = nullptr;
+    std::map<std::string, sptr<HDI::Usb::V1_0::IUsbdBulkCallback>> hdiCbMap_;
     std::mutex hdiCbMutex_;
     std::mutex transferMutex_;
     class UsbSubmitTransferDeathRecipient : public IRemoteObject::DeathRecipient {
@@ -211,7 +211,7 @@ private:
 #ifdef USB_MANAGER_PASS_THROUGH
     sptr<HDI::Usb::V2_0::IUsbDeviceInterface> usbDeviceInterface_ = nullptr;
     sptr<HDI::Usb::V2_0::IUsbHostInterface> usbHostInterface_ = nullptr;
-    sptr<HDI::Usb::V2_0::IUsbdBulkCallback> usbHostHdiCb_ = nullptr;
+    std::map<std::string, sptr<HDI::Usb::V2_0::IUsbdBulkCallback>> usbHostHdiCbMap_;
     sptr<UsbManagerSubscriber> usbManagerSubscriber_;
 #else
     sptr<HDI::Usb::V1_2::IUsbInterface> usbd_ = nullptr;
