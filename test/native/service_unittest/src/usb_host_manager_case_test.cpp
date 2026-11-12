@@ -476,6 +476,12 @@ void UsbDynamicControlTest::SetUp()
 
 void UsbDynamicControlTest::TearDown()
 {
+    // Reset the mode flag before destroying the manager so a test that enabled the
+    // mode cannot leak state into the following tests.
+    if (usbHostManager_ != nullptr) {
+        usbHostManager_->InitDynamicControlEnabled(false);
+        usbHostManager_->SetDeviceControlEventSink(nullptr);
+    }
     // UsbHostManager owns the devices added through AddDevice() and releases them in its destructor
     usbHostManager_.reset();
 }

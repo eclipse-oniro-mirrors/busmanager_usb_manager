@@ -1357,42 +1357,47 @@ bool UsbHostManager::AddDevice(UsbDevice *dev)
     uint8_t busNum = dev->GetBusNum();
     uint8_t devNum = dev->GetDevAddr();
     std::string name = std::to_string(busNum) + "-" + std::to_string(devNum);
-    std::unique_lock lock(devicesMutex_);
-    MAP_STR_DEVICE::iterator iter = devices_.find(name);
-    if (iter != devices_.end()) {
-        USB_HILOGF(MODULE_USB_HOST, "device:%{public}s bus:%{public}hhu dev:%{public}hhu already exist", name.c_str(),
-            busNum, devNum);
-        UsbDevice *devOld = iter->second;
-        if (devOld != nullptr && devOld != dev) {
-            delete devOld;
+    // Scoped locks only: no explicit unlock() calls, so the lock state can never
+    // diverge from the scope (a mismatched unlock throws std::system_error).
+    {
+        std::unique_lock lock(devicesMutex_);
+        MAP_STR_DEVICE::iterator iter = devices_.find(name);
+        if (iter != devices_.end()) {
+            USB_HILOGF(MODULE_USB_HOST, "device:%{public}s bus:%{public}hhu dev:%{public}hhu already exist",
+                name.c_str(), busNum, devNum);
+            UsbDevice *devOld = iter->second;
+            if (devOld != nullptr && devOld != dev) {
+                delete devOld;
+            }
+            devices_.erase(iter);
         }
-        devices_.erase(iter);
+        devices_.insert(std::pair<std::string, UsbDevice *>(name, dev));
+        dev->SetAuthorizeStatus(NEW_ARRIVED);
+        USB_HILOGI(MODULE_USB_HOST,
+            "device:%{public}s bus:%{public}hhu dev:%{public}hhu insert, cur device size: %{public}zu",
+            name.c_str(), busNum, devNum, devices_.size());
+        AddUsbSerialDevice(*dev);
+        ApplyDynamicControlToNewDevice(*dev);
     }
-    devices_.insert(std::pair<std::string, UsbDevice *>(name, dev));
-    dev->SetAuthorizeStatus(NEW_ARRIVED);
-    USB_HILOGI(MODULE_USB_HOST,
-        "device:%{public}s bus:%{public}hhu dev:%{public}hhu insert, cur device size: %{public}zu",
-        name.c_str(), busNum, devNum, devices_.size());
-    AddUsbSerialDevice(*dev);
-    ApplyDynamicControlToNewDevice(*dev);
-    lock.unlock();
 
-    // DONT hold unique_lock here: ExecuteStratgy quiries policy (requires the same lock with policy execution in MDM)
+    // ExecuteStrategy() re-enters the policy flow which takes devicesMutex_ itself.
     ExecuteStrategy();
 
-    std::shared_lock sharedLock(devicesMutex_);
-    iter = devices_.find(name);
-    if (iter == devices_.end()) {
-        USB_HILOGW(MODULE_USB_HOST, "%{public}s: device removed before publish common event", __func__);
-        return false;
+    UsbDevice eventDevice;
+    bool wasDisabled = false;
+    {
+        std::shared_lock sharedLock(devicesMutex_);
+        auto iter = devices_.find(name);
+        if (iter == devices_.end()) {
+            USB_HILOGW(MODULE_USB_HOST, "%{public}s: device removed before publish common event", __func__);
+            return false;
+        }
+        wasDisabled = iter->second->GetAuthorizeStatus() == DISABLED;
+        if (!wasDisabled) {
+            iter->second->SetAuthorizeStatus(ENABLED);
+        }
+        eventDevice = UsbDevice(*iter->second);
     }
-    dev = iter->second;
-    bool wasDisabled = dev->GetAuthorizeStatus() == DISABLED;
-    if (!wasDisabled) {
-        dev->SetAuthorizeStatus(ENABLED);
-    }
-    UsbDevice eventDevice(*dev);
-    sharedLock.unlock();
     NotifyDeviceAttached(eventDevice, wasDisabled);
     return true;
 }
@@ -2391,12 +2396,15 @@ bool UsbHostManager::IsUsbSerialDevice(UsbDevice &dev)
 int32_t UsbHostManager::ManageUsbSerialDevice(bool disable)
 {
     USB_HILOGI(MODULE_USB_HOST, "%{public}s: enter", __func__);
-    std::shared_lock lock(devicesMutex_);
-    for (auto &dev : serialDevices_) {
-        (void)UsbDeviceAuthorize(dev.busNum, dev.devAddr, !disable, "UsbSerialType");
+    // Scoped lock: strategy execution below must run without devicesMutex_ held
+    // (it re-enters the policy flow which takes the same lock).
+    {
+        std::shared_lock lock(devicesMutex_);
+        for (auto &dev : serialDevices_) {
+            (void)UsbDeviceAuthorize(dev.busNum, dev.devAddr, !disable, "UsbSerialType");
+        }
     }
     if (!disable) {
-        lock.unlock();
         ExecuteStrategy();
     }
     return UEC_OK;
