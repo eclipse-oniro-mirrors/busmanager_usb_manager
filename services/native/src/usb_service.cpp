@@ -15,14 +15,18 @@
 
 #include "usb_service.h"
 
+#include <atomic>
 #include <cstdio>
+#include <filesystem>
 #include <iostream>
 #include <ipc_skeleton.h>
 #include <sstream>
 #include <string>
-#include <filesystem>
 #include <unistd.h>
 #include <unordered_map>
+#include <utility>
+#include <vector>
+
 #include "parameters.h"
 #include "bundle_mgr_interface.h"
 #include "bundle_mgr_proxy.h"
@@ -83,6 +87,10 @@ static const std::filesystem::path TTYACM_PATH = "/sys/class/tty";
 static const std::string TTYACM_PREFIX = "ttyACM";
 constexpr const pid_t ROOT_UID = 0;
 constexpr const pid_t EDM_UID = 3057;
+#ifdef USB_SERVICE_TEST
+// Test-only override: <0 uses the production token/UID checks, 0/1 forces the result.
+std::atomic<int32_t> g_callerValidForTest{-1};
+#endif // USB_SERVICE_TEST
 } // namespace
 auto g_serviceInstance = DelayedSpSingleton<UsbService>::GetInstance();
 const bool G_REGISTER_RESULT =
@@ -95,6 +103,10 @@ UsbService::UsbService() : SystemAbility(USB_SYSTEM_ABILITY_ID, true)
 
 #ifdef USB_MANAGER_FEATURE_HOST
     usbHostManager_ = std::make_shared<UsbHostManager>(nullptr);
+    if (usbHostManager_ != nullptr) {
+        usbHostManager_->SetDeviceControlEventSink(
+            [this](const UsbDevice &device, bool attached) { NotifyDeviceControlEvent(device, attached); });
+    }
 #endif // USB_MANAGER_FEATURE_HOST
 #ifdef USB_MANAGER_FEATURE_PORT
     usbPortManager_ = std::make_shared<UsbPortManager>();
@@ -115,7 +127,28 @@ UsbService::UsbService() : SystemAbility(USB_SYSTEM_ABILITY_ID, true)
 #endif // USB_MANAGER_PASS_THROUGH
 }
 
-UsbService::~UsbService() {}
+UsbService::~UsbService()
+{
+#ifdef USB_MANAGER_FEATURE_HOST
+    // Clear the sink before member destruction to avoid calling into a destroyed service.
+    if (usbHostManager_ != nullptr) {
+        usbHostManager_->SetDeviceControlEventSink(nullptr);
+    }
+    std::vector<std::pair<sptr<IRemoteObject>, sptr<UsbService::DeviceControlDeathRecipient>>> subscribers;
+    {
+        std::lock_guard<std::mutex> guard(deviceControlSubscribersMutex_);
+        for (auto &entry : deviceControlSubscribers_) {
+            subscribers.push_back(std::make_pair(entry.second.remote, entry.second.recipient));
+        }
+        deviceControlSubscribers_.clear();
+    }
+    for (auto &entry : subscribers) {
+        if (entry.first != nullptr && entry.second != nullptr) {
+            entry.first->RemoveDeathRecipient(entry.second);
+        }
+    }
+#endif // USB_MANAGER_FEATURE_HOST
+}
 
 // LCOV_EXCL_START
 #ifndef USB_MANAGER_PASS_THROUGH
@@ -302,6 +335,26 @@ void UsbService::OnStart()
         }, this);
     if (watchRet != UEC_OK) {
         USB_HILOGE(MODULE_USB_SERVICE, "failed to watch usb_serial_disable parameter");
+    }
+
+    std::string dynamicControlValue = OHOS::system::GetParameter(DYNAMIC_CONTROL_MODE_PARAM, "false");
+    if (usbHostManager_ != nullptr) {
+        bool enabled = (dynamicControlValue == "true");
+        usbHostManager_->InitDynamicControlEnabled(enabled);
+        if (enabled) {
+            usbHostManager_->SetAllNonHubDevicesAuthorized(false);
+        }
+    }
+    auto dynamicWatchRet = WatchParameter(
+        DYNAMIC_CONTROL_MODE_PARAM,
+        [](const char *key, const char *value, void *context) {
+            if (g_serviceInstance != nullptr) {
+                g_serviceInstance->OnDynamicControlParamChanged(key, value);
+            }
+        },
+        this);
+    if (dynamicWatchRet != UEC_OK) {
+        USB_HILOGE(MODULE_USB_SERVICE, "failed to watch dynamic control parameter");
     }
 #endif // USB_MANAGER_FEATURE_HOST
 #ifdef USB_MANAGER_FEATURE_PORT
@@ -1311,6 +1364,258 @@ int32_t UsbService::GetDevices(std::vector<UsbDevice> &deviceList)
         return UEC_SERVICE_INVALID_VALUE;
     }
     return usbHostManager_->GetDevices(deviceList);
+}
+
+void UsbService::OnDynamicControlParamChanged(const char *key, const char *value)
+{
+    if (key == nullptr || value == nullptr) {
+        USB_HILOGE(MODULE_USB_SERVICE, "dynamic control param null pointer");
+        return;
+    }
+    USB_HILOGI(MODULE_USB_SERVICE, "watch dynamic control param: get %{public}s=%{public}s", key, value);
+    if (usbHostManager_ == nullptr) {
+        return;
+    }
+    bool enabled = (std::string(value) == "true");
+    if (usbHostManager_->IsDynamicControlEnabled() == enabled) {
+        return;
+    }
+    usbHostManager_->InitDynamicControlEnabled(enabled);
+    usbHostManager_->SetAllNonHubDevicesAuthorized(!enabled);
+}
+
+int32_t UsbService::CheckDynamicControlPermission(const char *operation)
+{
+    if (!IsCallerValid()) {
+        USB_HILOGE(MODULE_USB_SERVICE, "%{public}s: not root or edm process", operation);
+        return UEC_SERVICE_INVALID_OPERATION;
+    }
+    return UEC_OK;
+}
+
+int32_t UsbService::GetAllDevices(std::vector<UsbDeviceInfo> &deviceInfos)
+{
+    int32_t permRet = CheckDynamicControlPermission("GetAllDevices");
+    if (permRet != UEC_OK) {
+        return permRet;
+    }
+    if (usbHostManager_ == nullptr) {
+        USB_HILOGE(MODULE_USB_SERVICE, "UsbService::usbHostManager_ is nullptr");
+        return UEC_SERVICE_INVALID_VALUE;
+    }
+    return usbHostManager_->GetAllDevices(deviceInfos);
+}
+
+int32_t UsbService::ValidateDynamicControlDeviceRef(uint8_t busNum, uint8_t devAddr, UsbDevice &dev)
+{
+    if (busNum == 0 || devAddr < USB_DEVICE_ADDR_MIN || devAddr > USB_DEVICE_ADDR_MAX) {
+        USB_HILOGE(MODULE_USB_SERVICE, "dynamic control invalid busNum/devAddr: %{public}hhu/%{public}hhu", busNum,
+                   devAddr);
+        return UEC_INTERFACE_INVALID_VALUE;
+    }
+    if (!usbHostManager_->GetTargetDevice(busNum, devAddr, dev)) {
+        USB_HILOGE(MODULE_USB_SERVICE, "dynamic control target device not attached, bus:%{public}hhu dev:%{public}hhu",
+                   busNum, devAddr);
+        // A detached target reports the same code as a ROOT-HUB rejection.
+        return UEC_INTERFACE_INVALID_OPERATION;
+    }
+    return UEC_OK;
+}
+
+int32_t UsbService::UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, int32_t &funcResult)
+{
+    funcResult = CheckDynamicControlPermission("UsbDeviceAuthorize");
+    if (funcResult != UEC_OK) {
+        return funcResult;
+    }
+    if (usbHostManager_ == nullptr) {
+        USB_HILOGE(MODULE_USB_SERVICE, "UsbService::usbHostManager_ is nullptr");
+        funcResult = UEC_SERVICE_INVALID_VALUE;
+        return funcResult;
+    }
+    UsbDevice dev;
+    funcResult = ValidateDynamicControlDeviceRef(busNum, devAddr, dev);
+    if (funcResult != UEC_OK) {
+        return funcResult;
+    }
+    if (IsRootHub(dev)) {
+        USB_HILOGE(MODULE_USB_SERVICE, "dynamic control cannot manage root HUB device");
+        funcResult = UEC_INTERFACE_INVALID_OPERATION;
+        return funcResult;
+    }
+    funcResult = usbHostManager_->AuthorizeDevice(busNum, devAddr, authorized, DYNAMIC_CONTROL_OPERATION_TYPE);
+    if (funcResult != UEC_OK) {
+        USB_HILOGE(MODULE_USB_SERVICE, "dynamic control device authorize failed, ret:%{public}d", funcResult);
+    }
+    return funcResult;
+}
+
+int32_t UsbService::UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uint8_t configId, uint8_t interfaceId,
+                                          bool authorized, int32_t &funcResult)
+{
+    funcResult = CheckDynamicControlPermission("UsbInterfaceAuthorize");
+    if (funcResult != UEC_OK) {
+        return funcResult;
+    }
+    if (usbHostManager_ == nullptr) {
+        USB_HILOGE(MODULE_USB_SERVICE, "UsbService::usbHostManager_ is nullptr");
+        funcResult = UEC_SERVICE_INVALID_VALUE;
+        return funcResult;
+    }
+    UsbDevice dev;
+    funcResult = ValidateDynamicControlDeviceRef(busNum, devAddr, dev);
+    if (funcResult != UEC_OK) {
+        return funcResult;
+    }
+    if (IsRootHub(dev)) {
+        USB_HILOGE(MODULE_USB_SERVICE, "dynamic control cannot manage root HUB interface");
+        funcResult = UEC_INTERFACE_INVALID_OPERATION;
+        return funcResult;
+    }
+    const HDI::Usb::V1_0::UsbDev usbDev = {busNum, devAddr};
+    funcResult = usbHostManager_->UsbInterfaceAuthorize(usbDev, configId, interfaceId, authorized);
+    if (funcResult != UEC_OK) {
+        USB_HILOGE(MODULE_USB_SERVICE, "dynamic control interface authorize failed, ret:%{public}d", funcResult);
+    }
+    return funcResult;
+}
+
+int32_t UsbService::RegDeviceControlCallback(const sptr<IRemoteObject> &cb)
+{
+    int32_t permRet = CheckDynamicControlPermission("RegDeviceControlCallback");
+    if (permRet != UEC_OK) {
+        return permRet;
+    }
+    if (cb == nullptr) {
+        USB_HILOGE(MODULE_USB_SERVICE, "dynamic control callback is nullptr");
+        return UEC_INTERFACE_INVALID_VALUE;
+    }
+    IRemoteObject *key = cb.GetRefPtr();
+    {
+        std::lock_guard<std::mutex> guard(deviceControlSubscribersMutex_);
+        if (deviceControlSubscribers_.find(key) != deviceControlSubscribers_.end()) {
+            USB_HILOGI(MODULE_USB_SERVICE, "dynamic control callback already registered");
+            return UEC_OK;
+        }
+    }
+    sptr<UsbService::DeviceControlDeathRecipient> recipient =
+        new (std::nothrow) UsbService::DeviceControlDeathRecipient(this, key);
+    if (recipient == nullptr) {
+        USB_HILOGE(MODULE_USB_SERVICE, "create dynamic control death recipient failed");
+        return UEC_SERVICE_NO_MEMORY;
+    }
+    // Do not call AddDeathRecipient while holding the subscriber mutex: a death notification
+    // may synchronously re-enter RemoveDeviceControlSubscriber().
+    if (!cb->AddDeathRecipient(recipient)) {
+        USB_HILOGE(MODULE_USB_SERVICE, "add dynamic control death recipient failed");
+        return UEC_SERVICE_ADD_DEATH_RECIPIENT_FAILED;
+    }
+    bool duplicate = false;
+    {
+        std::lock_guard<std::mutex> guard(deviceControlSubscribersMutex_);
+        if (deviceControlSubscribers_.find(key) != deviceControlSubscribers_.end()) {
+            duplicate = true;
+        } else {
+            DeviceControlSubscriber subscriber;
+            subscriber.remote = cb;
+            subscriber.recipient = recipient;
+            deviceControlSubscribers_[key] = subscriber;
+        }
+    }
+    if (duplicate) {
+        cb->RemoveDeathRecipient(recipient);
+        USB_HILOGI(MODULE_USB_SERVICE, "dynamic control callback registered concurrently");
+        return UEC_OK;
+    }
+    USB_HILOGI(MODULE_USB_SERVICE, "register dynamic control callback success");
+    return UEC_OK;
+}
+
+int32_t UsbService::UnRegDeviceControlCallback(const sptr<IRemoteObject> &cb)
+{
+    int32_t permRet = CheckDynamicControlPermission("UnRegDeviceControlCallback");
+    if (permRet != UEC_OK) {
+        return permRet;
+    }
+    if (cb == nullptr) {
+        USB_HILOGE(MODULE_USB_SERVICE, "dynamic control callback is nullptr");
+        return UEC_INTERFACE_INVALID_VALUE;
+    }
+    RemoveDeviceControlSubscriber(cb.GetRefPtr());
+    return UEC_OK;
+}
+
+void UsbService::RemoveDeviceControlSubscriber(IRemoteObject *remote)
+{
+    sptr<IRemoteObject> remoteObject = nullptr;
+    sptr<UsbService::DeviceControlDeathRecipient> recipient = nullptr;
+    {
+        std::lock_guard<std::mutex> guard(deviceControlSubscribersMutex_);
+        auto iter = deviceControlSubscribers_.find(remote);
+        if (iter == deviceControlSubscribers_.end()) {
+            return;
+        }
+        remoteObject = iter->second.remote;
+        recipient = iter->second.recipient;
+        deviceControlSubscribers_.erase(iter);
+    }
+    // Remove the death recipient outside the mutex; OnRemoteDied() may re-enter this method.
+    if (remoteObject != nullptr && recipient != nullptr) {
+        remoteObject->RemoveDeathRecipient(recipient);
+    }
+    USB_HILOGI(MODULE_USB_SERVICE, "remove dynamic control subscriber");
+}
+
+std::vector<sptr<IRemoteObject>> UsbService::GetDeviceControlSubscribers()
+{
+    std::vector<sptr<IRemoteObject>> subscribers;
+    std::lock_guard<std::mutex> guard(deviceControlSubscribersMutex_);
+    for (auto &entry : deviceControlSubscribers_) {
+        if (entry.second.remote != nullptr) {
+            subscribers.push_back(entry.second.remote);
+        }
+    }
+    return subscribers;
+}
+
+void UsbService::SendDeviceControlEvent(const sptr<IRemoteObject> &remote, const UsbDevice &device, bool attached)
+{
+    MessageParcel data;
+    MessageParcel reply;
+    UsbDevice eventDevice(device);
+    if (!eventDevice.Marshalling(data)) {
+        USB_HILOGE(MODULE_USB_SERVICE, "marshal dynamic control event device failed");
+        return;
+    }
+    data.WriteInt32(static_cast<int32_t>(eventDevice.GetAuthorizeStatus()));
+    data.WriteBool(attached);
+    // Bound the synchronous callback so a slow subscriber cannot stall hotplug.
+    MessageOption option(MessageOption::TF_SYNC, DEVICE_CONTROL_EVENT_TIMEOUT_MS);
+    int32_t ret = remote->SendRequest(DEVICE_CONTROL_EVENT_CODE, data, reply, option);
+    if (ret != UEC_OK) {
+        USB_HILOGW(MODULE_USB_SERVICE, "notify dynamic control event failed, ret:%{public}d", ret);
+    }
+}
+
+void UsbService::NotifyDeviceControlEvent(const UsbDevice &device, bool attached)
+{
+    auto subscribers = GetDeviceControlSubscribers();
+    if (subscribers.empty()) {
+        return;
+    }
+    // Subscription was authorized at registration; the hotplug thread has no subscriber token.
+    for (auto &remote : subscribers) {
+        SendDeviceControlEvent(remote, device, attached);
+    }
+}
+
+void UsbService::DeviceControlDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &object)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "DeviceControlDeathRecipient OnRemoteDied");
+    if (service_ == nullptr) {
+        return;
+    }
+    service_->RemoveDeviceControlSubscriber(remote_);
 }
 
 // LCOV_EXCL_START
@@ -3183,11 +3488,24 @@ int32_t UsbService::DeviceEvent(const HDI::Usb::V1_0::USBDeviceInfo &info)
 }
 // LCOV_EXCL_STOP
 
+#ifdef USB_SERVICE_TEST
+void UsbService::SetCallerValidForTest(int32_t value)
+{
+    g_callerValidForTest.store(value);
+}
+#endif // USB_SERVICE_TEST
+
 bool UsbService::IsCallerValid()
 {
-    OHOS::Security::AccessToken::AccessTokenID callerToken = IPCSkeleton::GetCallingTokenID();
-    auto callerTokenType = OHOS::Security::AccessToken::AccessTokenKit::GetTokenType(callerToken);
-    if (callerTokenType == OHOS::Security::AccessToken::TypeATokenTypeEnum::TOKEN_NATIVE) {
+#ifdef USB_SERVICE_TEST
+    int32_t callerOverride = g_callerValidForTest.load();
+    if (callerOverride >= 0) {
+        return callerOverride == 1;
+    }
+#endif // USB_SERVICE_TEST
+    AccessTokenID callerToken = IPCSkeleton::GetCallingTokenID();
+    auto callerTokenType = AccessTokenKit::GetTokenType(callerToken);
+    if (callerTokenType == TypeATokenTypeEnum::TOKEN_NATIVE) {
         pid_t callerUid = IPCSkeleton::GetCallingUid();
         return callerUid == ROOT_UID || callerUid == EDM_UID;
     }

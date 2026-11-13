@@ -45,3 +45,34 @@
    int productId;
    int vendorId;
  };
+
+// FROZEN LAYOUT: the EDM client reads this parcel as a packed
+// {int32 x5, bool} block via ReadUnpadBuffer. Do not change fields or order
+// without a coordinated update on the EDM side.
+struct UsbInterfaceInfo {
+    int interfaceId;
+    int interfaceClass;
+    int subClass;
+    int protocol;
+    int alternateSetting;
+    boolean authorized;
+};
+
+// FROZEN ORDER: the EDM client deserializes fields in the declared order.
+// Do not add, remove or reorder fields without a coordinated update.
+struct UsbDeviceInfo {
+    String deviceId;
+    unsigned char busNum;
+    unsigned char devAddr;
+    int vendorId;
+    int productId;
+    int deviceClass;
+    int subClass;
+    int protocol;
+    String serial;
+    String manufacturerName;
+    String productName;
+    boolean isHub;
+    boolean authorized;
+    UsbInterfaceInfo[] interfaces;
+};
