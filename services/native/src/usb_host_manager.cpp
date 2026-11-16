@@ -1125,7 +1125,6 @@ int32_t UsbHostManager::RegBulkCallback(const HDI::Usb::V1_0::UsbDev &devInfo, c
         return ret;
     }
     UsbHostHdiBulkCallbackInfo info{hdiCb, callerTokenId, usbDev_, usbPipe_};
-    info.ownerTokenId = callerTokenId;
     usbHostHdiCbMap_[devKey] = info;
     return UEC_OK;
 #else
