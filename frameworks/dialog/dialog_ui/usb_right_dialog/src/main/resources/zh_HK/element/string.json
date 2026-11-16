@@ -123,14 +123,14 @@
             "name":"USB_hdc_notifier_title",
             "value":"已連線 USB 偵錯",
             "attr":{
-                "priority":"translate"
+                "priority":"LT"
             }
         },
         {
             "name":"USB_hdc_notifier_content",
             "value":"輕觸可停用 USB 偵錯。",
             "attr":{
-                "priority":"translate"
+                "priority":"LT"
             }
         },
         {

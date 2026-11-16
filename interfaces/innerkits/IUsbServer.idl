@@ -27,6 +27,11 @@ sequenceable UsbBulkTransData..OHOS.USB.UsbBulkTransData;
 interface OHOS.USB.IUsbServer {
     /* the function about UsbService */
     [macrodef USB_MANAGER_FEATURE_HOST] void GetDevices([out]UsbDevice[] deviceList);
+    [macrodef USB_MANAGER_FEATURE_HOST] void GetAllDevices([out]UsbDeviceInfo[] deviceInfos);
+    [macrodef USB_MANAGER_FEATURE_HOST] int UsbDeviceAuthorize([in]unsigned char busNum, [in]unsigned char devAddr, [in]boolean authorized);
+    [macrodef USB_MANAGER_FEATURE_HOST] int UsbInterfaceAuthorize([in]unsigned char busNum, [in]unsigned char devAddr, [in]unsigned char configId, [in]unsigned char interfaceId, [in]boolean authorized);
+    [macrodef USB_MANAGER_FEATURE_HOST] void RegDeviceControlCallback([in]IRemoteObject cb);
+    [macrodef USB_MANAGER_FEATURE_HOST] void UnRegDeviceControlCallback([in]IRemoteObject cb);
     [macrodef USB_MANAGER_FEATURE_HOST] void OpenDevice([in]unsigned char busNum, [in]unsigned char devAddr);
     [macrodef USB_MANAGER_FEATURE_HOST] void Close([in]unsigned char busNum, [in]unsigned char devAddr);
     [macrodef USB_MANAGER_FEATURE_HOST] void ResetDevice([in]unsigned char busNum, [in]unsigned char devAddr);

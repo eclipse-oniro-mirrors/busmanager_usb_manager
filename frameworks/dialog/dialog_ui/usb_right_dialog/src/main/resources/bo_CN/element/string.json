@@ -123,14 +123,14 @@
             "name":"USB_hdc_notifier_title",
             "value":"USB སྙོམ་སྒྲིག་དང་སྦྲེལ་ཟིན་པ།",
             "attr":{
-                "priority":"translate"
+                "priority":"LT"
             }
         },
         {
             "name":"USB_hdc_notifier_content",
             "value":"རེག་ན་USBཚོད་སྒྲིག་མཚམས་འཇོག་ཐུབ།",
             "attr":{
-                "priority":"translate"
+                "priority":"LT"
             }
         },
         {

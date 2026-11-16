@@ -102,7 +102,7 @@
             "name":"USB_hdc_notifier_title",
             "value":"Débogage USB initié",
             "attr":{
-                "priority":"translate"
+                "priority":"LT"
             }
         },
         {
@@ -149,7 +149,7 @@
         },
         {
             "name":"USB_hdc_notifier_content",
-            "value":"Veuillez toucher pour désactiver le débogage USB",
+            "value":"Toucher pour désactiver le débogage USB.",
             "attr":{
                 "priority":"LT"
             }
