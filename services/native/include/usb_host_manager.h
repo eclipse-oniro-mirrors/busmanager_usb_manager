@@ -120,8 +120,9 @@ public:
     int32_t UsbSubmitTransfer(const HDI::Usb::V1_0::UsbDev &devInfo, HDI::Usb::V1_2::USBTransferInfo &info,
         const sptr<IRemoteObject> &cb, sptr<Ashmem> &ashmem);
     int32_t RegBulkCallback(const HDI::Usb::V1_0::UsbDev &devInfo, const HDI::Usb::V1_0::UsbPipe &pipe,
-        const sptr<IRemoteObject> &cb);
-    int32_t UnRegBulkCallback(const HDI::Usb::V1_0::UsbDev &devInfo, const HDI::Usb::V1_0::UsbPipe &pipe);
+        const sptr<IRemoteObject> &cb, uint32_t callerTokenId);
+    int32_t UnRegBulkCallback(const HDI::Usb::V1_0::UsbDev &devInfo, const HDI::Usb::V1_0::UsbPipe &pipe,
+        uint32_t callerTokenId);
     int32_t BulkRead(
         const HDI::Usb::V1_0::UsbDev &devInfo, const HDI::Usb::V1_0::UsbPipe &pipe, sptr<Ashmem> &ashmem);
     int32_t BulkWrite(
@@ -174,6 +175,7 @@ private:
     int32_t CheckDevPathIsExist(uint8_t busNum, uint8_t devAddr);
     bool IsDevicePresent(uint8_t busNum, uint8_t devAddr);
     void LoadEdmService();
+    void RemoveBulkCallbackByDevice(uint8_t busNum, uint8_t devAddr);
     MAP_STR_DEVICE devices_;
     SystemAbility *systemAbility_;
     bool isPermTypePolicy_ = false;
@@ -182,7 +184,6 @@ private:
     std::shared_ptr<UsbRightManager> usbRightManager_;
     std::shared_ptr<SERIAL::SerialManager> usbSerialManager_ = nullptr;
     std::vector<HDI::Usb::V1_0::UsbDev> serialDevices_;
-    std::map<std::string, sptr<HDI::Usb::V1_0::IUsbdBulkCallback>> hdiCbMap_;
     std::mutex hdiCbMutex_;
     std::mutex transferMutex_;
     class UsbSubmitTransferDeathRecipient : public IRemoteObject::DeathRecipient {
@@ -211,10 +212,23 @@ private:
 #ifdef USB_MANAGER_PASS_THROUGH
     sptr<HDI::Usb::V2_0::IUsbDeviceInterface> usbDeviceInterface_ = nullptr;
     sptr<HDI::Usb::V2_0::IUsbHostInterface> usbHostInterface_ = nullptr;
-    std::map<std::string, sptr<HDI::Usb::V2_0::IUsbdBulkCallback>> usbHostHdiCbMap_;
+    struct UsbHostHdiBulkCallbackInfo {
+        sptr<HDI::Usb::V2_0::IUsbdBulkCallback> cb;
+        uint32_t ownerTokenId = 0;
+        HDI::Usb::V2_0::UsbDev dev {};
+        HDI::Usb::V2_0::UsbPipe pipe {};
+    };
+    std::map<std::string, UsbHostHdiBulkCallbackInfo> usbHostHdiCbMap_;
     sptr<UsbManagerSubscriber> usbManagerSubscriber_;
 #else
     sptr<HDI::Usb::V1_2::IUsbInterface> usbd_ = nullptr;
+    struct HdiBulkCallbackInfo {
+        sptr<HDI::Usb::V1_0::IUsbdBulkCallback> cb;
+        uint32_t ownerTokenId = 0;
+        HDI::Usb::V1_0::UsbDev dev {};
+        HDI::Usb::V1_0::UsbPipe pipe {};
+    };
+    std::map<std::string, HdiBulkCallbackInfo> hdiCbMap_;
 #endif // USB_MANAGER_PASS_THROUGH
 };
 } // namespace USB
