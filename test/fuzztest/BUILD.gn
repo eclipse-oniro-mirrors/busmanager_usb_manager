@@ -24,6 +24,9 @@ config("usbsrv_public_config") {
     "${usb_manager_path}/services/native/include",
     "${usb_manager_path}/utils/native/include",
   ]
+  # Keep parity with services/BUILD.gn usbsrv_public_config: usb_host_manager.cpp
+  # compares char with 0xFF/0xFE (UTF-16LE BOM), always-false where char is signed.
+  cflags = [ "-Wno-tautological-constant-out-of-range-compare" ]
 }
 
 # Exposes the test-only override hooks (SetCallerValidForTest/SetEdmEnabledForTest)
