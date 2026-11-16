@@ -753,7 +753,7 @@ void UsbService::AddDeviceConnection(uint8_t busNum, uint8_t devAddr)
         USB_HILOGE(MODULE_USB_HOST, "%{public}s: GetDeviceInfo failed", __func__);
         return;
     }
-    int32_t uid = IPCSkeleton::GetCallingUid();
+    int32_t callingAppUid = IPCSkeleton::GetCallingAppUid();
     std::string bundleName;
     std::string tokenId;
     int32_t userId = 0;
@@ -767,13 +767,13 @@ void UsbService::AddDeviceConnection(uint8_t busNum, uint8_t devAddr)
         std::lock_guard<std::mutex> lock(deviceConnectionMutex_);
         auto &record = deviceConnectionMap_[key];
         record.device = dev;
-        record.apps[uid] = bundleName;
+        record.apps[callingAppUid] = bundleName;
     }
 
     UsbDeviceConnectionInfo info;
     info.type = USB_DEVICE_CONNECTION_CONNECT;
     info.device = dev;
-    info.uid = uid;
+    info.uid = callingAppUid;
     info.bundleName = bundleName;
     NotifyDeviceConnection(info);
 }
@@ -782,7 +782,7 @@ void UsbService::AddDeviceConnection(uint8_t busNum, uint8_t devAddr)
 // LCOV_EXCL_START
 void UsbService::RemoveDeviceConnection(uint8_t busNum, uint8_t devAddr)
 {
-    int32_t uid = IPCSkeleton::GetCallingUid();
+    int32_t callingAppUid = IPCSkeleton::GetCallingAppUid();
     std::string bundleName;
     std::string tokenId;
     int32_t userId = 0;
@@ -800,7 +800,7 @@ void UsbService::RemoveDeviceConnection(uint8_t busNum, uint8_t devAddr)
         if (it == deviceConnectionMap_.end()) {
             return;
         }
-        auto appIt = it->second.apps.find(uid);
+        auto appIt = it->second.apps.find(callingAppUid);
         if (appIt == it->second.apps.end()) {
             return;
         }
@@ -816,7 +816,7 @@ void UsbService::RemoveDeviceConnection(uint8_t busNum, uint8_t devAddr)
         UsbDeviceConnectionInfo info;
         info.type = USB_DEVICE_CONNECTION_DISCONNECT;
         info.device = device;
-        info.uid = uid;
+        info.uid = callingAppUid;
         info.bundleName = bundleName;
         NotifyDeviceConnection(info);
     }
@@ -3126,7 +3126,7 @@ bool UsbService::GetBundleName(std::string &bundleName)
     bundleName = "com.usb.right";
     return true;
 #endif // USB_RIGHT_TEST
-    pid_t uid = GetCallingUid();
+    pid_t callingAppUid = IPCSkeleton::GetCallingAppUid();
     sptr<ISystemAbilityManager> systemAbilityManager =
         SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
     if (systemAbilityManager == nullptr) {
@@ -3142,7 +3142,7 @@ bool UsbService::GetBundleName(std::string &bundleName)
         return false;
     }
 
-    ErrCode ret = bundleMgr->GetNameForUid(uid, bundleName);
+    ErrCode ret = bundleMgr->GetNameForUid(callingAppUid, bundleName);
     if (ret != ERR_OK) {
         USB_HILOGE(MODULE_USB_SERVICE, "failed to obtain bundleName");
         return false;
@@ -3506,8 +3506,8 @@ bool UsbService::IsCallerValid()
     AccessTokenID callerToken = IPCSkeleton::GetCallingTokenID();
     auto callerTokenType = AccessTokenKit::GetTokenType(callerToken);
     if (callerTokenType == TypeATokenTypeEnum::TOKEN_NATIVE) {
-        pid_t callerUid = IPCSkeleton::GetCallingUid();
-        return callerUid == ROOT_UID || callerUid == EDM_UID;
+        pid_t callerAppUid = IPCSkeleton::GetCallingAppUid();
+        return callerAppUid == ROOT_UID || callerAppUid == EDM_UID;
     }
     return false;
 }

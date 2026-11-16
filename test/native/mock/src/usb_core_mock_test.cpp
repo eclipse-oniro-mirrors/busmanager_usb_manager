@@ -55,7 +55,7 @@ sptr<UsbService> UsbCoreMockTest::usbSrv_ = nullptr;
 
 bool UsbCoreMockTest::GetBundleName(std::string &bundleName)
 {
-    pid_t uid = IPCSkeleton::GetCallingUid();
+    pid_t callingAppUid = IPCSkeleton::GetCallingAppUid();
     sptr<ISystemAbilityManager> systemAbilityManager =
         SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
     if (systemAbilityManager == nullptr) {
@@ -73,7 +73,7 @@ bool UsbCoreMockTest::GetBundleName(std::string &bundleName)
         USB_HILOGE(MODULE_USB_SERVICE, "bundleMgr is nullptr");
         return false;
     }
-    bundleMgr->GetNameForUid(uid, bundleName);
+    bundleMgr->GetNameForUid(callingAppUid, bundleName);
     return true;
 }
 
