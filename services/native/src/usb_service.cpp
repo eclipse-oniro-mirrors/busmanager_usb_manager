@@ -2019,7 +2019,8 @@ int32_t UsbService::RegBulkCallback(uint8_t busNum, uint8_t devAddr,
     }
     HDI::Usb::V1_0::UsbDev devInfo = {busNum, devAddr};
     UsbPipe pipe = {ep.GetInterfaceId(), ep.GetAddress()};
-    int32_t ret = usbHostManager_->RegBulkCallback(devInfo, pipe, cb);
+    uint32_t callerTokenId = IPCSkeleton::GetCallingTokenID();
+    int32_t ret = usbHostManager_->RegBulkCallback(devInfo, pipe, cb, callerTokenId);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_HOST, "RegBulkCallback error ret:%{public}d", ret);
     }
@@ -2154,7 +2155,8 @@ int32_t UsbService::UnRegBulkCallback(uint8_t busNum, uint8_t devAddr, const USB
     }
     HDI::Usb::V1_0::UsbDev devInfo = {busNum, devAddr};
     UsbPipe pipe = {ep.GetInterfaceId(), ep.GetAddress()};
-    int32_t ret = usbHostManager_->UnRegBulkCallback(devInfo, pipe);
+    uint32_t callerTokenId = IPCSkeleton::GetCallingTokenID();
+    int32_t ret = usbHostManager_->UnRegBulkCallback(devInfo, pipe, callerTokenId);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_HOST, "UnRegBulkCallback error ret:%{public}d", ret);
     }

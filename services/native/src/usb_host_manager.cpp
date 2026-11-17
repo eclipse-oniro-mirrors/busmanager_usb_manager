@@ -1091,50 +1091,92 @@ int32_t UsbHostManager::UsbSubmitTransfer(const HDI::Usb::V1_0::UsbDev &devInfo,
     return ret;
 }
 
+static std::string GetBulkCallbackKey(const HDI::Usb::V1_0::UsbDev &devInfo, const HDI::Usb::V1_0::UsbPipe &pipe)
+{
+    return std::to_string(devInfo.busNum) + "-" + std::to_string(devInfo.devAddr) + "-" +
+        std::to_string(pipe.intfId) + "-" + std::to_string(pipe.endpointId);
+}
+
 int32_t UsbHostManager::RegBulkCallback(const HDI::Usb::V1_0::UsbDev &devInfo, const HDI::Usb::V1_0::UsbPipe &pipe,
-    const sptr<IRemoteObject> &cb)
+    const sptr<IRemoteObject> &cb, uint32_t callerTokenId)
 {
     if (cb == nullptr) {
         USB_HILOGE(MODULE_USB_HOST, "cb is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
     std::lock_guard<std::mutex> guard(hdiCbMutex_);
+    std::string devKey = GetBulkCallbackKey(devInfo, pipe);
 #ifdef USB_MANAGER_PASS_THROUGH
-    if (usbHostHdiCb_ == nullptr) {
-        usbHostHdiCb_ = new UsbBulkCallbackImpl(cb);
-    }
     if (usbHostInterface_ == nullptr) {
         USB_HILOGE(MODULE_USB_HOST, "UsbHostManager::RegBulkCallback usbHostInterface_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
+    auto existing = usbHostHdiCbMap_.find(devKey);
+    if (existing != usbHostHdiCbMap_.end() && existing->second.ownerTokenId != callerTokenId) {
+        USB_HILOGE(MODULE_USB_HOST, "RegBulkCallback permission denied for dev:%{public}s", devKey.c_str());
+        return UEC_SERVICE_PERMISSION_DENIED;
+    }
+    sptr<HDI::Usb::V2_0::IUsbdBulkCallback> hdiCb = new UsbBulkCallbackImpl(cb);
     const HDI::Usb::V2_0::UsbDev &usbDev_ = reinterpret_cast<const HDI::Usb::V2_0::UsbDev &>(devInfo);
     const HDI::Usb::V2_0::UsbPipe &usbPipe_ = reinterpret_cast<const HDI::Usb::V2_0::UsbPipe &>(pipe);
-    return usbHostInterface_->RegBulkCallback(usbDev_, usbPipe_, usbHostHdiCb_);
-#else
-    if (hdiCb_ == nullptr) {
-        hdiCb_ = new UsbdBulkCallbackImpl(cb);
+    int32_t ret = usbHostInterface_->RegBulkCallback(usbDev_, usbPipe_, hdiCb);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "RegBulkCallback error ret:%{public}d", ret);
+        return ret;
     }
+    UsbHostHdiBulkCallbackInfo info{hdiCb, callerTokenId, usbDev_, usbPipe_};
+    usbHostHdiCbMap_[devKey] = info;
+    return UEC_OK;
+#else
     if (usbd_ == nullptr) {
         USB_HILOGE(MODULE_USB_HOST, "UsbHostManager::usbd_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
-
-    return usbd_->RegBulkCallback(devInfo, pipe, hdiCb_);
+    auto existing = hdiCbMap_.find(devKey);
+    if (existing != hdiCbMap_.end() && existing->second.ownerTokenId != callerTokenId) {
+        USB_HILOGE(MODULE_USB_HOST, "RegBulkCallback permission denied for dev:%{public}s", devKey.c_str());
+        return UEC_SERVICE_PERMISSION_DENIED;
+    }
+    sptr<HDI::Usb::V1_0::IUsbdBulkCallback> hdiCb = new UsbdBulkCallbackImpl(cb);
+    int32_t ret = usbd_->RegBulkCallback(devInfo, pipe, hdiCb);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "RegBulkCallback error ret:%{public}d", ret);
+        return ret;
+    }
+    HdiBulkCallbackInfo info{hdiCb, callerTokenId, devInfo, pipe};
+    hdiCbMap_[devKey] = info;
+    return UEC_OK;
 #endif // USB_MANAGER_PASS_THROUGH
 }
 
-int32_t UsbHostManager::UnRegBulkCallback(const HDI::Usb::V1_0::UsbDev &devInfo, const HDI::Usb::V1_0::UsbPipe &pipe)
+int32_t UsbHostManager::UnRegBulkCallback(const HDI::Usb::V1_0::UsbDev &devInfo, const HDI::Usb::V1_0::UsbPipe &pipe,
+    uint32_t callerTokenId)
 {
+    std::string devKey = GetBulkCallbackKey(devInfo, pipe);
 #ifdef USB_MANAGER_PASS_THROUGH
     if (usbHostInterface_ == nullptr) {
         USB_HILOGE(MODULE_USB_HOST, "UsbHostManager::UnRegBulkCallback usbHostInterface_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
     std::lock_guard<std::mutex> guard(hdiCbMutex_);
-    usbHostHdiCb_ = nullptr;
+    auto it = usbHostHdiCbMap_.find(devKey);
+    if (it == usbHostHdiCbMap_.end()) {
+        USB_HILOGE(MODULE_USB_HOST, "UnRegBulkCallback not registered for dev:%{public}s", devKey.c_str());
+        return UEC_SERVICE_INVALID_VALUE;
+    }
+    if (it->second.ownerTokenId != callerTokenId) {
+        USB_HILOGE(MODULE_USB_HOST, "UnRegBulkCallback permission denied for dev:%{public}s", devKey.c_str());
+        return UEC_SERVICE_PERMISSION_DENIED;
+    }
     const HDI::Usb::V2_0::UsbDev &usbDev_ = reinterpret_cast<const HDI::Usb::V2_0::UsbDev &>(devInfo);
     const HDI::Usb::V2_0::UsbPipe &usbPipe_ = reinterpret_cast<const HDI::Usb::V2_0::UsbPipe &>(pipe);
-    return usbHostInterface_->UnRegBulkCallback(usbDev_, usbPipe_);
+    int32_t ret = usbHostInterface_->UnRegBulkCallback(usbDev_, usbPipe_);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "UnRegBulkCallback error ret:%{public}d", ret);
+        return ret;
+    }
+    usbHostHdiCbMap_.erase(it);
+    return UEC_OK;
 #else
     if (usbd_ == nullptr) {
         USB_HILOGE(MODULE_USB_HOST, "UsbHostManager::usbd_ is nullptr");
@@ -1142,8 +1184,57 @@ int32_t UsbHostManager::UnRegBulkCallback(const HDI::Usb::V1_0::UsbDev &devInfo,
     }
 
     std::lock_guard<std::mutex> guard(hdiCbMutex_);
-    hdiCb_ = nullptr;
-    return usbd_->UnRegBulkCallback(devInfo, pipe);
+    auto it = hdiCbMap_.find(devKey);
+    if (it == hdiCbMap_.end()) {
+        USB_HILOGE(MODULE_USB_HOST, "UnRegBulkCallback not registered for dev:%{public}s", devKey.c_str());
+        return UEC_SERVICE_INVALID_VALUE;
+    }
+    if (it->second.ownerTokenId != callerTokenId) {
+        USB_HILOGE(MODULE_USB_HOST, "UnRegBulkCallback permission denied for dev:%{public}s", devKey.c_str());
+        return UEC_SERVICE_PERMISSION_DENIED;
+    }
+    int32_t ret = usbd_->UnRegBulkCallback(devInfo, pipe);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "UnRegBulkCallback error ret:%{public}d", ret);
+        return ret;
+    }
+    hdiCbMap_.erase(it);
+    return UEC_OK;
+#endif // USB_MANAGER_PASS_THROUGH
+}
+
+void UsbHostManager::RemoveBulkCallbackByDevice(uint8_t busNum, uint8_t devAddr)
+{
+    std::string prefix = std::to_string(busNum) + "-" + std::to_string(devAddr) + "-";
+    std::lock_guard<std::mutex> guard(hdiCbMutex_);
+#ifdef USB_MANAGER_PASS_THROUGH
+    for (auto it = usbHostHdiCbMap_.begin(); it != usbHostHdiCbMap_.end();) {
+        if (it->first.compare(0, prefix.size(), prefix) != 0) {
+            ++it;
+            continue;
+        }
+        if (usbHostInterface_ != nullptr) {
+            int32_t ret = usbHostInterface_->UnRegBulkCallback(it->second.dev, it->second.pipe);
+            if (ret != UEC_OK) {
+                USB_HILOGW(MODULE_USB_HOST, "clean hdi callback ret:%{public}d", ret);
+            }
+        }
+        it = usbHostHdiCbMap_.erase(it);
+    }
+#else
+    for (auto it = hdiCbMap_.begin(); it != hdiCbMap_.end();) {
+        if (it->first.compare(0, prefix.size(), prefix) != 0) {
+            ++it;
+            continue;
+        }
+        if (usbd_ != nullptr) {
+            int32_t ret = usbd_->UnRegBulkCallback(it->second.dev, it->second.pipe);
+            if (ret != UEC_OK) {
+                USB_HILOGW(MODULE_USB_HOST, "clean hdi callback ret:%{public}d", ret);
+            }
+        }
+        it = hdiCbMap_.erase(it);
+    }
 #endif // USB_MANAGER_PASS_THROUGH
 }
 
@@ -1330,6 +1421,7 @@ bool UsbHostManager::DelDevice(uint8_t busNum, uint8_t devNum)
     UsbDevice detachedDevice(*devOld);
     delete devOld;
     NotifyDeviceDetached(detachedDevice, wasEnabled);
+    RemoveBulkCallbackByDevice(busNum, devNum);
     USB_HILOGI(MODULE_USB_HOST,
                "device:%{public}s bus:%{public}hhu dev:%{public}hhu erase, cur device size: %{public}zu", name.c_str(),
                busNum, devNum, remaining);
@@ -1372,6 +1464,7 @@ bool UsbHostManager::AddDevice(UsbDevice *dev)
                 delete devOld;
             }
             devices_.erase(iter);
+            RemoveBulkCallbackByDevice(busNum, devNum);
         }
         devices_.insert(std::pair<std::string, UsbDevice *>(name, dev));
         dev->SetAuthorizeStatus(NEW_ARRIVED);
