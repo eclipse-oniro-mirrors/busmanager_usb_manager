@@ -2009,6 +2009,12 @@ int32_t UsbService::RequestCancel(uint8_t busNum, uint8_t devAddr, uint8_t inter
 int32_t UsbService::RegBulkCallback(uint8_t busNum, uint8_t devAddr,
     const USBEndpoint &ep, const sptr<IRemoteObject> &cb)
 {
+    int32_t permRet = CheckSysApiPermission();
+    if (permRet != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "%{public}s: CheckSysApiPermission failed ret = %{public}d", __func__, permRet);
+        return permRet;
+    }
+
     if (!UsbService::CheckDevicePermission(busNum, devAddr)) {
         return UEC_SERVICE_PERMISSION_DENIED;
     }
@@ -2144,6 +2150,12 @@ int32_t UsbService::UsbSubmitTransfer(uint8_t busNum, uint8_t devAddr, const Usb
 
 int32_t UsbService::UnRegBulkCallback(uint8_t busNum, uint8_t devAddr, const USBEndpoint &ep)
 {
+    int32_t permRet = CheckSysApiPermission();
+    if (permRet != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "%{public}s: CheckSysApiPermission failed ret = %{public}d", __func__, permRet);
+        return permRet;
+    }
+
     if (!UsbService::CheckDevicePermission(busNum, devAddr)) {
         return UEC_SERVICE_PERMISSION_DENIED;
     }
@@ -2166,6 +2178,13 @@ int32_t UsbService::UnRegBulkCallback(uint8_t busNum, uint8_t devAddr, const USB
 
 int32_t UsbService::BulkRead(uint8_t busNum, uint8_t devAddr, const USBEndpoint &ep, int32_t fd, int32_t memSize)
 {
+    int32_t permRet = CheckSysApiPermission();
+    if (permRet != UEC_OK) {
+        ::close(fd);
+        USB_HILOGE(MODULE_USB_HOST, "%{public}s: CheckSysApiPermission failed ret = %{public}d", __func__, permRet);
+        return permRet;
+    }
+
     if (usbHostManager_ == nullptr || fd <= 0 || memSize <= 0) {
         ::close(fd);
         USB_HILOGE(MODULE_USB_HOST, "invalid param, fd=[%{public}d],memSize=[%{public}d]", fd, memSize);
@@ -2203,6 +2222,13 @@ int32_t UsbService::BulkRead(uint8_t busNum, uint8_t devAddr, const USBEndpoint 
 
 int32_t UsbService::BulkWrite(uint8_t busNum, uint8_t devAddr, const USBEndpoint &ep, int32_t fd, int32_t memSize)
 {
+    int32_t permRet = CheckSysApiPermission();
+    if (permRet != UEC_OK) {
+        ::close(fd);
+        USB_HILOGE(MODULE_USB_HOST, "%{public}s: CheckSysApiPermission failed ret = %{public}d", __func__, permRet);
+        return permRet;
+    }
+
     if (usbHostManager_ == nullptr || fd <= 0 || memSize <= 0) {
         ::close(fd);
         USB_HILOGE(MODULE_USB_HOST, "invalid param, fd=[%{public}d],memSize=[%{public}d]", fd, memSize);
@@ -2240,6 +2266,12 @@ int32_t UsbService::BulkWrite(uint8_t busNum, uint8_t devAddr, const USBEndpoint
 
 int32_t UsbService::BulkCancel(uint8_t busNum, uint8_t devAddr, const USBEndpoint &ep)
 {
+    int32_t permRet = CheckSysApiPermission();
+    if (permRet != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "%{public}s: CheckSysApiPermission failed ret = %{public}d", __func__, permRet);
+        return permRet;
+    }
+
     if (!UsbService::CheckDevicePermission(busNum, devAddr)) {
         return UEC_SERVICE_PERMISSION_DENIED;
     }
