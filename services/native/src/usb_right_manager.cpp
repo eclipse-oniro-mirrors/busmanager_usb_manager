@@ -721,7 +721,7 @@ uint64_t UsbRightManager::GetCurrentTimestamp()
 
 void UsbRightManager::GetCurrentUserId(int32_t &uid)
 {
-    int32_t ret = AccountSA::OsAccountManager::GetOsAccountLocalIdFromUid(IPCSkeleton::GetCallingUid(), uid);
+    int32_t ret = AccountSA::OsAccountManager::GetOsAccountLocalIdFromUid(IPCSkeleton::GetCallingAppUid(), uid);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_HOST, "GetOsAccountLocalIdFromUid failed: %{public}d, set to defult", ret);
         uid = USB_RIGHT_USERID_DEFAULT; /* default user id */
