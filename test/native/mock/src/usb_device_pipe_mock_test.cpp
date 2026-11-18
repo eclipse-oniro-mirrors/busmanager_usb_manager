@@ -108,7 +108,7 @@ void UsbDevicePipeMockTest::SetUpTestCase(void)
     device_ = MockUsbImpl::FindDeviceInfo(devList);
 
     EXPECT_CALL(*mockUsbImpl_, OpenDevice(testing::_)).WillRepeatedly(Return(0));
-    ret = usbSrv_->OpenDevice(dev_.busNum, dev_.devAddr);
+    ret = usbSrv_->OpenDevice(dev_.busNum, dev_.devAddr, sptr<IRemoteObject>(new DeviceDeathMonitor()));
     EXPECT_EQ(0, ret);
 }
 
@@ -163,7 +163,7 @@ HWTEST_F(UsbDevicePipeMockTest, UsbOpenDevice001, TestSize.Level1)
     EXPECT_EQ(0, ret);
 
     EXPECT_CALL(*mockUsbImpl_, OpenDevice(testing::_)).WillRepeatedly(Return(0));
-    ret = usbSrv_->OpenDevice(dev_.busNum, dev_.devAddr);
+    ret = usbSrv_->OpenDevice(dev_.busNum, dev_.devAddr, sptr<IRemoteObject>(new DeviceDeathMonitor()));
     EXPECT_EQ(0, ret);
 }
 
@@ -1280,7 +1280,7 @@ HWTEST_F(UsbDevicePipeMockTest, Close001, TestSize.Level1)
     EXPECT_EQ(0, ret);
 
     EXPECT_CALL(*mockUsbImpl_, OpenDevice(testing::_)).WillRepeatedly(Return(0));
-    ret = usbSrv_->OpenDevice(dev_.busNum, dev_.devAddr);
+    ret = usbSrv_->OpenDevice(dev_.busNum, dev_.devAddr, sptr<IRemoteObject>(new DeviceDeathMonitor()));
     EXPECT_EQ(0, ret);
 }
 
@@ -1300,7 +1300,7 @@ HWTEST_F(UsbDevicePipeMockTest, Close002, TestSize.Level1)
 
     dev_.busNum = BUS_NUM_OK;
     EXPECT_CALL(*mockUsbImpl_, OpenDevice(testing::_)).WillRepeatedly(Return(0));
-    ret = usbSrv_->OpenDevice(dev_.busNum, dev_.devAddr);
+    ret = usbSrv_->OpenDevice(dev_.busNum, dev_.devAddr, sptr<IRemoteObject>(new DeviceDeathMonitor()));
     EXPECT_EQ(0, ret);
 }
 
@@ -1320,7 +1320,7 @@ HWTEST_F(UsbDevicePipeMockTest, Close003, TestSize.Level1)
 
     dev_.devAddr = DEV_ADDR_OK;
     EXPECT_CALL(*mockUsbImpl_, OpenDevice(testing::_)).WillRepeatedly(Return(0));
-    ret = usbSrv_->OpenDevice(dev_.busNum, dev_.devAddr);
+    ret = usbSrv_->OpenDevice(dev_.busNum, dev_.devAddr, sptr<IRemoteObject>(new DeviceDeathMonitor()));
     EXPECT_EQ(0, ret);
 }
 
