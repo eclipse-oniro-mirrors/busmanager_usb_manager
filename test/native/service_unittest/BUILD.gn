@@ -561,6 +561,16 @@ ohos_unittest("test_usbhostmanagerextended") {
 
 ohos_unittest("test_usbhostmanagercase") {
   module_out_path = module_output_path
+  sanitize = {
+    integer_overflow = true
+    ubsan = true
+    boundary_sanitize = true
+    cfi = true
+    cfi_cross_dso = true
+    debug = false
+  }
+  branch_protector_ret = "pac_ret"
+
   sources = [
     "src/usb_host_manager_case_test.cpp",
   ]
@@ -569,12 +579,24 @@ ohos_unittest("test_usbhostmanagercase") {
     "${utils_path}:utils_config",
     ":module_private_config",
   ]
-  defines = [ "private=public" ]
+  defines = [
+    "private=public",
+    "USB_SERVICE_TEST",
+  ]
   if (usb_manager_pass_through) {
-    defines += [ "USB_MANAGER_PASS_THROUGH" ]
+    defines += [
+      "USB_MANAGER_PASS_THROUGH",
+      "USB_MANAGER_V2_0",
+    ]
   }
   if (usb_manager_feature_host) {
     defines += [ "USB_MANAGER_FEATURE_HOST" ]
+  }
+  if (usb_manager_feature_device) {
+    defines += [ "USB_MANAGER_FEATURE_DEVICE" ]
+  }
+  if (usb_manager_feature_port) {
+    defines += [ "USB_MANAGER_FEATURE_PORT" ]
   }
 
   deps = [
@@ -601,6 +623,55 @@ ohos_unittest("test_usbhostmanagercase") {
     "init:libbegetutil",
     "ipc:ipc_core",
     "memmgr:memmgrclient",
+    "safwk:system_ability_fwk",
+    "samgr:samgr_proxy",
+  ]
+}
+
+ohos_unittest("test_usb_calling_appuid") {
+  module_out_path = module_output_path
+  sources = [ "src/usb_calling_appuid_test.cpp" ]
+
+  configs = [
+    "${utils_path}:utils_config",
+    ":module_private_config",
+  ]
+  defines = [ "private=public" ]
+  if (usb_manager_pass_through) {
+    defines += [ "USB_MANAGER_PASS_THROUGH" ]
+  }
+  if (usb_manager_feature_host) {
+    defines += [ "USB_MANAGER_FEATURE_HOST" ]
+  }
+  if (usb_manager_feature_device) {
+    defines += [ "USB_MANAGER_FEATURE_DEVICE" ]
+  }
+
+  deps = [
+    "${usb_manager_path}/interfaces/innerkits:usbsrv_client",
+    "${usb_manager_path}/services:usbservice",
+    "${usb_manager_path}/test/fuzztest:usbservice_source_set",
+  ]
+
+  external_deps = [
+    "ability_base:want",
+    "ability_runtime:ability_connect_callback_stub",
+    "access_token:libaccesstoken_sdk",
+    "access_token:libnativetoken",
+    "access_token:libtoken_setproc",
+    "bundle_framework:appexecfwk_base",
+    "bundle_framework:appexecfwk_core",
+    "cJSON:cjson",
+    "c_utils:utils",
+    "common_event_service:cesfwk_innerkits",
+    "drivers_interface_usb:libusb_proxy_1.0",
+    "eventhandler:libeventhandler",
+    "googletest:gtest_main",
+    "hilog:libhilog",
+    "init:libbegetutil",
+    "ipc:ipc_core",
+    "memmgr:memmgrclient",
+    "os_account:os_account_innerkits",
     "safwk:system_ability_fwk",
     "samgr:samgr_proxy",
   ]

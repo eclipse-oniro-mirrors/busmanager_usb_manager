@@ -466,7 +466,7 @@ void SerialManager::ReportSerialOperationSecurityInfo(int32_t portId, std::strin
         {"happenTime", time},
         {"portId", portId},
         {"operationType", operationType},
-        {"uid", IPCSkeleton::GetCallingUid()},
+        {"uid", IPCSkeleton::GetCallingAppUid()},
     };
     USB::UsbSecurityReport::ReportSecurityInfo(USB_SERIAL_EVENT_ID, std::string(SERIAL_VERSION), operationJson);
 }

@@ -24,6 +24,15 @@ config("usbsrv_public_config") {
     "${usb_manager_path}/services/native/include",
     "${usb_manager_path}/utils/native/include",
   ]
+  # Keep parity with services/BUILD.gn usbsrv_public_config: usb_host_manager.cpp
+  # compares char with 0xFF/0xFE (UTF-16LE BOM), always-false where char is signed.
+  cflags = [ "-Wno-tautological-constant-out-of-range-compare" ]
+}
+
+# Exposes the test-only override hooks (SetCallerValidForTest/SetEdmEnabledForTest)
+# to test binaries only. Production builds keep the hooks compiled out.
+config("usbservice_test_config") {
+  defines = [ "USB_SERVICE_TEST" ]
 }
 
 ohos_source_set("usbservice_source_set") {
@@ -56,7 +65,10 @@ ohos_source_set("usbservice_source_set") {
     ":usbsrv_private_config",
   ]
 
-  public_configs = [ ":usbsrv_public_config" ]
+  public_configs = [
+    ":usbsrv_public_config",
+    ":usbservice_test_config",
+  ]
   deps = [ "${usb_manager_path}/interfaces/innerkits:usb_server_stub" ]
   defines = []
   if (usb_manager_pass_through) {
