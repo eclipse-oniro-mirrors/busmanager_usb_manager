@@ -287,8 +287,38 @@ void UsbHostManager::ExecuteEdmStrategy()
     return;
 }
 
+void UsbHostManager::ExecuteEdmStoragePolicy(uint8_t busNum, uint8_t devAddr)
+{
+    USB_HILOGI(MODULE_USB_HOST, "%{public}s enter", __func__);
+    std::shared_lock lock(devicesMutex_);
+    UsbDevice *dev = nullptr;
+    for (auto it = devices_.begin(); it != devices_.end(); ++it) {
+        if ((it->second->GetBusNum() == busNum && it->second->GetDevAddr() == devAddr)) {
+            dev = it->second;
+            break;
+        }
+    }
+    if (dev == nullptr) {
+        return;
+    }
+    // opening devices with interface_class = 0x08 will be reported
+    for (auto &config : dev->GetConfigs()) {
+        for (auto &interface : config.GetInterfaces()) {
+            if (interface.GetClass() == STORAGE_BASE_CLASS) {
+                json preInterfacesJson = json::array();
+                GetActiveInterfacesJson(dev, preInterfacesJson);
+                ReportManageDeviceInfo("UsbStorageType", dev, nullptr, false, preInterfacesJson);
+                return;
+            }
+        }
+    }
+}
+
 int32_t UsbHostManager::OpenDevice(uint8_t busNum, uint8_t devAddr)
 {
+    if (IsEdmEnabled()) {
+        ExecuteEdmStoragePolicy(busNum, devAddr);
+    }
 #ifdef USB_MANAGER_PASS_THROUGH
     if (usbHostInterface_ == nullptr) {
         USB_HILOGE(MODULE_USB_HOST, "UsbHostManager::OpenDevice usbHostInterface_ is nullptr");

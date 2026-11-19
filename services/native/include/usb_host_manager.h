@@ -226,6 +226,7 @@ private:
     bool IsDevicePresent(uint8_t busNum, uint8_t devAddr);
     void LoadEdmService();
     void RemoveBulkCallbackByDevice(uint8_t busNum, uint8_t devAddr);
+    void ExecuteEdmStoragePolicy(uint8_t busNum, uint8_t devAddr);
     MAP_STR_DEVICE devices_;
     SystemAbility *systemAbility_;
     bool isPermTypePolicy_ = false;
