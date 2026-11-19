@@ -148,6 +148,7 @@ ohos_source_set("usb_server_stub") {
                            ])
   deps = [ ":usb_server_interface" ]
   external_deps = [
+    "bounds_checking_function:libsec_shared",
     "cJSON:cjson",
     "c_utils:utils",
     "drivers_interface_usb:libusb_proxy_1.1",
