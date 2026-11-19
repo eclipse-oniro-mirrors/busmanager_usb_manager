@@ -174,6 +174,8 @@ public:
         const HDI::Usb::V1_0::UsbDev &devInfo, const HDI::Usb::V1_0::UsbPipe &pipe, sptr<Ashmem> &ashmem);
     int32_t BulkCancel(const HDI::Usb::V1_0::UsbDev &devInfo, const HDI::Usb::V1_0::UsbPipe &pipe);
     bool hasActiveDevice();
+    bool IsEdmEnabled();
+    void ExecuteEdmStoragePolicy(uint8_t busNum, uint8_t devAddr, const std::string &clientName);
 
 private:
     bool PublishCommonEvent(const std::string &event, UsbDevice &dev);
@@ -184,7 +186,6 @@ private:
     std::string GetInterfaceUsageDescription(const UsbDeviceType &interfaceType);
     int32_t FillDevStrings(UsbDevice &dev);
     std::string GetDevStringValFromIdx(uint8_t busNum, uint8_t devAddr, uint8_t idx);
-    bool IsEdmEnabled();
     void ExecuteEdmStrategy();
     // Caller must hold devicesMutex_.
     void ApplyDynamicControlToNewDevice(UsbDevice &dev);
@@ -220,13 +221,12 @@ private:
     bool IsUsbSerialDisable();
     void ReportManageDeviceInfo(const std::string &operationType, UsbDevice* device,
         const UsbInterface* interface, bool isInterfaceType,
-        const nlohmann::json &preInterfacesJson = nlohmann::json::array());
+        const nlohmann::json &preInterfacesJson = nlohmann::json::array(), const std::string &clientName = "");
     void GetActiveInterfacesJson(UsbDevice* device, nlohmann::json &interfacesJson);
     int32_t CheckDevPathIsExist(uint8_t busNum, uint8_t devAddr);
     bool IsDevicePresent(uint8_t busNum, uint8_t devAddr);
     void LoadEdmService();
     void RemoveBulkCallbackByDevice(uint8_t busNum, uint8_t devAddr);
-    void ExecuteEdmStoragePolicy(uint8_t busNum, uint8_t devAddr);
     MAP_STR_DEVICE devices_;
     SystemAbility *systemAbility_;
     bool isPermTypePolicy_ = false;

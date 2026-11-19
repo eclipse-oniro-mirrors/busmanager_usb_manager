@@ -567,6 +567,16 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr)
         USB_HILOGE(MODULE_USB_HOST, "UsbService::usbHostManager_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
     }
+    if (usbHostManager_->IsEdmEnabled()) {
+        std::string bundleName;
+        std::string tokenId;
+        int32_t userId;
+        if (!GetCallingInfo(bundleName, tokenId, userId)) {
+            USB_HILOGE(MODULE_USB_SERVICE, "%{public}s: GetCallingInfo false", __func__);
+            bundleName = "UnKnown";
+        }
+        usbHostManager_->ExecuteEdmStoragePolicy(busNum, devAddr, bundleName);
+    }
 
     int32_t ret = usbHostManager_->OpenDevice(busNum, devAddr);
     if (ret != UEC_OK) {

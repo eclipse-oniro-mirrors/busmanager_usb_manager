@@ -287,7 +287,7 @@ void UsbHostManager::ExecuteEdmStrategy()
     return;
 }
 
-void UsbHostManager::ExecuteEdmStoragePolicy(uint8_t busNum, uint8_t devAddr)
+void UsbHostManager::ExecuteEdmStoragePolicy(uint8_t busNum, uint8_t devAddr, const std::string &clientName)
 {
     USB_HILOGI(MODULE_USB_HOST, "%{public}s enter", __func__);
     std::shared_lock lock(devicesMutex_);
@@ -307,7 +307,7 @@ void UsbHostManager::ExecuteEdmStoragePolicy(uint8_t busNum, uint8_t devAddr)
             if (interface.GetClass() == STORAGE_BASE_CLASS) {
                 json preInterfacesJson = json::array();
                 GetActiveInterfacesJson(dev, preInterfacesJson);
-                ReportManageDeviceInfo("UsbStorageType", dev, nullptr, false, preInterfacesJson);
+                ReportManageDeviceInfo("UsbStorageType", dev, nullptr, false, preInterfacesJson, clientName);
                 return;
             }
         }
@@ -316,9 +316,6 @@ void UsbHostManager::ExecuteEdmStoragePolicy(uint8_t busNum, uint8_t devAddr)
 
 int32_t UsbHostManager::OpenDevice(uint8_t busNum, uint8_t devAddr)
 {
-    if (IsEdmEnabled()) {
-        ExecuteEdmStoragePolicy(busNum, devAddr);
-    }
 #ifdef USB_MANAGER_PASS_THROUGH
     if (usbHostInterface_ == nullptr) {
         USB_HILOGE(MODULE_USB_HOST, "UsbHostManager::OpenDevice usbHostInterface_ is nullptr");
@@ -2591,7 +2588,7 @@ void UsbHostManager::GetActiveInterfacesJson(UsbDevice* device, nlohmann::json &
 }
 
 void UsbHostManager::ReportManageDeviceInfo(const std::string &operationType, UsbDevice* device,
-    const UsbInterface* interface, bool isInterfaceType, const json &preInterfacesJson)
+    const UsbInterface* interface, bool isInterfaceType, const json &preInterfacesJson, const std::string &clientName)
 {
     USB_HILOGI(MODULE_USB_HOST, "ReportManageDeviceInfo");
     int32_t vid = device->GetVendorId();
@@ -2626,7 +2623,8 @@ void UsbHostManager::ReportManageDeviceInfo(const std::string &operationType, Us
             {"vid", vid},
             {"manufactureName", device->GetManufacturerName()},
             {"productName", device->GetProductName()},
-            {"interfaces", isInterfaceType ? json::array() : preInterfacesJson}
+            {"interfaces", isInterfaceType ? json::array() : preInterfacesJson},
+            {"clientName", clientName}
         }},
         {"eventId", USB_AUDIT_EVENT_ID_DEFAULT},
         {"metadata", {
