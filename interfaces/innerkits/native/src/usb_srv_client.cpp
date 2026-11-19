@@ -14,6 +14,7 @@
  */
 
 #include "usb_srv_client.h"
+#include "accesstoken_kit.h"
 #include "datetime_ex.h"
 #include "if_system_ability_manager.h"
 #include "ipc_skeleton.h"
@@ -136,7 +137,13 @@ int32_t UsbSrvClient::OpenDevice(const UsbDevice &device, USBDevicePipe &pipe)
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
     std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
-    int32_t ret = proxy_->OpenDevice(device.GetBusNum(), device.GetDevAddr(), deviceRemote);
+    // 锚点仅对 HAP 调用方注入:native SA 不参与死亡监听,parcel 不携带 binder 对象,无需 SELinux transfer 策略
+    sptr<IRemoteObject> remote;
+    auto tokenType = OHOS::Security::AccessToken::AccessTokenKit::GetTokenType(IPCSkeleton::GetSelfTokenID());
+    if (tokenType == OHOS::Security::AccessToken::TypeATokenTypeEnum::TOKEN_HAP) {
+        remote = deviceRemote;
+    }
+    int32_t ret = proxy_->OpenDevice(device.GetBusNum(), device.GetDevAddr(), remote);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "OpenDevice failed with ret = %{public}d !", ret);
         return ret;
