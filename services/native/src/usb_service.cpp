@@ -564,7 +564,7 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr, const sptr<IRemo
 
     // LCOV_EXCL_START
     uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
-    int32_t callingUid = IPCSkeleton::GetCallingUid();
+    int32_t callingUid = IPCSkeleton::GetCallingAppUid();
     std::tuple<uint8_t, uint8_t, uint32_t> key = std::make_tuple(busNum, devAddr, tokenId);
     if (usbHostManager_ == nullptr) {
         USB_HILOGE(MODULE_USB_HOST, "UsbService::usbHostManager_ is nullptr");
