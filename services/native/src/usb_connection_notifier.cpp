@@ -246,6 +246,22 @@ void UsbConnectionNotifier::SendNotification(std::string func)
         return;
     }
 
+    uint32_t funcBit = 0;
+    if (func == USB_FUNC_CHARGE) {
+        funcBit = SUPPORTED_FUNC_MTP | SUPPORTED_FUNC_PTP;
+    } else if (func == USB_FUNC_MTP) {
+        funcBit = SUPPORTED_FUNC_MTP;
+    } else if (func == USB_FUNC_PTP) {
+        funcBit = SUPPORTED_FUNC_PTP;
+    } else if (func == USB_FUNC_REVERSE_CHARGE) {
+        funcBit = SUPPORTED_FUNC_REVERSECHARGE;
+    }
+    if ((usbSupportedFunctions_ & funcBit) == 0) {
+        USB_HILOGI(MODULE_USB_SERVICE, "%{public}s: func %{public}s is not supported, skip notification",
+            __func__, func.c_str());
+        return;
+    }
+
     lastFunc_ = func;
     GetHapString();
     std::shared_ptr<OHOS::Notification::NotificationNormalContent> normalContent =
@@ -305,8 +321,12 @@ int32_t UsbConnectionNotifier::GetSupportedFunctions()
     uint32_t ptp = supportedFuncStr.find("ptp") != std::string::npos ? SUPPORTED_FUNC_PTP : 0;
     uint32_t reverseCharge =
         supportedFuncStr.find("reverseCharge") != std::string::npos ? SUPPORTED_FUNC_REVERSECHARGE : 0;
-
-    return static_cast<int32_t>(mtp | ptp | reverseCharge);
+    bool hasCharge = (mtp != 0) || (ptp != 0);
+    uint32_t charge = hasCharge ? SUPPORTED_FUNC_CHARGE : 0;
+    if (mtp == 0 && ptp == 0 && reverseCharge == 0) {
+        return SUPPORTED_FUNC_NONE;
+    }
+    return static_cast<int32_t>(charge | mtp | ptp | reverseCharge);
 }
 
 void UsbConnectionNotifier::SendHdcNotification()
