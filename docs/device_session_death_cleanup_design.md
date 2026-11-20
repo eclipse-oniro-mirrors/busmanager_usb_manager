@@ -2,7 +2,7 @@
 
 > 仓库:usb_manager(SA 4201)
 > 关联特性:应用连接 USB 设备状态监听 InnerAPI(RegisterConnectionListener)
-> 状态:设计稿 v7 —— **死亡锚点方案**(binder 死亡通知)+ 条件注入(按调用路径判定):应用侧绑定层(taihe/napi/capi)传 true 注入锚点,innerkit 直调(SA)默认 false 传空,免 SELinux transfer 策略;含基线适配修复(GetCallingAppUid 一致性)
+> 状态:设计稿 v8 —— **死亡锚点方案**(binder 死亡通知)+ 双接口拆分:老接口 OpenDevice(2 参)逻辑不变,SA/innerkit 直调;新接口 OpenDeviceWithMonitor(带锚点)面向 HAP 绑定层(taihe/napi/capi);含基线适配修复(GetCallingAppUid 一致性)
 
 ## 1. 背景与目标
 
@@ -44,7 +44,7 @@
 
 ## 4. 最终实现要点与基线适配
 
-1. **锚点注册链(条件注入,按调用路径判定)**:`UsbSrvClient::OpenDevice` 增加可选参数 `isHapCaller`(默认 false)——应用侧绑定层(taihe/napi/capi)显式传 true 注入锚点桩;innerkit 直调(SA)保持默认 false,parcel 不携带 binder 对象,免除 transfer 策略;服务端 deviceRemote 非空 → 创建 DeviceDeathRecipient 并注册,为空 → 跳过锚点、open 正常执行;HDI open 失败 → **RemoveDeathRecipient 回滚**(防僵尸通知);成功 → 会话表入账(同 key 重开先注销旧锚点)→ 连接广播
+1. **双接口拆分**:老接口 `OpenDevice(busNum, devAddr)` 保持原始逻辑不变(SA/innerkit 直调,无锚点、无会话表);新接口 `OpenDeviceWithMonitor(busNum, devAddr, deviceRemote)` 面向 HAP 绑定层(taihe/napi/capi):注册死亡锚点(deviceRemote 为空则跳过注册)→ HDI open 失败 → **RemoveDeathRecipient 回滚**(防僵尸通知)→ 成功 → 会话表入账(同 key 重开先注销旧锚点)→ 连接广播
 2. **统一清理链 `ReleaseDeviceClient`**(死亡/兜底共用,幂等查表):锁内查 key 快照 uid → 定向清独占 claim(显式 token)→ HDI Close(引用计数 -1,多应用安全)→ 清会话表+注销锚点 → `ReleaseDeviceConnectionByUid` 清连接记录并广播 DISCONNECT
 3. **死亡回调 `OnRemoteDied`**:GetGlobalInstance 判空 → `ReleaseDeviceClient(固化身份)`,不经过依赖 IPC 上下文的公共 Close
 4. **拔出闭环**:DelDevice → RemoveAllDeviceConnections(逐 uid 广播)→ RemoveAllDeviceClients(清会话+注销锚点,不关 HDI/不广播)→ RemoveAllClaimByDevice → Close(幂等 no-op)
@@ -55,9 +55,9 @@
 ### 5.1 Open(双监听建立)
 
 ```
-应用调 UsbSrvClient::OpenDevice(device, pipe)   ← ArkTS 签名未变,应用零改动
- └ proxy_->OpenDevice(bus, dev, deviceRemote)    ← 锚点由系统侧 UsbSrvClient 自动注入
- UsbService::OpenDevice(busNum, devAddr, deviceRemote)
+应用调绑定层 openDevice(ArkTS API 未变)
+ └ proxy_->OpenDeviceWithMonitor(bus, dev, deviceRemote)  ← 绑定层专用新接口,锚点由 UsbSrvClient 创建并随 IPC 传递
+  UsbService::OpenDeviceWithMonitor(busNum, devAddr, deviceRemote)
  ① 权限检查(IPC 上下文正常)
  ② 固化身份:tokenId/uid(GetCallingAppUid,与连接表键源一致)
  ③ new DeviceDeathRecipient(bus,dev,tokenId) → AddDeathRecipient    【监听②:死亡锚点】
@@ -103,10 +103,10 @@ usbd → UsbServiceSubscriber::DeviceEvent{ACT_DEVDOWN} → DelDevice
 | 调用方 | 锚点/对象传递 | 策略状态 |
 |---|---|---|
 | 普通 HAP(normal_hap / debug_hap) | ✓ 注入锚点 | **规则现成**:`allow normal_hap usb_service:binder { transfer }`(usb_service.te)/ debug 同条 |
-| native SA(innerkit 直调,默认 false) | **✗ 传空** | **零策略**:parcel 无对象即无 transfer 检查,凭既有 `binder call` 即通 |
+| native SA(innerkit 直调老接口 OpenDevice) | **✗ 无对象** | **零策略**:老接口 parcel 无 binder 对象,凭既有 `binder call` 即通 |
 | 系统 HAP(system_basic/core_hap) | ✓ 注入锚点 | **缺 2 条**——仅当系统应用也需要死亡监听时补(usb 组件 te,带属性一条/域);亦可确认无此消费方后不补 |
 | 监听消费方 resource_schedule_service | cb 对象 | **已全通**:`resource_schedule_service usb_service:binder { call transfer }` + 回调方向 `usb_service → rss: call` 均已存在(带 avc 修复注释) |
-| 应用侧 | — | 零改动、零概念:SELinux 是系统镜像策略,应用无感;判定在系统镜像内绑定层(taihe/napi/capi 显式传 true),对调用方零 API 变化(可选参数带默认值) |
+| 应用侧 | — | 零改动、零概念:SELinux 是系统镜像策略,应用无感;HAP 绑定层走新接口 OpenDeviceWithMonitor,ArkTS API 签名不变 |
 
 验证方法:permissive 下全量回归(HAP openDevice、SA openDevice、监听注册),收集 `hilog | grep avc` 确认零缺失后切 enforcing 复验。
 

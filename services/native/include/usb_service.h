@@ -101,7 +101,8 @@ public:
     void UnLoadSelf(UnLoadSaType type);
     int32_t DeviceEvent(const HDI::Usb::V1_0::USBDeviceInfo &info);
 #ifdef USB_MANAGER_FEATURE_HOST
-    int32_t OpenDevice(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote) override;
+    int32_t OpenDevice(uint8_t busNum, uint8_t devAddr) override;
+    int32_t OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote) override;
     int32_t Close(uint8_t busNum, uint8_t devAddr) override;
     int32_t ResetDevice(uint8_t busNum, uint8_t devAddr) override;
     int32_t ClaimInterface(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid, uint8_t force) override;

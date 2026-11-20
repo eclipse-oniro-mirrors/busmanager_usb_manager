@@ -555,10 +555,35 @@ bool UsbService::IsCommonEventServiceAbilityExist()
 // LCOV_EXCL_STOP
 
 #ifdef USB_MANAGER_FEATURE_HOST
-int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote)
+int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr)
 {
     if (!UsbService::CheckDevicePermission(busNum, devAddr)) {
         ReportUsbOperationFaultSysEvent("OpenDevice", UEC_SERVICE_PERMISSION_DENIED, "CheckDevicePermission failed");
+        return UEC_SERVICE_PERMISSION_DENIED;
+    }
+
+    // LCOV_EXCL_START
+    if (usbHostManager_ == nullptr) {
+        USB_HILOGE(MODULE_USB_HOST, "UsbService::usbHostManager_ is nullptr");
+        return UEC_SERVICE_INVALID_VALUE;
+    }
+
+    int32_t ret = usbHostManager_->OpenDevice(busNum, devAddr);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST, "OpenDevice failed ret:%{public}d", ret);
+    } else {
+        AddDeviceConnection(busNum, devAddr);
+    }
+
+    return ret;
+    // LCOV_EXCL_STOP
+}
+
+int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote)
+{
+    if (!UsbService::CheckDevicePermission(busNum, devAddr)) {
+        ReportUsbOperationFaultSysEvent("OpenDeviceWithMonitor", UEC_SERVICE_PERMISSION_DENIED,
+            "CheckDevicePermission failed");
         return UEC_SERVICE_PERMISSION_DENIED;
     }
 
@@ -572,21 +597,21 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr, const sptr<IRemo
     }
 
     sptr<DeviceDeathRecipient> deviceRecipient = nullptr;
-    if (deviceRemote != nullptr) { // HAP 调用方:注册死亡锚点;SA 调用方传空,跳过锚点,open 正常执行
+    if (deviceRemote != nullptr) { // HAP 调用方:注册死亡锚点;锚点为空时跳过注册,open 正常执行
         deviceRecipient = new DeviceDeathRecipient(busNum, devAddr, tokenId);
         if (deviceRecipient == nullptr) {
-            USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDevice deviceRecipient is nullptr");
+            USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDeviceWithMonitor deviceRecipient is nullptr");
             return UEC_SERVICE_INVALID_VALUE;
         }
         if (!deviceRemote->AddDeathRecipient(deviceRecipient)) {
-            USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDevice add DeathRecipient failed");
+            USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDeviceWithMonitor add DeathRecipient failed");
             return UEC_SERVICE_INVALID_VALUE;
         }
     }
 
     int32_t ret = usbHostManager_->OpenDevice(busNum, devAddr);
     if (ret != UEC_OK) {
-        USB_HILOGE(MODULE_USB_HOST, "OpenDevice failed ret:%{public}d", ret);
+        USB_HILOGE(MODULE_USB_HOST, "OpenDeviceWithMonitor failed ret:%{public}d", ret);
         if (deviceRemote != nullptr && deviceRecipient != nullptr) {
             deviceRemote->RemoveDeathRecipient(deviceRecipient);
         }

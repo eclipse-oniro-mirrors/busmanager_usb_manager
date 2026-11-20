@@ -116,7 +116,7 @@ void UsbBulkcallbackMockTest::SetUpTestCase(void)
     UsbDevice device = MockUsbImpl::FindDeviceInfo(devList);
 
     EXPECT_CALL(*mockUsbImpl_, OpenDevice(testing::_)).WillRepeatedly(Return(0));
-    ret = usbSrv_->OpenDevice(dev_.busNum, dev_.devAddr, sptr<IRemoteObject>(new DeviceDeathMonitor()));
+    ret = usbSrv_->OpenDevice(dev_.busNum, dev_.devAddr);
     EXPECT_EQ(0, ret);
 
     interface_ = device.GetConfigs().front().GetInterfaces().at(1);
