@@ -2,7 +2,7 @@
 
 > 仓库:usb_manager(SA 4201)
 > 关联特性:应用连接 USB 设备状态监听 InnerAPI(RegisterConnectionListener)
-> 状态:设计稿 v8 —— **死亡锚点方案**(binder 死亡通知)+ 双接口拆分:老接口 OpenDevice(2 参)逻辑不变,SA/innerkit 直调;新接口 OpenDeviceWithMonitor(带锚点)面向 HAP 绑定层(taihe/napi/capi);含基线适配修复(GetCallingAppUid 一致性)
+> 状态:设计稿 v9 —— **死亡锚点方案**(binder 死亡通知)+ 双接口拆分:老接口 OpenDevice(2 参)逻辑不变,SA/innerkit 直调;新接口 OpenDeviceWithMonitor(带锚点)面向 HAP 绑定层(taihe/napi/capi);含 NAPI 入口全链路数据流图(标注新增)
 
 ## 1. 背景与目标
 
@@ -52,20 +52,87 @@
 
 ## 5. 目标行为数据流程图
 
-### 5.1 Open(双监听建立)
+### 5.1 OpenDevice 全链路数据流(NAPI 入口视角,★ 标注本次新增部分)
+
+#### 5.1.1 HAP 路径 —— 绑定层 → 新接口 OpenDeviceWithMonitor
 
 ```
-应用调绑定层 openDevice(ArkTS API 未变)
- └ proxy_->OpenDeviceWithMonitor(bus, dev, deviceRemote)  ← 绑定层专用新接口,锚点由 UsbSrvClient 创建并随 IPC 传递
-  UsbService::OpenDeviceWithMonitor(busNum, devAddr, deviceRemote)
- ① 权限检查(IPC 上下文正常)
- ② 固化身份:tokenId/uid(GetCallingAppUid,与连接表键源一致)
- ③ new DeviceDeathRecipient(bus,dev,tokenId) → AddDeathRecipient    【监听②:死亡锚点】
- ④ usbHostManager_->OpenDevice → HDI 引用计数 +1
-    └ 失败 → RemoveDeathRecipient 回滚 → return
- ⑤ 锁内入表(同 key 重开先注销旧锚点)                                【监听②:会话表】
- ⑥ AddDeviceConnection → 锁外 oneway 广播 CONNECT                    【监听①】
+HAP 应用(ArkTS)
+  │  usb.openDevice(device) / OH_UsbManager_ConnectDevice
+  ▼
+NAPI 绑定层(系统镜像内,HAP 进程中)          ★ 唯一改动点:改调新接口
+  ├─ taihe  ohos.usbManager.impl.cpp:354   g_usbClient.OpenDeviceWithMonitor(usbDev, pipe)
+  ├─ napi   usb_info.cpp:632               g_usbClient.OpenDeviceWithMonitor(dev, pipe)
+  └─ capi   ohusb_manager.cpp:326          UsbSrvClient::GetInstance().OpenDeviceWithMonitor(cppDevice, cppPipe)
+  ▼
+UsbSrvClient(HAP 进程内单例)
+  ├─ 构造:usb_srv_client.cpp:44  deviceRemote = new DeviceDeathMonitor()
+  │     ★新增:死亡锚点桩(IPCObjectStub 空壳),随 HAP 进程生灭,
+  │            与 SerialDeathMonitor/AccessoryDeathMonitor 同构
+  └─ OpenDeviceWithMonitor(device, pipe)          usb_srv_client.cpp:150   ★新增接口
+       └─ proxy_->OpenDeviceWithMonitor(bus, dev, deviceRemote)
+                 │  IPC 事务:parcel = { busNum, devAddr, 锚点 binder 对象 }
+                 │  (老接口 OpenDevice 的 parcel 只有 { busNum, devAddr },无对象)
+                 ▼
+usb_service 进程(SA 4201)
+  UsbService::OpenDeviceWithMonitor(bus, dev, deviceRemote)   usb_service.cpp:582  ★新增接口
+   ① CheckDevicePermission(busNum, devAddr)                       权限检查(既有)
+   ② 固化身份:tokenId / callingUid                                 ★新增
+        = GetCallingTokenID() / GetCallingAppUid()(与连接表键源一致)
+        key = (busNum, devAddr, tokenId)
+   ③ deviceRecipient = new DeviceDeathRecipient(bus, dev, tokenId) ★新增
+        deviceRemote->AddDeathRecipient(deviceRecipient)
+        → 向 binder 驱动登记:"锚点宿主进程死亡时通知我"
+        → recipient 自带清理身份,回调时无需反查
+   ④ usbHostManager_->OpenDevice → HDI 引用计数 +1                HDI 打开(既有)
+        └─ 失败 → RemoveDeathRecipient 回滚                        ★新增:防僵尸通知
+   ⑤ deviceClientMap_[key] = {remote, recipient, tokenId, uid}     ★新增:会话表入账
+        (同 key 重开 → 先注销旧锚点再覆盖)
+   ⑥ AddDeviceConnection                                           连接广播(既有监听①)
+        deviceConnectionMap_["bus-dev"].apps[uid] = bundleName
+        → 锁外 oneway OnDeviceConnected(device, uid, bundleName)
+   └─ 返回 0,HAP 拿到 USBDevicePipe 继续读写
+
+HAP 进程死亡(crash / kill -9,未调 closeDevice)
+  └─ 内核 binder 驱动触发 DeviceDeathRecipient::OnRemoteDied       usb_service.cpp:3556  ★新增
+       (binder 线程,毫秒级,无 IPC 调用上下文)
+       └─ ReleaseDeviceClient(固化 tokenId)                       usb_service.cpp:2205  ★新增
+            ├─ 锁内查会话表(查无 → 幂等返回)
+            ├─ RemoveExclusiveClaimByDevice(死者 token)            定向清独占 claim
+            ├─ usbHostManager_->Close → HDI 引用计数 -1            (多应用同设备安全)
+            ├─ RemoveDeviceClientInfo → 清会话表 + 注销锚点
+            └─ ReleaseDeviceConnectionByUid                        ★新增:死亡路径广播
+                 → 锁外 oneway OnDeviceDisconnected(device, uid, bundleName)
+                 → 监听方表现与正常 Close 完全一致
 ```
+
+#### 5.1.2 SA 路径 —— 老接口 OpenDevice,逻辑零改动
+
+```
+系统 SA(任意 native 进程)
+  └─ UsbSrvClient::OpenDevice(device, pipe)            既有签名(2 参),未动
+       └─ proxy_->OpenDevice(bus, dev)                 IUsbServer.idl:35  既有,未动
+            │  IPC 事务:parcel = { busNum, devAddr }   ← 无 binder 对象 → 无 transfer 评估
+            ▼
+  UsbService::OpenDevice(busNum, devAddr)              既有逻辑逐字还原
+   ① CheckDevicePermission
+   ② usbHostManager_->OpenDevice → HDI 计数 +1
+   ③ 成功 → AddDeviceConnection(广播 CONNECT)
+   (无锚点注册、无会话表、无身份固化 —— SA 死亡不做清理,设计语义)
+   mock/fuzz/benchmark 测试直调此路径,300+ 处调用零改动
+```
+
+#### 5.1.3 与既有双监听/清理链的关系
+
+| 步骤 | 归属 | 新旧 |
+|---|---|---|
+| 绑定层三入口改调新接口 | — | ★改(每处仅一行) |
+| DeviceDeathMonitor 桩 / DeviceDeathRecipient | 监听②检测器 | ★新增 |
+| 会话表 deviceClientMap_ / 锁 / 入账与注销 | 监听②数据结构 | ★新增 |
+| AddDeviceConnection / RemoveDeviceConnection / NotifyDeviceConnection | 监听①广播 | 既有(本特性早期新增,已稳定) |
+| ReleaseDeviceClient / ReleaseDeviceConnectionByUid / RemoveAllDeviceClients | 统一清理链 | ★新增 |
+| Close 成功分支清会话表 / DelDevice 挂 RemoveAllDeviceClients | 终点事件同步 | ★新增挂接 |
+| 权限检查 / HDI Open/Close / 引用计数 | 基础链路 | 既有 |
 
 ### 5.2 Close(双监听拆除)
 
