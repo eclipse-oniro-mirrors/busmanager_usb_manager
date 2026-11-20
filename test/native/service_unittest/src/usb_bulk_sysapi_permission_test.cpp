@@ -14,7 +14,6 @@
  */
 
 #include <fcntl.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #include <cerrno>
@@ -24,9 +23,6 @@
 
 #include "accesstoken_kit.h"
 #include "hilog_wrapper.h"
-#include "ipc_skeleton.h"
-#include "nativetoken_kit.h"
-#include "token_setproc.h"
 #include "usb_common_test.h"
 #include "usb_endpoint.h"
 #include "usb_errors.h"
@@ -368,7 +364,7 @@ HWTEST_F(UsbBulkSysApiPermissionTest, RegBulkCallback_NativeNoPermDenied_001, Te
     Common::UsbCommonTest::GrantSysNoPermissionNative();
     UsbService *service = SharedService();
     ASSERT_NE(service, nullptr);
-    sptr<IRemoteObject> cb = new BulkCallbackRecorder();
+    sptr<IRemoteObject> cb(new BulkCallbackRecorder());
     EXPECT_EQ(service->RegBulkCallback(TEST_BUS_NUM, TEST_DEV_ADDR, MakeBulkEndpoint(), cb),
         UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED);
     USB_HILOGI(MODULE_USB_SERVICE, "RegBulkCallback_NativeNoPermDenied_001 end");
@@ -433,7 +429,7 @@ HWTEST_F(UsbBulkSysApiPermissionTest, RegBulkCallback_NativeWithPermDeviceRightD
     Common::UsbCommonTest::GrantPermissionSysNative();
     UsbService *service = SharedService();
     ASSERT_NE(service, nullptr);
-    sptr<IRemoteObject> cb = new BulkCallbackRecorder();
+    sptr<IRemoteObject> cb(new BulkCallbackRecorder());
     EXPECT_EQ(service->RegBulkCallback(TEST_BUS_NUM, TEST_DEV_ADDR, MakeBulkEndpoint(), cb),
         UEC_SERVICE_PERMISSION_DENIED);
     USB_HILOGI(MODULE_USB_SERVICE, "RegBulkCallback_NativeWithPermDeviceRightDenied_001 end");
