@@ -351,7 +351,7 @@ USBDevicePipe connectDevice(USBDevice const &device)
         return {};
     }
     OHOS::USB::UsbDevice usbDev = ConvertToUsbDevice(device);
-    int32_t ret = g_usbClient.OpenDevice(usbDev, pipe);
+    int32_t ret = g_usbClient.OpenDevice(usbDev, pipe, true);
     if (ret == OHOS::USB::UEC_SERVICE_PERMISSION_DENIED || ret == OHOS::USB::UEC_INTERFACE_PERMISSION_DENIED) {
         metrics.SetErrorCode(UEC_COMMON_HAS_NO_RIGHT);
         ThrowBusinessError(UEC_COMMON_HAS_NO_RIGHT, "need call requestRight to get the permission");

@@ -629,7 +629,7 @@ static napi_value CoreConnectDevice(napi_env env, napi_callback_info info)
     ParseDeviceObj(env, deviceObj, dev);
 
     USBDevicePipe pipe;
-    int32_t ret = g_usbClient.OpenDevice(dev, pipe);
+    int32_t ret = g_usbClient.OpenDevice(dev, pipe, true);
     napi_value pipObj = nullptr;
     if (ret == UEC_OK) {
         CreateUsbDevicePipe(env, pipObj, pipe);
