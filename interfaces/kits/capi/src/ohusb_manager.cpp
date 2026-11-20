@@ -323,7 +323,7 @@ OH_UsbManager_ErrorCode OH_UsbManager_ConnectDevice(const OH_UsbManager_UsbDevic
     cppDevice.SetDevAddr(device->devAddress);
 
     OHOS::USB::USBDevicePipe cppPipe;
-    int32_t ret = OHOS::USB::UsbSrvClient::GetInstance().OpenDevice(cppDevice, cppPipe);
+    int32_t ret = OHOS::USB::UsbSrvClient::GetInstance().OpenDevice(cppDevice, cppPipe, true);
     if (ret != OHOS::USB::UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "OpenDevice failed, ret=%{public}d", ret);
         return ConvertErrCodeForConnect(ret);

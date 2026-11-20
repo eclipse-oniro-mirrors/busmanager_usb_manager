@@ -50,7 +50,7 @@ public:
     DISALLOW_COPY_AND_MOVE(UsbSrvClient);
 
     static UsbSrvClient& GetInstance();
-    int32_t OpenDevice(const UsbDevice &device, USBDevicePipe &pipe);
+    int32_t OpenDevice(const UsbDevice &device, USBDevicePipe &pipe, bool isHapCaller = false);
     int32_t ResetDevice(USBDevicePipe &pipe);
     bool HasRight(std::string deviceName);
     int32_t HasRightEx(std::string deviceName, bool &result);
