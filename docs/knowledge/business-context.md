@@ -36,7 +36,7 @@ skinparam componentStyle rectangle
 actor "三方/系统应用\n(JS/C++/CLI)" as App
 
 package "本组件 usb_manager" {
-  component "NAPI 三模块（usb_info/usbmanager_middle/serial_middle 源文件）\ninterfaces/kits/js/napi/src/" as Napi
+  component "NAPI 三模块（usb_info、设备管理中间层、serial_middle）\ninterfaces/kits/js/napi/src/" as Napi
   component "CAPI ohusb_manager\ninterfaces/kits/capi/" as Capi
   component "客户端 SDK\nUsbSrvClient (usbsrv_client)" as Client
   component "SA 4201 服务 UsbService\nservices/native/src/usb_service.cpp" as SA
@@ -102,7 +102,7 @@ Usbd <-- Hw
 
 | 输入类型 | 来源 | 主要内容 | 触发时机 |
 |---|---|---|---|
-| IPC 接口调用 | NAPI/CAPI/CLI 经 `UsbSrvClient` | 68 个 `UsbInterfaceCode` 方法（services/zidl/include/usb_service_ipc_interface_code.h:22-91），按 USB_MANAGER_FEATURE_HOST/DEVICE/PORT 宏条件编译（interfaces/innerkits/IUsbServer.idl:29-104 的 [macrodef]） | 应用调用 `@ohos.usb.*` 等 NAPI 模块（usb_info/usbmanager_middle/serial_middle 三源文件） |
+| IPC 接口调用 | NAPI/CAPI/CLI 经 `UsbSrvClient` | 68 个 `UsbInterfaceCode` 方法（services/zidl/include/usb_service_ipc_interface_code.h:22-91），按 USB_MANAGER_FEATURE_HOST/DEVICE/PORT 宏条件编译（interfaces/innerkits/IUsbServer.idl:29-104 的 [macrodef]） | 应用调用 `@ohos.usb.*` 等 NAPI 模块（usb_info、设备管理中间层、serial_middle 三源文件） |
 | HDI 设备事件 | `UsbManagerSubscriber::DeviceEvent`（V2_0，services/native/src/usb_manager_subscriber.cpp:79）或 `UsbServiceSubscriber::DeviceEvent`（V1_x，usb_service_subscriber.cpp:78） | status：ACT_DEVUP/ACT_DEVDOWN（主机插拔）、ACT_UPDEVICE/ACT_DOWNDEVICE（gadget 连接）、ACT_ACCESSORY*（配件）、ACT_CUSTOMCONTROLREQUEST | usbd 上报，经 `UsbService::DeviceEvent` 分派（usb_service.cpp:3496-3532） |
 | HDI 端口事件 | 订阅者 `PortChangedEvent`（usb_manager_subscriber.cpp:35） | portId/powerRole/dataRole/mode/supportedModes | 端口角色变化 |
 | 系统参数 | WatchParameter `persist.edm.usb_serial_disable`（usb_service.cpp:326-335）；串口 SysCap 常量（取值见 usb_service.cpp:321） | 串口禁用开关 | 参数变更即刻 |

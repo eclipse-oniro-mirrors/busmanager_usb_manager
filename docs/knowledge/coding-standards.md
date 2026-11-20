@@ -50,5 +50,5 @@
 
 - **禁止**在 BUILD.gn 引入 bundle.json 未声明的组件依赖（services/BUILD.gn 30+ 依赖需 license 审查，AGENTS.md Third-party constraints）。
 - **禁止**未经确认改 MEMSIZE_MAX、串口收发上限、EDM 超时（EDM_SA_MAX_TIME_OUT=5000，usb_host_manager.cpp:101）等行为数值（AGENTS.md Ask before）。
-- 单测镜像源目录放 test/native/（unittest/service_unittest/serial/、fuzztest、benchmarktest、js_unittest、ets_unittest，test/native/ 下 8 个目录）；C++ 用 gtest HWTEST_F，ArkTS 用 Hypium（AGENTS.md Testing）。改动权限流必须过 service_unittest，NAPI 改动须同时构建 usb_info/usbmanager_middle/serial_middle 三源文件对应模块。
+- 单测镜像源目录放 test/native/（unittest/service_unittest/serial/、fuzztest、benchmarktest、js_unittest、ets_unittest，test/native/ 下 8 个目录）；C++ 用 gtest HWTEST_F，ArkTS 用 Hypium（AGENTS.md Testing）。改动权限流必须过 service_unittest，NAPI 改动须同时构建 usb_info、设备管理中间层、serial_middle 三源文件对应模块。
 - 提交前按 AGENTS.md Formatting 约定执行格式化（仓根配置文件，Webkit 基底 120 列）；本仓 Windows 环境无 OpenHarmony 工具链时须明示"构建/测试未执行"。

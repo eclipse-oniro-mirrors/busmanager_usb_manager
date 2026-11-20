@@ -23,7 +23,7 @@ skinparam componentStyle rectangle
 package "interfaces/（公共契约）" {
   [IUsbServer.idl + 3 个回调 IDL\n(stub/proxy 生成)]
   [native/include/ 数据模型\nUsbDevice/USBEndpoint/UsbPort/USBAccessory\nUsbSerialPort/USBDevicePipe/UsbRequest]
-  [kits/js/napi/src/\nusb_info/usbmanager_middle/serial_middle]
+  [kits/js/napi/src/\nusb_info / 设备管理中间层 / serial_middle]
   [kits/capi/ ohusb_manager]
 }
 package "utils/native/（公共设施）" {
@@ -99,7 +99,7 @@ UsbService --> samgr : Publish SA 4201
 
 - 组件 `usb_manager`（subsystem usb，bundle.json:14-15）；SysCap 为 USB 域两个能力（含 Serial 扩展，字面值见 bundle.json:24-27）。
 - usbmgr.gni:20-29：`usb_manager_feature_host/device/port`（默认 true，编译宏 USB_MANAGER_FEATURE_*）、`usb_manager_pass_through`（默认 true）、`usb_manager_feature_pop_up_func_switch_model`、`usb_manager_feature_support_cli`（默认 false）；`usb_manager_peripheral_fault_notifier` 随 hdf_external_device_manager 部件存在自动开启（usbmgr.gni:31-33）；`usb_manager_feature_metrics_enable` 随 hiviewdfx_api_metrics（usbmgr.gni:35-37）。
-- 产物（bundle.json:73-91）：fwk_group=usbsrv_client、NAPI 三模块（usb_info/usbmanager_middle/serial_middle 源文件）、ohusb_manager CAPI、dialog_hap、usb_taihe、usb_cli；service_group=usbservice（libusbservice.z.so）、usb_service.init、etc。
+- 产物（bundle.json:73-91）：fwk_group=usbsrv_client、NAPI 三模块（usb_info、设备管理中间层、serial_middle，源文件见 interfaces/kits/js/napi/src/）、ohusb_manager CAPI、dialog_hap、usb_taihe、usb_cli；service_group=usbservice（libusbservice.z.so）、usb_service.init、etc。
 - inner_kits 发布 usb_srv_client.h、usb_interface_type.h、iusb_srv.h（bundle.json:92-104）。
 
 ## 架构约束
