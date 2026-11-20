@@ -2,7 +2,7 @@
 
 > 仓库:usb_manager(SA 4201)
 > 关联特性:应用连接 USB 设备状态监听 InnerAPI(RegisterConnectionListener)
-> 状态:设计稿 v7 —— **死亡锚点方案**(binder 死亡通知)+ 条件注入(按调用路径判定):应用侧绑定层(taihe/napi/capi)传 true 注入锚点,innerkit 直调(SA)默认 false 传空,免 SELinux transfer 策略;含基线适配修复(GetCallingAppUid 一致性)
+> 状态:设计稿 v6 —— **死亡锚点方案**(binder 死亡通知)+ 条件注入:HAP 调用方注入锚点、native SA 传空免 SELinux transfer 策略;含基线适配修复(GetCallingAppUid 一致性)
 
 ## 1. 背景与目标
 
@@ -44,7 +44,7 @@
 
 ## 4. 最终实现要点与基线适配
 
-1. **锚点注册链(条件注入,按调用路径判定)**:`UsbSrvClient::OpenDevice` 增加可选参数 `isHapCaller`(默认 false)——应用侧绑定层(taihe/napi/capi)显式传 true 注入锚点桩;innerkit 直调(SA)保持默认 false,parcel 不携带 binder 对象,免除 transfer 策略;服务端 deviceRemote 非空 → 创建 DeviceDeathRecipient 并注册,为空 → 跳过锚点、open 正常执行;HDI open 失败 → **RemoveDeathRecipient 回滚**(防僵尸通知);成功 → 会话表入账(同 key 重开先注销旧锚点)→ 连接广播
+1. **锚点注册链(条件注入)**:UsbSrvClient 按自身 token 类型判定——HAP(TOKEN_HAP)注入锚点桩,native/shell 传空(parcel 不携带 binder 对象,免除 transfer 策略);服务端 deviceRemote 非空 → 创建 DeviceDeathRecipient 并注册,为空 → 跳过锚点、open 正常执行;HDI open 失败 → **RemoveDeathRecipient 回滚**(防僵尸通知);成功 → 会话表入账(同 key 重开先注销旧锚点)→ 连接广播
 2. **统一清理链 `ReleaseDeviceClient`**(死亡/兜底共用,幂等查表):锁内查 key 快照 uid → 定向清独占 claim(显式 token)→ HDI Close(引用计数 -1,多应用安全)→ 清会话表+注销锚点 → `ReleaseDeviceConnectionByUid` 清连接记录并广播 DISCONNECT
 3. **死亡回调 `OnRemoteDied`**:GetGlobalInstance 判空 → `ReleaseDeviceClient(固化身份)`,不经过依赖 IPC 上下文的公共 Close
 4. **拔出闭环**:DelDevice → RemoveAllDeviceConnections(逐 uid 广播)→ RemoveAllDeviceClients(清会话+注销锚点,不关 HDI/不广播)→ RemoveAllClaimByDevice → Close(幂等 no-op)
@@ -103,10 +103,10 @@ usbd → UsbServiceSubscriber::DeviceEvent{ACT_DEVDOWN} → DelDevice
 | 调用方 | 锚点/对象传递 | 策略状态 |
 |---|---|---|
 | 普通 HAP(normal_hap / debug_hap) | ✓ 注入锚点 | **规则现成**:`allow normal_hap usb_service:binder { transfer }`(usb_service.te)/ debug 同条 |
-| native SA(innerkit 直调,默认 false) | **✗ 传空** | **零策略**:parcel 无对象即无 transfer 检查,凭既有 `binder call` 即通 |
+| native SA(TOKEN_NATIVE) | **✗ 传空** | **零策略**:parcel 无对象即无 transfer 检查,凭既有 `binder call` 即通 |
 | 系统 HAP(system_basic/core_hap) | ✓ 注入锚点 | **缺 2 条**——仅当系统应用也需要死亡监听时补(usb 组件 te,带属性一条/域);亦可确认无此消费方后不补 |
 | 监听消费方 resource_schedule_service | cb 对象 | **已全通**:`resource_schedule_service usb_service:binder { call transfer }` + 回调方向 `usb_service → rss: call` 均已存在(带 avc 修复注释) |
-| 应用侧 | — | 零改动、零概念:SELinux 是系统镜像策略,应用无感;判定在系统镜像内绑定层(taihe/napi/capi 显式传 true),对调用方零 API 变化(可选参数带默认值) |
+| 应用侧 | — | 零改动、零概念:SELinux 是系统镜像策略,应用无感;判定在系统镜像内 UsbSrvClient,对调用方零 API |
 
 验证方法:permissive 下全量回归(HAP openDevice、SA openDevice、监听注册),收集 `hilog | grep avc` 确认零缺失后切 enforcing 复验。
 
@@ -145,4 +145,4 @@ usbd → UsbServiceSubscriber::DeviceEvent{ACT_DEVDOWN} → DelDevice
 7. uid 一致性(本版关键回归):`GetCallingAppUid` 作为会话 uid 与连接表键一致,crash 后 DISCONNECT 必达
 8. **SA 调用 openDevice(条件注入回归)**:open 成功且 parcel 不携带锚点对象,零 transfer 相关 avc;该会话无死亡清理(设计语义)
 9. SELinux:permissive 收集 avc → 按需合规则 → enforcing 全量回归
-10. mock 回归:`usb_unittest_test` / `service_unittest`(直调默认 false 自动走传空分支,用例无需改动)
+10. mock 回归:`usb_unittest_test` / `service_unittest`(native 测试进程自动走传空分支,用例无需改动)

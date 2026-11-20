@@ -14,6 +14,7 @@
  */
 
 #include "usb_srv_client.h"
+#include "accesstoken_kit.h"
 #include "datetime_ex.h"
 #include "if_system_ability_manager.h"
 #include "ipc_skeleton.h"
@@ -130,15 +131,16 @@ void UsbSrvClient::UsbSrvDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> 
 }
 
 #ifdef USB_MANAGER_FEATURE_HOST
-int32_t UsbSrvClient::OpenDevice(const UsbDevice &device, USBDevicePipe &pipe, bool isHapCaller)
+int32_t UsbSrvClient::OpenDevice(const UsbDevice &device, USBDevicePipe &pipe)
 {
     USB_HILOGI(MODULE_USB_INNERKIT, "Calling OpenDevice Start!");
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
     std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
-    // 锚点仅由应用侧绑定层(taihe/napi/capi)显式传入;innerkit 直调(SA)默认 false,parcel 不携带 binder 对象
+    // 锚点仅对 HAP 调用方注入:native SA 不参与死亡监听,parcel 不携带 binder 对象,无需 SELinux transfer 策略
     sptr<IRemoteObject> remote;
-    if (isHapCaller) {
+    auto tokenType = OHOS::Security::AccessToken::AccessTokenKit::GetTokenType(IPCSkeleton::GetSelfTokenID());
+    if (tokenType == OHOS::Security::AccessToken::TypeATokenTypeEnum::TOKEN_HAP) {
         remote = deviceRemote;
     }
     int32_t ret = proxy_->OpenDevice(device.GetBusNum(), device.GetDevAddr(), remote);
@@ -834,7 +836,7 @@ int32_t UsbSrvClient::UnRegisterConnectionListener(const sptr<IUsbConnectionCall
 }
 
 #else
-int32_t UsbSrvClient::OpenDevice(const UsbDevice &device, USBDevicePipe &pipe, bool)
+int32_t UsbSrvClient::OpenDevice(const UsbDevice &device, USBDevicePipe &pipe)
 {
     USB_HILOGW(MODULE_USB_INNERKIT, "%{public}s: Capability not supported.", __FUNCTION__);
     return CAPABILITY_NOT_SUPPORT;
