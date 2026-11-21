@@ -581,6 +581,12 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr)
 
 int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote_)
 {
+    if (!UsbService::CheckDevicePermission(busNum, devAddr)) {
+        ReportUsbOperationFaultSysEvent("OpenDeviceWithMonitor", UEC_SERVICE_PERMISSION_DENIED,
+            "CheckDevicePermission failed");
+        return UEC_SERVICE_PERMISSION_DENIED;
+    }
+
     // LCOV_EXCL_START
     uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
     int32_t callingUid = IPCSkeleton::GetCallingAppUid();
@@ -588,7 +594,7 @@ int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const
 
     sptr<DeviceDeathRecipient> deviceRecipient = nullptr;
     if (deviceRemote_ != nullptr) {
-        deviceRecipient = new DeviceDeathRecipient(busNum, devAddr, tokenId);
+        deviceRecipient = new (std::nothrow) DeviceDeathRecipient(busNum, devAddr, tokenId);
         if (deviceRecipient == nullptr) {
             USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDeviceWithMonitor deviceRecipient is nullptr");
             return UEC_SERVICE_INVALID_VALUE;
