@@ -597,7 +597,7 @@ int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const
     }
 
     sptr<DeviceDeathRecipient> deviceRecipient = nullptr;
-    if (deviceRemote != nullptr) { // HAP 调用方:注册死亡锚点;锚点为空时跳过注册,open 正常执行
+    if (deviceRemote != nullptr) {
         deviceRecipient = new DeviceDeathRecipient(busNum, devAddr, tokenId);
         if (deviceRecipient == nullptr) {
             USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDeviceWithMonitor deviceRecipient is nullptr");
