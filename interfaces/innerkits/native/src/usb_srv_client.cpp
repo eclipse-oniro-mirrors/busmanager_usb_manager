@@ -41,7 +41,7 @@ UsbSrvClient::UsbSrvClient()
     Connect();
     serialRemote = new SerialDeathMonitor();
     accessoryRemote = new AccessoryDeathMonitor();
-    deviceRemote = new DeviceDeathMonitor();
+    deviceRemote_ = new DeviceDeathMonitor();
     claimCallback_ = new ClaimExclusiveCallback();
 }
 UsbSrvClient::~UsbSrvClient()
@@ -153,7 +153,7 @@ int32_t UsbSrvClient::OpenDeviceWithMonitor(const UsbDevice &device, USBDevicePi
     RETURN_IF_WITH_RET(Connect() != UEC_OK, UEC_INTERFACE_NO_INIT);
     std::shared_lock<std::shared_mutex> lock(mutex_);
     RETURN_IF_WITH_RET(proxy_ == nullptr, UEC_INTERFACE_NO_INIT);
-    int32_t ret = proxy_->OpenDeviceWithMonitor(device.GetBusNum(), device.GetDevAddr(), deviceRemote);
+    int32_t ret = proxy_->OpenDeviceWithMonitor(device.GetBusNum(), device.GetDevAddr(), deviceRemote_);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_INNERKIT, "OpenDeviceWithMonitor failed with ret = %{public}d !", ret);
         return ret;

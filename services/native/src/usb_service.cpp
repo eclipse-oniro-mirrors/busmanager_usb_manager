@@ -579,41 +579,31 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr)
     // LCOV_EXCL_STOP
 }
 
-int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote)
+int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote_)
 {
-    if (!UsbService::CheckDevicePermission(busNum, devAddr)) {
-        ReportUsbOperationFaultSysEvent("OpenDeviceWithMonitor", UEC_SERVICE_PERMISSION_DENIED,
-            "CheckDevicePermission failed");
-        return UEC_SERVICE_PERMISSION_DENIED;
-    }
-
     // LCOV_EXCL_START
     uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
     int32_t callingUid = IPCSkeleton::GetCallingAppUid();
     std::tuple<uint8_t, uint8_t, uint32_t> key = std::make_tuple(busNum, devAddr, tokenId);
-    if (usbHostManager_ == nullptr) {
-        USB_HILOGE(MODULE_USB_HOST, "UsbService::usbHostManager_ is nullptr");
-        return UEC_SERVICE_INVALID_VALUE;
-    }
 
     sptr<DeviceDeathRecipient> deviceRecipient = nullptr;
-    if (deviceRemote != nullptr) {
+    if (deviceRemote_ != nullptr) {
         deviceRecipient = new DeviceDeathRecipient(busNum, devAddr, tokenId);
         if (deviceRecipient == nullptr) {
             USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDeviceWithMonitor deviceRecipient is nullptr");
             return UEC_SERVICE_INVALID_VALUE;
         }
-        if (!deviceRemote->AddDeathRecipient(deviceRecipient)) {
+        if (!deviceRemote_->AddDeathRecipient(deviceRecipient)) {
             USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDeviceWithMonitor add DeathRecipient failed");
             return UEC_SERVICE_INVALID_VALUE;
         }
     }
 
-    int32_t ret = usbHostManager_->OpenDevice(busNum, devAddr);
+    int32_t ret = OpenDevice(busNum, devAddr);
     if (ret != UEC_OK) {
         USB_HILOGE(MODULE_USB_HOST, "OpenDeviceWithMonitor failed ret:%{public}d", ret);
-        if (deviceRemote != nullptr && deviceRecipient != nullptr) {
-            deviceRemote->RemoveDeathRecipient(deviceRecipient);
+        if (deviceRemote_ != nullptr && deviceRecipient != nullptr) {
+            deviceRemote_->RemoveDeathRecipient(deviceRecipient);
         }
         return ret;
     }
@@ -621,14 +611,13 @@ int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const
     {
         std::lock_guard<std::mutex> guard(deviceClientMutex_);
         auto oldIt = deviceClientMap_.find(key);
-        if (oldIt != deviceClientMap_.end() && oldIt->second.deviceRemote != nullptr
+        if (oldIt != deviceClientMap_.end() && oldIt->second.deviceRemote_ != nullptr
             && oldIt->second.deviceRecipient != nullptr) {
-            oldIt->second.deviceRemote->RemoveDeathRecipient(oldIt->second.deviceRecipient);
+            oldIt->second.deviceRemote_->RemoveDeathRecipient(oldIt->second.deviceRecipient);
         }
-        DeviceClientInfo info = {deviceRemote, deviceRecipient, tokenId, callingUid};
+        DeviceClientInfo info = {deviceRemote_, deviceRecipient, tokenId, callingUid};
         deviceClientMap_[key] = info;
     }
-    AddDeviceConnection(busNum, devAddr);
 
     return ret;
     // LCOV_EXCL_STOP
@@ -956,8 +945,8 @@ void UsbService::RemoveAllDeviceClients(uint8_t busNum, uint8_t devAddr)
         }
     }
     for (const auto &info : removed) {
-        if (info.deviceRemote != nullptr && info.deviceRecipient != nullptr) {
-            info.deviceRemote->RemoveDeathRecipient(info.deviceRecipient);
+        if (info.deviceRemote_ != nullptr && info.deviceRecipient != nullptr) {
+            info.deviceRemote_->RemoveDeathRecipient(info.deviceRecipient);
         }
     }
 }
@@ -2189,8 +2178,8 @@ void UsbService::RemoveDeviceClientInfo(uint8_t busNum, uint8_t devAddr, uint32_
     std::lock_guard<std::mutex> guard(deviceClientMutex_);
     auto it = deviceClientMap_.find(key);
     if (it != deviceClientMap_.end()) {
-        if (it->second.deviceRemote != nullptr && it->second.deviceRecipient != nullptr) {
-            it->second.deviceRemote->RemoveDeathRecipient(it->second.deviceRecipient);
+        if (it->second.deviceRemote_ != nullptr && it->second.deviceRecipient != nullptr) {
+            it->second.deviceRemote_->RemoveDeathRecipient(it->second.deviceRecipient);
         }
         deviceClientMap_.erase(it);
         USB_HILOGI(MODULE_USB_HOST,

@@ -171,7 +171,7 @@ private:
     sptr<SerialDeathMonitor> serialRemote = nullptr;
     sptr<AccessoryDeathMonitor> accessoryRemote = nullptr;
     sptr<ClaimExclusiveCallback> claimCallback_ = nullptr;
-    sptr<DeviceDeathMonitor> deviceRemote = nullptr;
+    sptr<DeviceDeathMonitor> deviceRemote_ = nullptr;
 };
 } // namespace USB
 } // namespace OHOS
