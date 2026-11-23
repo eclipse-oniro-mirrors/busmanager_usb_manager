@@ -49,6 +49,8 @@ constexpr uint32_t TEST_BULK_EP_ATTRIBUTES = 0x02;
 constexpr uint32_t TEST_BULK_EP_MAX_PACKET = 512;
 constexpr int32_t TEST_MEM_SIZE = 1024;
 constexpr int32_t INVALID_MEM_SIZE = 0;
+// fd 0/1/2 are stdin/stdout/stderr; the test needs a descriptor whose index is >= 3.
+constexpr int32_t MIN_TEST_FD = 3;
 constexpr int32_t TEST_HAP_USER_ID = 1;
 constexpr int32_t TEST_HAP_API_VERSION = 18;
 constexpr int32_t TEST_HAP_INST_INDEX = 0;
@@ -79,8 +81,8 @@ int32_t CreatePipeReadFd()
     }
     (void)close(fds[1]);
     int32_t fd = fds[0];
-    if (fd <= 2) {
-        int32_t dupFd = fcntl(fd, F_DUPFD, 3);
+    if (fd < MIN_TEST_FD) {
+        int32_t dupFd = fcntl(fd, F_DUPFD, MIN_TEST_FD);
         (void)close(fd);
         fd = dupFd;
     }
