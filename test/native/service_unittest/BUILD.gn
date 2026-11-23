@@ -679,16 +679,13 @@ ohos_unittest("test_usb_calling_appuid") {
 
 ohos_unittest("test_usb_bulk_sysapi_permission") {
   module_out_path = module_output_path
-  sources = [
-    "src/usb_common_test.cpp",
-    "src/usb_bulk_sysapi_permission_test.cpp",
-  ]
+  sources = [ "src/usb_bulk_sysapi_permission_test.cpp" ]
 
   configs = [
     "${utils_path}:utils_config",
     ":module_private_config",
   ]
-  defines = []
+  defines = [ "private=public" ]
   if (usb_manager_pass_through) {
     defines += [ "USB_MANAGER_PASS_THROUGH" ]
   }
