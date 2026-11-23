@@ -14,69 +14,64 @@
  */
 
 #include "usbmgropendevicewithmonitor_fuzzer.h"
-
-#include "usb_srv_client.h"
-#include "usb_errors.h"
-#include "usb_device.h"
-#include "usb_device_pipe.h"
+#include "usb_service.h"
+#include "accesstoken_kit.h"
+#include "nativetoken_kit.h"
+#include "token_setproc.h"
 
 namespace OHOS {
 const uint32_t OFFSET = 4;
-constexpr size_t THRESHOLD = 4;
+const uint32_t OFFSET_BYTE = 8;
+constexpr size_t THRESHOLD = 10;
+const uint32_t code = 0x04;
+const std::u16string USB_INTERFACE_TOKEN = u"OHOS.USB.IUsbServer";
+
 namespace USB {
-    bool UsbMgrOpenDeviceWithMonitorFuzzTest(const uint8_t* data, size_t size)
-    {
-        if (data == nullptr || size < OFFSET) {
-            USB_HILOGE(MODULE_USB_SERVICE, "data size is insufficient!");
-            return false;
-        }
-        auto &usbSrvClient = UsbSrvClient::GetInstance();
-
-        UsbDevice fuzzDevice;
-        fuzzDevice.SetBusNum(data[0]);
-        fuzzDevice.SetDevAddr(data[1]);
-        USBDevicePipe fuzzPipe;
-        usbSrvClient.OpenDeviceWithMonitor(fuzzDevice, fuzzPipe);
-
-        std::vector<UsbDevice> devList;
-        auto ret = usbSrvClient.GetDevices(devList);
-        if (ret != UEC_OK || devList.empty()) {
-            USB_HILOGE(MODULE_USB_SERVICE, "get devices failed ret=%{public}d", ret);
-            return true;
-        }
-        UsbDevice device = devList.front();
-        usbSrvClient.RequestRight(device.GetName());
-
-        USBDevicePipe pipe;
-        ret = usbSrvClient.OpenDeviceWithMonitor(device, pipe);
-        if (ret == UEC_OK) {
-            USBDevicePipe pipe2;
-            usbSrvClient.OpenDeviceWithMonitor(device, pipe2);
-            usbSrvClient.Close(pipe);
-        }
-
-        if (size >= OFFSET + sizeof(uint8_t) * 2) {
-            UsbDevice mixDevice = device;
-            mixDevice.SetBusNum(data[OFFSET]);
-            mixDevice.SetDevAddr(data[OFFSET + 1]);
-            USBDevicePipe mixPipe;
-            usbSrvClient.OpenDeviceWithMonitor(mixDevice, mixPipe);
-        }
-
-        USBDevicePipe closePipe;
-        closePipe.SetBusNum(device.GetBusNum());
-        closePipe.SetDevAddr(device.GetDevAddr());
-        usbSrvClient.Close(closePipe);
-        return true;
+bool UsbMgrOpenDeviceWithMonitorFuzzTest(const uint8_t* rawData, size_t size)
+{
+    if (rawData == nullptr || size < OFFSET_BYTE + sizeof(int32_t)) {
+        return false;
     }
+    MessageParcel data;
+    data.WriteInterfaceToken(USB_INTERFACE_TOKEN);
+    data.WriteBuffer(rawData, size);
+    data.RewindRead(0);
+    MessageParcel reply;
+    MessageOption option;
+    UsbService::GetGlobalInstance()->OnRemoteRequest(code, data, reply, option);
+    return true;
+}
 } // namespace USB
 } // namespace OHOS
 
+/* Fuzzer entry point */
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
     if (size < OHOS::THRESHOLD) {
         return 0;
     }
     OHOS::USB::UsbMgrOpenDeviceWithMonitorFuzzTest(data, size);
+    return 0;
+}
+
+static const uint64_t SYSTEM_APP_MASK = (static_cast<uint64_t>(1) << 32);
+
+extern "C" int LLVMFuzzerInitialize(int *argc, char **argv)
+{
+    constexpr int permissionNum = 1;
+    const char *perms[permissionNum] = {"ohos.permission.MANAGE_USB_CONFIG"};
+    NativeTokenInfoParams info = {
+        .dcapsNum = 0,
+        .permsNum = permissionNum,
+        .aclsNum = 0,
+        .dcaps = nullptr,
+        .perms = perms,
+        .acls = nullptr,
+        .processName = "usb_manager_fuzztest",
+        .aplStr = "system_basic",
+    };
+    uint64_t tokenId = GetAccessTokenId(&info);
+    SetSelfTokenID(tokenId | SYSTEM_APP_MASK);
+    OHOS::Security::AccessToken::AccessTokenKit::ReloadNativeTokenInfo();
     return 0;
 }
