@@ -579,7 +579,7 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr)
     // LCOV_EXCL_STOP
 }
 
-int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote_)
+int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote)
 {
     int32_t ret = OpenDevice(busNum, devAddr);
     if (ret != UEC_OK) {
@@ -591,9 +591,9 @@ int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const
     std::tuple<uint8_t, uint8_t, uint32_t> key = std::make_tuple(busNum, devAddr, tokenId);
 
     sptr<DeviceDeathRecipient> deviceRecipient = nullptr;
-    if (deviceRemote_ != nullptr) {
+    if (deviceRemote != nullptr) {
         deviceRecipient = new (std::nothrow) DeviceDeathRecipient(busNum, devAddr, tokenId);
-        if (deviceRecipient == nullptr || !deviceRemote_->AddDeathRecipient(deviceRecipient)) {
+        if (deviceRecipient == nullptr || !deviceRemote->AddDeathRecipient(deviceRecipient)) {
             USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDeviceWithMonitor add DeathRecipient failed");
             usbHostManager_->Close(busNum, devAddr);
             RemoveDeviceConnection(busNum, devAddr);
@@ -608,7 +608,7 @@ int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const
             && oldIt->second.deviceRecipient != nullptr) {
             oldIt->second.deviceRemote_->RemoveDeathRecipient(oldIt->second.deviceRecipient);
         }
-        DeviceClientInfo info = {deviceRemote_, deviceRecipient, tokenId, callingUid};
+        DeviceClientInfo info = {deviceRemote, deviceRecipient, tokenId, callingUid};
         deviceClientMap_[key] = info;
     }
 

@@ -33,7 +33,7 @@ interface OHOS.USB.IUsbServer {
     [macrodef USB_MANAGER_FEATURE_HOST] void RegDeviceControlCallback([in]IRemoteObject cb);
     [macrodef USB_MANAGER_FEATURE_HOST] void UnRegDeviceControlCallback([in]IRemoteObject cb);
     [macrodef USB_MANAGER_FEATURE_HOST] void OpenDevice([in]unsigned char busNum, [in]unsigned char devAddr);
-    [macrodef USB_MANAGER_FEATURE_HOST] void OpenDeviceWithMonitor([in]unsigned char busNum, [in]unsigned char devAddr, [in]IRemoteObject deviceRemote_);
+    [macrodef USB_MANAGER_FEATURE_HOST] void OpenDeviceWithMonitor([in]unsigned char busNum, [in]unsigned char devAddr, [in]IRemoteObject deviceRemote);
     [macrodef USB_MANAGER_FEATURE_HOST] void Close([in]unsigned char busNum, [in]unsigned char devAddr);
     [macrodef USB_MANAGER_FEATURE_HOST] void ResetDevice([in]unsigned char busNum, [in]unsigned char devAddr);
     [macrodef USB_MANAGER_FEATURE_HOST] void ClaimInterface([in]unsigned char busNum, [in]unsigned char devAddr, [in]unsigned char interfaceid, [in]unsigned char force);
