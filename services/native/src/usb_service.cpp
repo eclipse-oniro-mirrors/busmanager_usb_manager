@@ -562,7 +562,6 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr)
         return UEC_SERVICE_PERMISSION_DENIED;
     }
 
-    // LCOV_EXCL_START
     if (usbHostManager_ == nullptr) {
         USB_HILOGE(MODULE_USB_HOST, "UsbService::usbHostManager_ is nullptr");
         return UEC_SERVICE_INVALID_VALUE;
@@ -576,18 +575,15 @@ int32_t UsbService::OpenDevice(uint8_t busNum, uint8_t devAddr)
     }
 
     return ret;
-    // LCOV_EXCL_STOP
 }
 
 int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote_)
 {
-    if (!UsbService::CheckDevicePermission(busNum, devAddr)) {
-        ReportUsbOperationFaultSysEvent("OpenDeviceWithMonitor", UEC_SERVICE_PERMISSION_DENIED,
-            "CheckDevicePermission failed");
-        return UEC_SERVICE_PERMISSION_DENIED;
+    int32_t ret = OpenDevice(busNum, devAddr);
+    if (ret != UEC_OK) {
+        return ret;
     }
 
-    // LCOV_EXCL_START
     uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
     int32_t callingUid = IPCSkeleton::GetCallingAppUid();
     std::tuple<uint8_t, uint8_t, uint32_t> key = std::make_tuple(busNum, devAddr, tokenId);
@@ -595,23 +591,12 @@ int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const
     sptr<DeviceDeathRecipient> deviceRecipient = nullptr;
     if (deviceRemote_ != nullptr) {
         deviceRecipient = new (std::nothrow) DeviceDeathRecipient(busNum, devAddr, tokenId);
-        if (deviceRecipient == nullptr) {
-            USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDeviceWithMonitor deviceRecipient is nullptr");
-            return UEC_SERVICE_INVALID_VALUE;
-        }
-        if (!deviceRemote_->AddDeathRecipient(deviceRecipient)) {
+        if (deviceRecipient == nullptr || !deviceRemote_->AddDeathRecipient(deviceRecipient)) {
             USB_HILOGE(MODULE_USB_HOST, "UsbService::OpenDeviceWithMonitor add DeathRecipient failed");
+            usbHostManager_->Close(busNum, devAddr);
+            RemoveDeviceConnection(busNum, devAddr);
             return UEC_SERVICE_INVALID_VALUE;
         }
-    }
-
-    int32_t ret = OpenDevice(busNum, devAddr);
-    if (ret != UEC_OK) {
-        USB_HILOGE(MODULE_USB_HOST, "OpenDeviceWithMonitor failed ret:%{public}d", ret);
-        if (deviceRemote_ != nullptr && deviceRecipient != nullptr) {
-            deviceRemote_->RemoveDeathRecipient(deviceRecipient);
-        }
-        return ret;
     }
 
     {
@@ -626,7 +611,6 @@ int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const
     }
 
     return ret;
-    // LCOV_EXCL_STOP
 }
 
 int32_t UsbService::Close(uint8_t busNum, uint8_t devAddr)
@@ -2207,7 +2191,6 @@ void UsbService::ReleaseDeviceClient(uint8_t busNum, uint8_t devAddr, uint32_t t
         }
         uid = it->second.uid;
     }
-    RemoveExclusiveClaimByDevice(busNum, devAddr, tokenId);
     if (usbHostManager_ != nullptr) {
         int32_t ret = usbHostManager_->Close(busNum, devAddr);
         if (ret != UEC_OK) {
