@@ -21,7 +21,7 @@
 namespace OHOS::USB {
 class DeviceDeathMonitor : public OHOS::IPCObjectStub {
 public:
-    explicit DeviceDeathMonitor() : OHOS::IPCObjectStub() {}
+    DeviceDeathMonitor() : OHOS::IPCObjectStub() {}
     ~DeviceDeathMonitor() override = default;
 };
 } // namespace OHOS::USB
