@@ -18,14 +18,18 @@
 
 #include <cerrno>
 #include <cstdint>
+#include <memory>
+#include <string>
 
 #include <gtest/gtest.h>
 
 #include "accesstoken_kit.h"
 #include "hilog_wrapper.h"
-#include "usb_common_test.h"
+#include "nativetoken_kit.h"
+#include "token_setproc.h"
 #include "usb_endpoint.h"
 #include "usb_errors.h"
+#include "usb_host_manager.h"
 #include "usb_right_manager.h"
 #include "usb_service.h"
 #include "usbd_bulk_callback.h"
@@ -45,6 +49,18 @@ constexpr uint32_t TEST_BULK_EP_ATTRIBUTES = 0x02;
 constexpr uint32_t TEST_BULK_EP_MAX_PACKET = 512;
 constexpr int32_t TEST_MEM_SIZE = 1024;
 constexpr int32_t INVALID_MEM_SIZE = 0;
+constexpr int32_t TEST_HAP_USER_ID = 1;
+constexpr int32_t TEST_HAP_API_VERSION = 18;
+constexpr int32_t TEST_HAP_INST_INDEX = 0;
+constexpr char TEST_HAP_BUNDLE_NAME[] = "com.example.bulksysapitest";
+constexpr char TEST_NATIVE_PERM_PROCESS[] = "usb_bulk_sysapi_perm_test";
+constexpr char TEST_NATIVE_NO_PERM_PROCESS[] = "usb_bulk_sysapi_noperm_test";
+constexpr char MANAGE_USB_CONFIG_PERM[] = "ohos.permission.MANAGE_USB_CONFIG";
+constexpr uint8_t TEST_BULK_IN_ENDPOINT = 0x81;
+constexpr uint8_t TEST_BULK_OUT_ENDPOINT = 0x02;
+constexpr uint8_t TEST_INTERFACE_ID_ALT = 1;
+constexpr uint8_t TEST_DEV_ADDR_ALT = 10;
+constexpr uint8_t TEST_BUS_NUM_ALT = 11;
 
 USBEndpoint MakeBulkEndpoint()
 {
@@ -94,23 +110,61 @@ public:
     }
 };
 
+// Switch the process to a system_basic native token, optionally holding MANAGE_USB_CONFIG.
+void SetNativeToken(bool withManagePerm)
+{
+    const char *perms[] = {MANAGE_USB_CONFIG_PERM};
+    TokenInfoParams infoInstance = {
+        .dcapsNum = 0,
+        .permsNum = withManagePerm ? 1 : 0,
+        .aclsNum = 0,
+        .dcaps = nullptr,
+        .perms = withManagePerm ? perms : nullptr,
+        .acls = nullptr,
+        .processName = withManagePerm ? TEST_NATIVE_PERM_PROCESS : TEST_NATIVE_NO_PERM_PROCESS,
+        .aplStr = "system_basic",
+    };
+    uint64_t tokenId = GetAccessTokenId(&infoInstance);
+    (void)SetSelfTokenID(tokenId);
+    (void)OHOS::Security::AccessToken::AccessTokenKit::ReloadNativeTokenInfo();
+}
+
+// Allocate an APL_NORMAL, non-system app HAP token and return the full 64-bit token id.
+Security::AccessToken::AccessTokenIDEx AllocNormalHapToken()
+{
+    Security::AccessToken::HapInfoParams hapInfo = {
+        .userID = TEST_HAP_USER_ID,
+        .bundleName = TEST_HAP_BUNDLE_NAME,
+        .instIndex = TEST_HAP_INST_INDEX,
+        .appIDDesc = "usb bulk sysapi test",
+        .apiVersion = TEST_HAP_API_VERSION,
+        .isSystemApp = false,
+    };
+    Security::AccessToken::HapPolicyParams hapPolicy = {
+        .apl = Security::AccessToken::APL_NORMAL,
+        .domain = "test.domain.usb",
+    };
+    return Security::AccessToken::AccessTokenKit::AllocHapToken(hapInfo, hapPolicy);
+}
+
 // Scope guard for a normal HAP token: switches to an APL_NORMAL, non-system app HAP token
 // inside the scope, and restores the system_basic native token and deletes the HAP token on
 // exit so that cases do not affect each other.
 class ScopedNormalHapToken {
 public:
-    ScopedNormalHapToken() : tokenId_(Common::UsbCommonTest::AllocHapTest())
+    ScopedNormalHapToken()
     {
-        if (tokenId_ != 0) {
-            Common::UsbCommonTest::SetSelfToken(tokenId_);
+        tokenIdEx_ = AllocNormalHapToken();
+        if (IsValid()) {
+            (void)SetSelfTokenID(tokenIdEx_.tokenIDEx);
         }
     }
 
     ~ScopedNormalHapToken()
     {
-        Common::UsbCommonTest::GrantSysNoPermissionNative();
-        if (tokenId_ != 0) {
-            Common::UsbCommonTest::DeleteAllocHapToken(tokenId_);
+        SetNativeToken(false);
+        if (IsValid()) {
+            (void)Security::AccessToken::AccessTokenKit::DeleteToken(tokenIdEx_.tokenIdExStruct.tokenID);
         }
     }
 
@@ -119,11 +173,11 @@ public:
 
     bool IsValid() const
     {
-        return tokenId_ != 0;
+        return tokenIdEx_.tokenIdExStruct.tokenID != 0;
     }
 
 private:
-    Security::AccessToken::AccessTokenID tokenId_ = 0;
+    Security::AccessToken::AccessTokenIDEx tokenIdEx_ = {0};
 };
 } // namespace
 
@@ -134,12 +188,18 @@ public:
 
     void SetUp() override
     {
-        Common::UsbCommonTest::GrantSysNoPermissionNative();
+        SetNativeToken(false);
+#ifdef USB_MANAGER_FEATURE_HOST
+        hostManager_ = std::make_unique<UsbHostManager>(nullptr);
+#endif // USB_MANAGER_FEATURE_HOST
     }
 
     void TearDown() override
     {
-        Common::UsbCommonTest::GrantSysNoPermissionNative();
+#ifdef USB_MANAGER_FEATURE_HOST
+        hostManager_.reset();
+#endif // USB_MANAGER_FEATURE_HOST
+        SetNativeToken(false);
     }
 
     // Process-wide UsbService instance created by usb_service.cpp during static init.
@@ -151,6 +211,48 @@ public:
         static sptr<UsbService> service = UsbService::GetGlobalInstance();
         return service.GetRefPtr();
     }
+
+    // The key format must match UsbHostManager::GetBulkCallbackKey: bus-devAddr-intfId-endpointId.
+    static std::string MakeCallbackKey(uint8_t busNum, uint8_t devAddr, uint8_t interfaceId, uint8_t endpointId)
+    {
+        return std::to_string(busNum) + "-" + std::to_string(devAddr) + "-" +
+            std::to_string(interfaceId) + "-" + std::to_string(endpointId);
+    }
+
+    // Cleanup cases only need the map entries: RemoveBulkCallbackByDevice does not touch
+    // the HDI callback when usbHostInterface_ (or usbd_) is null, which is the UT case.
+    void SeedCallbackEntry(uint8_t busNum, uint8_t devAddr, uint8_t interfaceId, uint8_t endpointId)
+    {
+        std::string key = MakeCallbackKey(busNum, devAddr, interfaceId, endpointId);
+#ifdef USB_MANAGER_PASS_THROUGH
+        UsbHostManager::UsbHostHdiBulkCallbackInfo info;
+        hostManager_->usbHostHdiCbMap_[key] = info;
+#else
+        UsbHostManager::HdiBulkCallbackInfo info;
+        hostManager_->hdiCbMap_[key] = info;
+#endif // USB_MANAGER_PASS_THROUGH
+    }
+
+    size_t GetSeededCallbackCount() const
+    {
+#ifdef USB_MANAGER_PASS_THROUGH
+        return hostManager_->usbHostHdiCbMap_.size();
+#else
+        return hostManager_->hdiCbMap_.size();
+#endif // USB_MANAGER_PASS_THROUGH
+    }
+
+    bool HasSeededCallback(uint8_t busNum, uint8_t devAddr, uint8_t interfaceId, uint8_t endpointId) const
+    {
+        std::string key = MakeCallbackKey(busNum, devAddr, interfaceId, endpointId);
+#ifdef USB_MANAGER_PASS_THROUGH
+        return hostManager_->usbHostHdiCbMap_.find(key) != hostManager_->usbHostHdiCbMap_.end();
+#else
+        return hostManager_->hdiCbMap_.find(key) != hostManager_->hdiCbMap_.end();
+#endif // USB_MANAGER_PASS_THROUGH
+    }
+
+    std::unique_ptr<UsbHostManager> hostManager_;
 };
 
 /**
@@ -182,7 +284,7 @@ HWTEST_F(UsbBulkSysApiPermissionTest, CheckSysApiPermission_NormalHapDenied_001,
 HWTEST_F(UsbBulkSysApiPermissionTest, CheckSysApiPermission_NativeNoPermDenied_001, TestSize.Level1)
 {
     USB_HILOGI(MODULE_USB_SERVICE, "CheckSysApiPermission_NativeNoPermDenied_001 start");
-    Common::UsbCommonTest::GrantSysNoPermissionNative();
+    SetNativeToken(false);
     UsbService *service = SharedService();
     ASSERT_NE(service, nullptr);
     EXPECT_EQ(service->CheckSysApiPermission(), UEC_SERVICE_PERMISSION_DENIED_SYSAPI_FAILED);
@@ -198,7 +300,7 @@ HWTEST_F(UsbBulkSysApiPermissionTest, CheckSysApiPermission_NativeNoPermDenied_0
 HWTEST_F(UsbBulkSysApiPermissionTest, CheckSysApiPermission_NativeWithPermAllowed_001, TestSize.Level1)
 {
     USB_HILOGI(MODULE_USB_SERVICE, "CheckSysApiPermission_NativeWithPermAllowed_001 start");
-    Common::UsbCommonTest::GrantPermissionSysNative();
+    SetNativeToken(true);
     UsbService *service = SharedService();
     ASSERT_NE(service, nullptr);
     EXPECT_EQ(service->CheckSysApiPermission(), UEC_OK);
@@ -340,7 +442,7 @@ HWTEST_F(UsbBulkSysApiPermissionTest, BulkCancel_NormalHapDenied_001, TestSize.L
 HWTEST_F(UsbBulkSysApiPermissionTest, BulkRead_NativeNoPermDeniedAndFdClosed_001, TestSize.Level1)
 {
     USB_HILOGI(MODULE_USB_SERVICE, "BulkRead_NativeNoPermDeniedAndFdClosed_001 start");
-    Common::UsbCommonTest::GrantSysNoPermissionNative();
+    SetNativeToken(false);
     UsbService *service = SharedService();
     ASSERT_NE(service, nullptr);
     int32_t fd = CreatePipeReadFd();
@@ -361,7 +463,7 @@ HWTEST_F(UsbBulkSysApiPermissionTest, BulkRead_NativeNoPermDeniedAndFdClosed_001
 HWTEST_F(UsbBulkSysApiPermissionTest, RegBulkCallback_NativeNoPermDenied_001, TestSize.Level1)
 {
     USB_HILOGI(MODULE_USB_SERVICE, "RegBulkCallback_NativeNoPermDenied_001 start");
-    Common::UsbCommonTest::GrantSysNoPermissionNative();
+    SetNativeToken(false);
     UsbService *service = SharedService();
     ASSERT_NE(service, nullptr);
     sptr<IRemoteObject> cb(new BulkCallbackRecorder());
@@ -380,7 +482,7 @@ HWTEST_F(UsbBulkSysApiPermissionTest, RegBulkCallback_NativeNoPermDenied_001, Te
 HWTEST_F(UsbBulkSysApiPermissionTest, BulkRead_NativeWithPermInvalidParam_001, TestSize.Level1)
 {
     USB_HILOGI(MODULE_USB_SERVICE, "BulkRead_NativeWithPermInvalidParam_001 start");
-    Common::UsbCommonTest::GrantPermissionSysNative();
+    SetNativeToken(true);
     UsbService *service = SharedService();
     ASSERT_NE(service, nullptr);
     int32_t fd = CreatePipeReadFd();
@@ -404,7 +506,7 @@ HWTEST_F(UsbBulkSysApiPermissionTest, BulkRead_NativeWithPermInvalidParam_001, T
 HWTEST_F(UsbBulkSysApiPermissionTest, BulkRead_NativeWithPermDeviceRightDenied_001, TestSize.Level1)
 {
     USB_HILOGI(MODULE_USB_SERVICE, "BulkRead_NativeWithPermDeviceRightDenied_001 start");
-    Common::UsbCommonTest::GrantPermissionSysNative();
+    SetNativeToken(true);
     UsbService *service = SharedService();
     ASSERT_NE(service, nullptr);
     int32_t fd = CreatePipeReadFd();
@@ -426,7 +528,7 @@ HWTEST_F(UsbBulkSysApiPermissionTest, BulkRead_NativeWithPermDeviceRightDenied_0
 HWTEST_F(UsbBulkSysApiPermissionTest, RegBulkCallback_NativeWithPermDeviceRightDenied_001, TestSize.Level1)
 {
     USB_HILOGI(MODULE_USB_SERVICE, "RegBulkCallback_NativeWithPermDeviceRightDenied_001 start");
-    Common::UsbCommonTest::GrantPermissionSysNative();
+    SetNativeToken(true);
     UsbService *service = SharedService();
     ASSERT_NE(service, nullptr);
     sptr<IRemoteObject> cb(new BulkCallbackRecorder());
@@ -444,7 +546,7 @@ HWTEST_F(UsbBulkSysApiPermissionTest, RegBulkCallback_NativeWithPermDeviceRightD
 HWTEST_F(UsbBulkSysApiPermissionTest, UnRegBulkCallback_NativeWithPermDeviceRightDenied_001, TestSize.Level1)
 {
     USB_HILOGI(MODULE_USB_SERVICE, "UnRegBulkCallback_NativeWithPermDeviceRightDenied_001 start");
-    Common::UsbCommonTest::GrantPermissionSysNative();
+    SetNativeToken(true);
     UsbService *service = SharedService();
     ASSERT_NE(service, nullptr);
     EXPECT_EQ(service->UnRegBulkCallback(TEST_BUS_NUM, TEST_DEV_ADDR, MakeBulkEndpoint()),
@@ -461,12 +563,59 @@ HWTEST_F(UsbBulkSysApiPermissionTest, UnRegBulkCallback_NativeWithPermDeviceRigh
 HWTEST_F(UsbBulkSysApiPermissionTest, BulkCancel_NativeWithPermDeviceRightDenied_001, TestSize.Level1)
 {
     USB_HILOGI(MODULE_USB_SERVICE, "BulkCancel_NativeWithPermDeviceRightDenied_001 start");
-    Common::UsbCommonTest::GrantPermissionSysNative();
+    SetNativeToken(true);
     UsbService *service = SharedService();
     ASSERT_NE(service, nullptr);
     EXPECT_EQ(service->BulkCancel(TEST_BUS_NUM, TEST_DEV_ADDR, MakeBulkEndpoint()),
         UEC_SERVICE_PERMISSION_DENIED);
     USB_HILOGI(MODULE_USB_SERVICE, "BulkCancel_NativeWithPermDeviceRightDenied_001 end");
 }
+
+#ifdef USB_MANAGER_FEATURE_HOST
+/**
+ * @tc.name: RemoveBulkCallbackByDevice_MultiEndpointCleanup_001
+ * @tc.desc: RemoveBulkCallbackByDevice must erase every callback of one device, including
+ *           entries of different interfaces and endpoints.
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbBulkSysApiPermissionTest, RemoveBulkCallbackByDevice_MultiEndpointCleanup_001, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "RemoveBulkCallbackByDevice_MultiEndpointCleanup_001 start");
+    SeedCallbackEntry(TEST_BUS_NUM, TEST_DEV_ADDR, TEST_INTERFACE_ID, TEST_BULK_IN_ENDPOINT);
+    SeedCallbackEntry(TEST_BUS_NUM, TEST_DEV_ADDR, TEST_INTERFACE_ID, TEST_BULK_OUT_ENDPOINT);
+    SeedCallbackEntry(TEST_BUS_NUM, TEST_DEV_ADDR, TEST_INTERFACE_ID_ALT, TEST_BULK_IN_ENDPOINT);
+    ASSERT_EQ(GetSeededCallbackCount(), 3U);
+
+    hostManager_->RemoveBulkCallbackByDevice(TEST_BUS_NUM, TEST_DEV_ADDR);
+
+    EXPECT_EQ(GetSeededCallbackCount(), 0U);
+    USB_HILOGI(MODULE_USB_SERVICE, "RemoveBulkCallbackByDevice_MultiEndpointCleanup_001 end");
+}
+
+/**
+ * @tc.name: RemoveBulkCallbackByDevice_PrefixIsolation_001
+ * @tc.desc: Removing the callbacks of device (1, 1) must not erase (1, 10), (11, 1) or (2, 1),
+ *           whose keys share a textual prefix with the "1-1-" key prefix of the target device.
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbBulkSysApiPermissionTest, RemoveBulkCallbackByDevice_PrefixIsolation_001, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "RemoveBulkCallbackByDevice_PrefixIsolation_001 start");
+    SeedCallbackEntry(1, 1, TEST_INTERFACE_ID, TEST_BULK_IN_ENDPOINT);
+    SeedCallbackEntry(1, TEST_DEV_ADDR_ALT, TEST_INTERFACE_ID, TEST_BULK_IN_ENDPOINT);
+    SeedCallbackEntry(TEST_BUS_NUM_ALT, 1, TEST_INTERFACE_ID, TEST_BULK_IN_ENDPOINT);
+    SeedCallbackEntry(2, 1, TEST_INTERFACE_ID, TEST_BULK_OUT_ENDPOINT);
+    ASSERT_EQ(GetSeededCallbackCount(), 4U);
+
+    hostManager_->RemoveBulkCallbackByDevice(1, 1);
+
+    EXPECT_EQ(GetSeededCallbackCount(), 3U);
+    EXPECT_FALSE(HasSeededCallback(1, 1, TEST_INTERFACE_ID, TEST_BULK_IN_ENDPOINT));
+    EXPECT_TRUE(HasSeededCallback(1, TEST_DEV_ADDR_ALT, TEST_INTERFACE_ID, TEST_BULK_IN_ENDPOINT));
+    EXPECT_TRUE(HasSeededCallback(TEST_BUS_NUM_ALT, 1, TEST_INTERFACE_ID, TEST_BULK_IN_ENDPOINT));
+    EXPECT_TRUE(HasSeededCallback(2, 1, TEST_INTERFACE_ID, TEST_BULK_OUT_ENDPOINT));
+    USB_HILOGI(MODULE_USB_SERVICE, "RemoveBulkCallbackByDevice_PrefixIsolation_001 end");
+}
+#endif // USB_MANAGER_FEATURE_HOST
 } // namespace USB
 } // namespace OHOS
