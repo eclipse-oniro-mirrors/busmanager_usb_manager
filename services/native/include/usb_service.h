@@ -24,6 +24,7 @@
 #include <list>
 #include <mutex>
 #include <thread>
+#include <tuple>
 
 #include "delayed_sp_singleton.h"
 #include "iremote_object.h"
@@ -101,6 +102,7 @@ public:
     int32_t DeviceEvent(const HDI::Usb::V1_0::USBDeviceInfo &info);
 #ifdef USB_MANAGER_FEATURE_HOST
     int32_t OpenDevice(uint8_t busNum, uint8_t devAddr) override;
+    int32_t OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const sptr<IRemoteObject> &deviceRemote) override;
     int32_t Close(uint8_t busNum, uint8_t devAddr) override;
     int32_t ResetDevice(uint8_t busNum, uint8_t devAddr) override;
     int32_t ClaimInterface(uint8_t busNum, uint8_t devAddr, uint8_t interfaceid, uint8_t force) override;
@@ -262,6 +264,20 @@ private:
         uint32_t tokenId_;
     };
 
+#ifdef USB_MANAGER_FEATURE_HOST
+    class DeviceDeathRecipient : public IRemoteObject::DeathRecipient {
+    public:
+        DeviceDeathRecipient(uint8_t busNum, uint8_t devAddr, uint32_t tokenId)
+            : busNum_(busNum), devAddr_(devAddr), tokenId_(tokenId){};
+        ~DeviceDeathRecipient() {};
+        void OnRemoteDied(const wptr<IRemoteObject> &object) override;
+    private:
+        uint8_t busNum_;
+        uint8_t devAddr_;
+        uint32_t tokenId_;
+    };
+#endif // USB_MANAGER_FEATURE_HOST
+
     class DeviceListenerDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
         DeviceListenerDeathRecipient() = default;
@@ -341,6 +357,9 @@ private:
     void UsbDeviceTypeChange(std::vector<UsbDeviceType> &disableType,
         const std::vector<UsbDeviceTypeInfo> &deviceTypes);
     void UsbTransInfoChange(HDI::Usb::V1_2::USBTransferInfo &info, const UsbTransInfo &param);
+    void RemoveDeviceClientInfo(uint8_t busNum, uint8_t devAddr, uint32_t tokenId);
+    void ReleaseDeviceClient(uint8_t busNum, uint8_t devAddr, uint32_t tokenId);
+    void RemoveAllDeviceClients(uint8_t busNum, uint8_t devAddr);
     int32_t CheckDynamicControlPermission(const char *operation);
     void OnDynamicControlParamChanged(const char *key, const char *value);
     int32_t ValidateDynamicControlDeviceRef(uint8_t busNum, uint8_t devAddr, UsbDevice &dev);
@@ -355,6 +374,7 @@ private:
     void AddDeviceConnection(uint8_t busNum, uint8_t devAddr);
     void RemoveDeviceConnection(uint8_t busNum, uint8_t devAddr);
     void RemoveAllDeviceConnections(uint8_t busNum, uint8_t devAddr);
+    void ReleaseDeviceConnectionByUid(uint8_t busNum, uint8_t devAddr, int32_t uid);
     std::string GetDeviceKey(uint8_t busNum, uint8_t devAddr);
     struct ClaimInterfaceState {
         uint32_t exclusiveOwner = 0;
@@ -388,13 +408,20 @@ private:
     std::mutex unloadSelfTimerMutex_;
 #ifdef USB_MANAGER_FEATURE_HOST
     std::shared_ptr<UsbHostManager> usbHostManager_;
+    struct DeviceClientInfo {
+        sptr<IRemoteObject> deviceRemote_;
+        sptr<UsbService::DeviceDeathRecipient> deviceRecipient;
+        uint32_t tokenId;
+        int32_t uid = -1;
+    };
+    std::map<std::tuple<uint8_t, uint8_t, uint32_t>, DeviceClientInfo> deviceClientMap_;
+    std::mutex deviceClientMutex_;
     struct DeviceControlSubscriber {
         sptr<IRemoteObject> remote;
         sptr<UsbService::DeviceControlDeathRecipient> recipient;
     };
     std::map<IRemoteObject *, DeviceControlSubscriber> deviceControlSubscribers_;
     std::mutex deviceControlSubscribersMutex_;
-
     std::list<DeviceListenerEntry> deviceListeners_;
     std::mutex deviceListenerMutex_;
     std::map<std::string, DeviceConnectionRecord> deviceConnectionMap_;

@@ -32,6 +32,7 @@
 #include "usb_request.h"
 #include "usb_interface_type.h"
 #include "serial_death_monitor.h"
+#include "device_death_monitor.h"
 #include "claim_exclusive_callback.h"
 #include "accessory_death_monitor.h"
 #include "usb_server_types.h"
@@ -50,6 +51,7 @@ public:
 
     static UsbSrvClient& GetInstance();
     int32_t OpenDevice(const UsbDevice &device, USBDevicePipe &pipe);
+    int32_t OpenDeviceWithMonitor(const UsbDevice &device, USBDevicePipe &pipe);
     int32_t ResetDevice(USBDevicePipe &pipe);
     bool HasRight(std::string deviceName);
     int32_t HasRightEx(std::string deviceName, bool &result);
@@ -169,6 +171,7 @@ private:
     sptr<SerialDeathMonitor> serialRemote = nullptr;
     sptr<AccessoryDeathMonitor> accessoryRemote = nullptr;
     sptr<ClaimExclusiveCallback> claimCallback_ = nullptr;
+    sptr<DeviceDeathMonitor> deviceRemote_ = nullptr;
 };
 } // namespace USB
 } // namespace OHOS
