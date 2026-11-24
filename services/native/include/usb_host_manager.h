@@ -96,7 +96,7 @@ public:
     bool AddDevice(UsbDevice *dev);
     bool Dump(int fd, const std::string &args);
     void ExecuteStrategy();
-    // Thread-safe query of the persist-mode flag; does not take devicesMutex_.
+    // Does not take devicesMutex_.
     bool IsDynamicControlEnabled() const;
 #ifdef USB_SERVICE_TEST
     static void SetEdmEnabledForTest(int32_t value);
@@ -104,9 +104,6 @@ public:
     void InitDynamicControlEnabled(bool enabled);
     // Applies to all non-HUB devices; caller must not hold devicesMutex_.
     void SetAllNonHubDevicesAuthorized(bool authorized);
-    // Registers the management event sink. The sink is invoked without devicesMutex_ while
-    // deviceControlEventSinkMutex_ is held, so a concurrent SetDeviceControlEventSink()
-    // waits for in-flight callbacks. The sink must not call SetDeviceControlEventSink().
     void SetDeviceControlEventSink(const std::function<void(const UsbDevice &device, bool attached)> &sink);
     void SetSerialManager(std::shared_ptr<SERIAL::SerialManager> serialManager);
 
@@ -132,9 +129,10 @@ public:
     int32_t UsbDeviceAuthorize(uint8_t busNum, uint8_t devAddr, bool authorized, const std::string &operationType);
     int32_t UsbInterfaceAuthorize(
         const HDI::Usb::V1_0::UsbDev &dev, uint8_t configId, uint8_t interfaceId, bool authorized);
+    int32_t UsbInterfaceAuthorizeForDynamicControl(const UsbDevice &dev, uint8_t configId,
+        uint8_t interfaceId, bool authorized);
 
     int32_t GetDevices(std::vector<UsbDevice> &deviceList);
-    // Returns all enumerated devices, including DISABLED ones; no permission check.
     int32_t GetAllDevices(std::vector<UsbDeviceInfo> &deviceInfos);
     int32_t GetDeviceInfo(uint8_t busNum, uint8_t devAddr, UsbDevice &dev);
     int32_t GetDeviceInfoDescriptor(
@@ -208,6 +206,12 @@ private:
     int32_t GetEdmStroageTypePolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceType> &disableType);
     int32_t GetEdmTrustListPolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceId> &trustUsbDeviceIds);
     int32_t ManageInterface(const HDI::Usb::V1_0::UsbDev &dev, uint8_t interfaceId, bool disable);
+    // The helpers below require devicesMutex_ to be held by the caller.
+    int32_t UnblockDisabledDevice(const HDI::Usb::V1_0::UsbDev &usbDev, uint8_t configId,
+        uint8_t interfaceId, USBConfig &config);
+    int32_t OpenDeviceWithRetry(const HDI::Usb::V1_0::UsbDev &usbDev);
+    int32_t DisableNonTargetInterfaces(const HDI::Usb::V1_0::UsbDev &usbDev, uint8_t configId,
+        uint8_t interfaceId, USBConfig &config);
     void FindMatchingTypes(const std::unordered_map<InterfaceType, std::vector<int32_t>> &map, bool isDev,
         std::vector<InterfaceType> &matchingTypes, const std::vector<UsbDeviceType> &disableType);
     void ExecuteManageDeviceType(const std::vector<UsbDeviceType> &disableType, bool disable,

@@ -283,13 +283,10 @@ private:
 #endif // USB_MANAGER_FEATURE_DEVICE
     class DeviceControlDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
-        DeviceControlDeathRecipient(UsbService *service, IRemoteObject *remote) : service_(service), remote_(remote) {}
-        ~DeviceControlDeathRecipient() {}
+        DeviceControlDeathRecipient() = default;
+        ~DeviceControlDeathRecipient() = default;
+        // The recipient is held by the remote object, so it resolves the service lazily.
         void OnRemoteDied(const wptr<IRemoteObject> &object) override;
-
-    private:
-        UsbService *service_;
-        IRemoteObject *remote_;
     };
 
     class ClaimDeathRecipient : public IRemoteObject::DeathRecipient {

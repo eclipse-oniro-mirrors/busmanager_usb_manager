@@ -120,6 +120,7 @@ constexpr int32_t RANDOM_VALUE_INDICATE = -1;
 constexpr int32_t BASE_CLASS_AUDIO = 0x01;
 constexpr int32_t RETRY_NUM = 10;
 constexpr uint32_t RETRY_INTERVAL = 100;
+constexpr int32_t INTERFACE_AUTHORIZE_RETRY_NUM = 3;
 constexpr uint32_t USB_PATH_LENGTH = 64;
 constexpr const char* USB_DEV_FS_PATH = "/dev/bus/usb";
 #ifdef USB_MANAGER_PASS_THROUGH
@@ -1935,6 +1936,157 @@ int32_t UsbHostManager::UsbInterfaceAuthorize(
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(MANAGE_INTERFACE_INTERVAL));
     return ret;
+}
+
+static USBConfig *FindConfigById(UsbDevice &device, uint8_t configId)
+{
+    for (auto &config : device.GetConfigs()) {
+        if (config.GetId() == static_cast<int32_t>(configId)) {
+            return &config;
+        }
+    }
+    return nullptr;
+}
+
+static bool HasInterfaceById(USBConfig &config, uint8_t interfaceId)
+{
+    for (auto &interface : config.GetInterfaces()) {
+        if (interface.GetId() == static_cast<int32_t>(interfaceId)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int32_t UsbHostManager::UsbInterfaceAuthorizeForDynamicControl(const UsbDevice &dev, uint8_t configId,
+                                                               uint8_t interfaceId, bool authorized)
+{
+    const HDI::Usb::V1_0::UsbDev usbDev = {dev.GetBusNum(), dev.GetDevAddr()};
+    std::string name = std::to_string(usbDev.busNum) + "-" + std::to_string(usbDev.devAddr);
+    bool shouldUnblock = false;
+    {
+        std::shared_lock<std::shared_mutex> sharedLock(devicesMutex_);
+        auto iter = devices_.find(name);
+        if (iter == devices_.end() || iter->second == nullptr) {
+            USB_HILOGE(MODULE_USB_HOST, "dynamic control unblock: device %{public}s not found", name.c_str());
+            return UEC_SERVICE_INVALID_VALUE;
+        }
+        shouldUnblock = authorized && !IsDynamicControlExcludedDevice(iter->second->GetClass()) &&
+            iter->second->GetAuthorizeStatus() == DISABLED;
+    }
+    if (!shouldUnblock) {
+        return UsbInterfaceAuthorize(usbDev, configId, interfaceId, authorized);
+    }
+
+    std::unique_lock<std::shared_mutex> lock(devicesMutex_);
+    auto iter = devices_.find(name);
+    if (iter == devices_.end() || iter->second == nullptr) {
+        return UEC_SERVICE_INVALID_VALUE;
+    }
+    UsbDevice *device = iter->second;
+    if (IsDynamicControlExcludedDevice(device->GetClass()) || device->GetAuthorizeStatus() != DISABLED) {
+        return UsbInterfaceAuthorize(usbDev, configId, interfaceId, authorized);
+    }
+    USBConfig *config = FindConfigById(*device, configId);
+    if (config == nullptr || !HasInterfaceById(*config, interfaceId)) {
+        USB_HILOGE(MODULE_USB_HOST, "dynamic control unblock: invalid config %{public}hhu or interface %{public}hhu",
+            configId, interfaceId);
+        return UEC_INTERFACE_INVALID_VALUE;
+    }
+    return UnblockDisabledDevice(usbDev, configId, interfaceId, *config);
+}
+
+int32_t UsbHostManager::UnblockDisabledDevice(const HDI::Usb::V1_0::UsbDev &usbDev, uint8_t configId,
+                                              uint8_t interfaceId, USBConfig &config)
+{
+    int32_t ret = UsbDeviceAuthorize(usbDev.busNum, usbDev.devAddr, true, DYNAMIC_CONTROL_OPERATION_TYPE);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST,
+            "dynamic control unblock: enable device %{public}hhu-%{public}hhu failed ret:%{public}d",
+            usbDev.busNum, usbDev.devAddr, ret);
+        return ret;
+    }
+    ret = OpenDeviceWithRetry(usbDev);
+    if (ret != UEC_OK) {
+        USB_HILOGE(MODULE_USB_HOST,
+            "dynamic control unblock: open device %{public}hhu-%{public}hhu failed ret:%{public}d",
+            usbDev.busNum, usbDev.devAddr, ret);
+        int32_t rollbackRet = UsbDeviceAuthorize(usbDev.busNum, usbDev.devAddr, false,
+            DYNAMIC_CONTROL_OPERATION_TYPE);
+        if (rollbackRet != UEC_OK) {
+            USB_HILOGE(MODULE_USB_HOST,
+                "dynamic control unblock: rollback disable device %{public}hhu-%{public}hhu failed ret:%{public}d",
+                usbDev.busNum, usbDev.devAddr, rollbackRet);
+        }
+        return ret;
+    }
+    ret = SetActiveConfig(usbDev.busNum, usbDev.devAddr, configId);
+    if (ret == UEC_OK) {
+        int32_t attempt = 0;
+        // UsbInterfaceAuthorize() waits before returning, so failed attempts are already spaced out.
+        do {
+            ret = UsbInterfaceAuthorize(usbDev, configId, interfaceId, true);
+        } while (ret != UEC_OK && ++attempt < INTERFACE_AUTHORIZE_RETRY_NUM);
+    }
+    if (ret == UEC_OK) {
+        ret = DisableNonTargetInterfaces(usbDev, configId, interfaceId, config);
+    }
+    int32_t closeRet = Close(usbDev.busNum, usbDev.devAddr);
+    if (closeRet != UEC_OK) {
+        USB_HILOGW(MODULE_USB_HOST,
+            "dynamic control unblock: close device %{public}hhu-%{public}hhu failed ret:%{public}d",
+            usbDev.busNum, usbDev.devAddr, closeRet);
+    }
+    if (ret != UEC_OK) {
+        int32_t rollbackRet = UsbDeviceAuthorize(usbDev.busNum, usbDev.devAddr, false,
+            DYNAMIC_CONTROL_OPERATION_TYPE);
+        if (rollbackRet != UEC_OK) {
+            USB_HILOGE(MODULE_USB_HOST,
+                "dynamic control unblock: rollback disable device %{public}hhu-%{public}hhu failed ret:%{public}d",
+                usbDev.busNum, usbDev.devAddr, rollbackRet);
+        }
+    }
+    return ret;
+}
+
+int32_t UsbHostManager::OpenDeviceWithRetry(const HDI::Usb::V1_0::UsbDev &usbDev)
+{
+    int32_t ret = UEC_OK;
+    for (int32_t i = 0; i < RETRY_NUM; i++) {
+        ret = OpenDevice(usbDev.busNum, usbDev.devAddr);
+        if (ret == UEC_OK) {
+            break;
+        }
+        // Give the kernel time to finish re-enumerating the device after it is authorized again.
+        std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_INTERVAL));
+    }
+    return ret;
+}
+
+int32_t UsbHostManager::DisableNonTargetInterfaces(const HDI::Usb::V1_0::UsbDev &usbDev, uint8_t configId,
+                                                   uint8_t interfaceId, USBConfig &config)
+{
+    for (auto &interface : config.GetInterfaces()) {
+        uint8_t id = static_cast<uint8_t>(interface.GetId());
+        if (id == interfaceId) {
+            continue;
+        }
+        int32_t ret = UEC_OK;
+        int32_t attempt = 0;
+        // UsbInterfaceAuthorize() waits before returning, so failed attempts are already spaced out.
+        do {
+            ret = UsbInterfaceAuthorize(usbDev, configId, id, false);
+        } while (ret != UEC_OK && ++attempt < INTERFACE_AUTHORIZE_RETRY_NUM);
+        if (ret != UEC_OK) {
+            USB_HILOGE(MODULE_USB_HOST, "dynamic control unblock: disable interface %{public}hhu failed ret:%{public}d",
+                id, ret);
+            return ret;
+        }
+    }
+    for (auto &interface : config.GetInterfaces()) {
+        interface.SetAuthorizeStatus(interface.GetId() == static_cast<int32_t>(interfaceId));
+    }
+    return UEC_OK;
 }
 
 int32_t UsbHostManager::ExecuteManageDevicePolicy(std::vector<UsbDeviceId> &trustList)
