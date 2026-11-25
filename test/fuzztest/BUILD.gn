@@ -2013,6 +2013,7 @@ ohos_fuzztest("UsbMgrOpenDeviceWithMonitorFuzzTest") {
     "access_token:libnativetoken_shared",
     "access_token:libtoken_setproc",
     "c_utils:utils",
+    "drivers_interface_usb:libserial_proxy_1.0",
     "drivers_interface_usb:libusb_proxy_1.0",
     "drivers_interface_usb:libusb_proxy_1.2",
     "drivers_interface_usb:usb_idl_headers_1.2",
