@@ -1867,6 +1867,8 @@ int32_t UsbHostManager::AuthorizeDevice(uint8_t busNum, uint8_t devAddr, bool au
     return UsbDeviceAuthorize(busNum, devAddr, authorized, operationType);
 }
 
+static void SetAllInterfacesAuthorizeStatus(UsbDevice &device, bool authorized);
+
 int32_t UsbHostManager::UsbDeviceAuthorize(
     uint8_t busNum, uint8_t devAddr, bool authorized, const std::string &operationType)
 {
@@ -1885,6 +1887,9 @@ int32_t UsbHostManager::UsbDeviceAuthorize(
     auto authorizeStatus = iterDev->second->GetAuthorizeStatus();
     if ((authorized && authorizeStatus != DISABLED) || (!authorized && authorizeStatus == DISABLED)) {
         USB_HILOGI(MODULE_USB_HOST, "no need to change dev %{public}s authorize state", name.c_str());
+        if (!authorized) {
+            SetAllInterfacesAuthorizeStatus(*iterDev->second, false);
+        }
         return UEC_OK;
     }
 
@@ -1915,6 +1920,7 @@ int32_t UsbHostManager::UsbDeviceAuthorize(
         }
     }
     iterDev->second->SetAuthorizeStatus(authorized ? ENABLED : DISABLED);
+    SetAllInterfacesAuthorizeStatus(*iterDev->second, authorized);
     std::this_thread::sleep_for(std::chrono::milliseconds(MANAGE_INTERFACE_INTERVAL));
     return UEC_OK;
 }
@@ -1958,34 +1964,78 @@ static bool HasInterfaceById(USBConfig &config, uint8_t interfaceId)
     return false;
 }
 
+static void SetAllInterfacesAuthorizeStatus(UsbDevice &device, bool authorized)
+{
+    for (auto &config : device.GetConfigs()) {
+        for (auto &interface : config.GetInterfaces()) {
+            interface.SetAuthorizeStatus(authorized);
+        }
+    }
+}
+
+static void SetInterfaceAuthorizeStatus(USBConfig &config, uint8_t interfaceId, bool authorized)
+{
+    for (auto &interface : config.GetInterfaces()) {
+        if (interface.GetId() == static_cast<int32_t>(interfaceId)) {
+            interface.SetAuthorizeStatus(authorized);
+        }
+    }
+}
+
+static bool IsDisabledDynamicControlDevice(UsbDevice &device)
+{
+    return !IsDynamicControlExcludedDevice(device.GetClass()) && device.GetAuthorizeStatus() == DISABLED;
+}
+
+int32_t UsbHostManager::AuthorizeInterfaceLegacyLocked(UsbDevice &device, const HDI::Usb::V1_0::UsbDev &usbDev,
+                                                       uint8_t configId, uint8_t interfaceId, bool authorized)
+{
+    USBConfig *config = FindConfigById(device, configId);
+    if (config != nullptr) {
+        for (auto &interface : config->GetInterfaces()) {
+            if (interface.GetId() == static_cast<int32_t>(interfaceId) &&
+                interface.GetAuthorizeStatus() == authorized) {
+                return UEC_OK;
+            }
+        }
+    }
+
+    bool opened = false;
+    if (authorized) {
+        int32_t openRet = OpenDevice(usbDev.busNum, usbDev.devAddr);
+        if (openRet != UEC_OK) {
+            USB_HILOGE(MODULE_USB_HOST,
+                "dynamic control unblock: open device %{public}hhu-%{public}hhu for interface failed ret:%{public}d",
+                usbDev.busNum, usbDev.devAddr, openRet);
+            return openRet;
+        }
+        opened = true;
+    }
+    int32_t ret = UsbInterfaceAuthorize(usbDev, configId, interfaceId, authorized);
+    if (opened && Close(usbDev.busNum, usbDev.devAddr) != UEC_OK) {
+        USB_HILOGW(MODULE_USB_HOST,
+            "dynamic control unblock: close device %{public}hhu-%{public}hhu failed", usbDev.busNum, usbDev.devAddr);
+    }
+    if (ret == UEC_OK && config != nullptr) {
+        SetInterfaceAuthorizeStatus(*config, interfaceId, authorized);
+    }
+    return ret;
+}
+
 int32_t UsbHostManager::UsbInterfaceAuthorizeForDynamicControl(const UsbDevice &dev, uint8_t configId,
                                                                uint8_t interfaceId, bool authorized)
 {
     const HDI::Usb::V1_0::UsbDev usbDev = {dev.GetBusNum(), dev.GetDevAddr()};
     std::string name = std::to_string(usbDev.busNum) + "-" + std::to_string(usbDev.devAddr);
-    bool shouldUnblock = false;
-    {
-        std::shared_lock<std::shared_mutex> sharedLock(devicesMutex_);
-        auto iter = devices_.find(name);
-        if (iter == devices_.end() || iter->second == nullptr) {
-            USB_HILOGE(MODULE_USB_HOST, "dynamic control unblock: device %{public}s not found", name.c_str());
-            return UEC_SERVICE_INVALID_VALUE;
-        }
-        shouldUnblock = authorized && !IsDynamicControlExcludedDevice(iter->second->GetClass()) &&
-            iter->second->GetAuthorizeStatus() == DISABLED;
-    }
-    if (!shouldUnblock) {
-        return UsbInterfaceAuthorize(usbDev, configId, interfaceId, authorized);
-    }
-
     std::unique_lock<std::shared_mutex> lock(devicesMutex_);
     auto iter = devices_.find(name);
     if (iter == devices_.end() || iter->second == nullptr) {
+        USB_HILOGE(MODULE_USB_HOST, "dynamic control unblock: device %{public}s not found", name.c_str());
         return UEC_SERVICE_INVALID_VALUE;
     }
     UsbDevice *device = iter->second;
-    if (IsDynamicControlExcludedDevice(device->GetClass()) || device->GetAuthorizeStatus() != DISABLED) {
-        return UsbInterfaceAuthorize(usbDev, configId, interfaceId, authorized);
+    if (!authorized || !IsDisabledDynamicControlDevice(*device)) {
+        return AuthorizeInterfaceLegacyLocked(*device, usbDev, configId, interfaceId, authorized);
     }
     USBConfig *config = FindConfigById(*device, configId);
     if (config == nullptr || !HasInterfaceById(*config, interfaceId)) {

@@ -207,6 +207,8 @@ private:
     int32_t GetEdmTrustListPolicy(sptr<IRemoteObject> remote, std::vector<UsbDeviceId> &trustUsbDeviceIds);
     int32_t ManageInterface(const HDI::Usb::V1_0::UsbDev &dev, uint8_t interfaceId, bool disable);
     // The helpers below require devicesMutex_ to be held by the caller.
+    int32_t AuthorizeInterfaceLegacyLocked(UsbDevice &device, const HDI::Usb::V1_0::UsbDev &usbDev,
+        uint8_t configId, uint8_t interfaceId, bool authorized);
     int32_t UnblockDisabledDevice(const HDI::Usb::V1_0::UsbDev &usbDev, uint8_t configId,
         uint8_t interfaceId, USBConfig &config);
     int32_t OpenDeviceWithRetry(const HDI::Usb::V1_0::UsbDev &usbDev);

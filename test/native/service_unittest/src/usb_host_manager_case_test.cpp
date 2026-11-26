@@ -404,7 +404,7 @@ UsbDevice *CreateMultiInterfaceTestDevice(uint8_t busNum, uint8_t devAddr, int32
     secondInterface.SetSubClass(0x06);
     secondInterface.SetProtocol(0x50);
     secondInterface.SetAlternateSetting(0);
-    secondInterface.SetAuthorizeStatus(true);
+    secondInterface.SetAuthorizeStatus(false);
     USBConfig config;
     config.SetId(1);
     config.SetInterfaces({firstInterface, secondInterface});
@@ -1458,6 +1458,16 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_UnblockInterface
     ASSERT_EQ(mock_->interfaceCalls.size(), 1);
     EXPECT_EQ(mock_->interfaceCalls[0].interfaceId, 1);
     EXPECT_TRUE(mock_->interfaceCalls[0].authorized);
+
+    // Setting the same state again must be idempotent and not touch the HDI interface API.
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 1, 1, true), UEC_OK);
+    EXPECT_EQ(mock_->interfaceCalls.size(), 1);
+
+    UsbDevice queried;
+    ASSERT_TRUE(service_->usbHostManager_->GetTargetDevice(1, 2, queried));
+    ASSERT_EQ(queried.GetConfigs().size(), 1);
+    ASSERT_EQ(queried.GetConfigs()[0].GetInterfaces().size(), 2);
+    EXPECT_TRUE(queried.GetConfigs()[0].GetInterfaces()[1].GetAuthorizeStatus());
 }
 
 /**
@@ -1510,6 +1520,34 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_UnblockInterface
     UsbDevice queried;
     ASSERT_TRUE(service_->usbHostManager_->GetTargetDevice(1, 2, queried));
     EXPECT_EQ(queried.GetAuthorizeStatus(), DISABLED);
+}
+
+/**
+ * @tc.name: UsbDynamicControlService_DeviceAuthorizeSyncsInterfaces
+ * @tc.desc: device authorize updates the interface authorization model to match the device state
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_DeviceAuthorizeSyncsInterfaces, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_DeviceAuthorizeSyncsInterfaces start");
+    UsbDevice *device = CreateMultiInterfaceTestDevice(1, 2);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
+
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, false), UEC_OK);
+    UsbDevice queried;
+    ASSERT_TRUE(service_->usbHostManager_->GetTargetDevice(1, 2, queried));
+    EXPECT_EQ(queried.GetAuthorizeStatus(), DISABLED);
+    ASSERT_EQ(queried.GetConfigs().size(), 1);
+    ASSERT_EQ(queried.GetConfigs()[0].GetInterfaces().size(), 2);
+    EXPECT_FALSE(queried.GetConfigs()[0].GetInterfaces()[0].GetAuthorizeStatus());
+    EXPECT_FALSE(queried.GetConfigs()[0].GetInterfaces()[1].GetAuthorizeStatus());
+
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, true), UEC_OK);
+    ASSERT_TRUE(service_->usbHostManager_->GetTargetDevice(1, 2, queried));
+    EXPECT_EQ(queried.GetAuthorizeStatus(), ENABLED);
+    EXPECT_TRUE(queried.GetConfigs()[0].GetInterfaces()[0].GetAuthorizeStatus());
+    EXPECT_TRUE(queried.GetConfigs()[0].GetInterfaces()[1].GetAuthorizeStatus());
 }
 
 /**
