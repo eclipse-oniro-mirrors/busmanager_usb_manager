@@ -2716,6 +2716,29 @@ static int32_t UsbSubmitTransferErrorCode(int32_t &error)
     }
 }
 
+static const char *UsbSubmitTransferErrorMsg(int32_t error)
+{
+    switch (error) {
+        case USB_SUBMIT_TRANSFER_IO_ERROR:
+            return "Transmission I/O error.";
+        case OHEC_COMMON_PARAM_ERROR:
+            return "Parameter error.";
+        case USB_SUBMIT_TRANSFER_NO_DEVICE_ERROR:
+            return "No such device (it may have been disconnected).";
+        case USB_SUBMIT_TRANSFER_NOT_FOUND_ERROR:
+            return "The transfer is not in progress, or is already complete or cancelled.";
+        case USB_SUBMIT_TRANSFER_RESOURCE_BUSY_ERROR:
+            return "Resource busy. Possible causes: 1. The transfer has already been submitted. "
+                   "2. The interface is claimed by another program or driver.";
+        case USB_SUBMIT_TRANSFER_NO_MEM_ERROR:
+            return "Insufficient memory. Possible causes: 1. Memory allocation failed.";
+        case UEC_COMMON_HAS_NO_RIGHT:
+            return "Access right denied. Call requestRight to get the USBDevicePipe access right first.";
+        default:
+            return "Other USB error.";
+    }
+}
+
 static napi_value UsbSubmitTransfer(napi_env env, napi_callback_info info)
 {
     UsbApiMetrics metrics("BasicServicesKit.UsbManager.UsbSubmitTransfer");
@@ -2758,8 +2781,9 @@ static napi_value UsbSubmitTransfer(napi_env env, napi_callback_info info)
         asyncContext->ashmem->CloseAshmem();
         delete asyncContext;
         asyncContext = nullptr;
-        metrics.SetErrorCode(UsbSubmitTransferErrorCode(ret));
-        ThrowBusinessError(env, UsbSubmitTransferErrorCode(ret), "");
+        int32_t errCode = UsbSubmitTransferErrorCode(ret);
+        metrics.SetErrorCode(errCode);
+        ThrowBusinessError(env, errCode, UsbSubmitTransferErrorMsg(errCode));
         return nullptr;
     }
     timesUse->endTime = std::chrono::steady_clock::now();
@@ -2837,9 +2861,9 @@ static napi_value UsbCancelTransfer(napi_env env, napi_callback_info info)
     int32_t ret = asyncContext->pipe.UsbCancelTransfer(asyncContext->endpoint);
     FinishTraceEx(HITRACE_LEVEL_INFO, HITRACE_TAG_USB);
     if (ret != napi_ok) {
-        ret = UsbSubmitTransferErrorCode(ret);
-        metrics.SetErrorCode(ret);
-        ThrowBusinessError(env, ret, "");
+        int32_t errCode = UsbSubmitTransferErrorCode(ret);
+        metrics.SetErrorCode(errCode);
+        ThrowBusinessError(env, errCode, UsbSubmitTransferErrorMsg(errCode));
         return nullptr;
     }
     return nullptr;
