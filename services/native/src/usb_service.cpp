@@ -597,7 +597,7 @@ int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const
     }
 
     uint32_t tokenId = IPCSkeleton::GetCallingTokenID();
-    int32_t callingUid = IPCSkeleton::GetCallingAppUid();
+    int32_t callingAppUid = IPCSkeleton::GetCallingAppUid();
     std::tuple<uint8_t, uint8_t, uint32_t> key = std::make_tuple(busNum, devAddr, tokenId);
 
     sptr<DeviceDeathRecipient> deviceRecipient = nullptr;
@@ -618,7 +618,7 @@ int32_t UsbService::OpenDeviceWithMonitor(uint8_t busNum, uint8_t devAddr, const
             && oldIt->second.deviceRecipient != nullptr) {
             oldIt->second.deviceRemote_->RemoveDeathRecipient(oldIt->second.deviceRecipient);
         }
-        DeviceClientInfo info = {deviceRemote, deviceRecipient, tokenId, callingUid};
+        DeviceClientInfo info = {deviceRemote, deviceRecipient, tokenId, callingAppUid};
         deviceClientMap_[key] = info;
     }
 
