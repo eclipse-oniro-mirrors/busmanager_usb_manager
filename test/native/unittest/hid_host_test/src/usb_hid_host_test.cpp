@@ -151,16 +151,28 @@ bool UsbHidHostTest::FindMouseDevice(UsbDevice &device)
     return false;
 }
 
+namespace {
+// 查找单个 interface 上第一个 interrupt-IN endpoint，拆分出来以降低
+// FindInterruptInEndpoint 的循环嵌套深度（静态告警要求方法深度 ≤4）。
+bool FindInterruptInEndpointInInterface(UsbInterface &intf, UsbInterface &outInterface, USBEndpoint &outEndpoint)
+{
+    for (auto &ep : intf.GetEndpoints()) {
+        if (ep.GetType() == HID_ENDPOINT_TYPE_INTERRUPT && ep.GetDirection() == USB_ENDPOINT_DIR_IN) {
+            outInterface = intf;
+            outEndpoint = ep;
+            return true;
+        }
+    }
+    return false;
+}
+} // namespace
+
 bool UsbHidHostTest::FindInterruptInEndpoint(UsbDevice &device, UsbInterface &interface, USBEndpoint &endpoint)
 {
     for (auto &config : device.GetConfigs()) {
         for (auto &intf : config.GetInterfaces()) {
-            for (auto &ep : intf.GetEndpoints()) {
-                if (ep.GetType() == HID_ENDPOINT_TYPE_INTERRUPT && ep.GetDirection() == USB_ENDPOINT_DIR_IN) {
-                    interface = intf;
-                    endpoint = ep;
-                    return true;
-                }
+            if (FindInterruptInEndpointInInterface(intf, interface, endpoint)) {
+                return true;
             }
         }
     }
