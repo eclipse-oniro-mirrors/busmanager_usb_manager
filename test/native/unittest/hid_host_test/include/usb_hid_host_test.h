@@ -91,7 +91,6 @@ static constexpr int32_t DEVICE_DESC_LENGTH = 18;
 static constexpr int32_t INTERRUPT_BUFFER_LENGTH = 8;
 static constexpr int32_t CONTROL_TRANSFER_TIMEOUT = 2000;
 static constexpr int32_t INTERRUPT_TRANSFER_TIMEOUT = 2000;
-static constexpr int32_t PORT_ROLE_SETTLE_SLEEP_SEC = 2;
 
 /*
  * The test fixture. It caches the enumeration result once in SetUpTestCase so
