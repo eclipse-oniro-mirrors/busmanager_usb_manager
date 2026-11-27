@@ -1870,7 +1870,14 @@ int32_t UsbHostManager::AuthorizeDevice(uint8_t busNum, uint8_t devAddr, bool au
     return UsbDeviceAuthorize(busNum, devAddr, authorized, operationType);
 }
 
-static void SetAllInterfacesAuthorizeStatus(UsbDevice &device, bool authorized);
+static void SetAllInterfacesAuthorizeStatus(UsbDevice &device, bool authorized)
+{
+    for (auto &config : device.GetConfigs()) {
+        for (auto &interface : config.GetInterfaces()) {
+            interface.SetAuthorizeStatus(authorized);
+        }
+    }
+}
 
 int32_t UsbHostManager::UsbDeviceAuthorize(
     uint8_t busNum, uint8_t devAddr, bool authorized, const std::string &operationType)
@@ -1965,15 +1972,6 @@ static bool HasInterfaceById(USBConfig &config, uint8_t interfaceId)
         }
     }
     return false;
-}
-
-static void SetAllInterfacesAuthorizeStatus(UsbDevice &device, bool authorized)
-{
-    for (auto &config : device.GetConfigs()) {
-        for (auto &interface : config.GetInterfaces()) {
-            interface.SetAuthorizeStatus(authorized);
-        }
-    }
 }
 
 static void SetInterfaceAuthorizeStatus(USBConfig &config, uint8_t interfaceId, bool authorized)
