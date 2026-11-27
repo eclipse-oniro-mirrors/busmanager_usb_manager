@@ -1550,17 +1550,17 @@ int32_t UsbService::UnRegDeviceControlCallback(const sptr<IRemoteObject> &cb)
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control callback is nullptr");
         return UEC_INTERFACE_INVALID_VALUE;
     }
-    RemoveDeviceControlSubscriber(cb.GetRefPtr());
+    RemoveDeviceControlSubscriber(cb);
     return UEC_OK;
 }
 
-void UsbService::RemoveDeviceControlSubscriber(IRemoteObject *remote)
+void UsbService::RemoveDeviceControlSubscriber(const sptr<IRemoteObject> &remote)
 {
     sptr<IRemoteObject> remoteObject = nullptr;
     sptr<UsbService::DeviceControlDeathRecipient> recipient = nullptr;
     {
         std::lock_guard<std::mutex> guard(deviceControlSubscribersMutex_);
-        auto iter = deviceControlSubscribers_.find(remote);
+        auto iter = deviceControlSubscribers_.find(remote.GetRefPtr());
         if (iter == deviceControlSubscribers_.end()) {
             return;
         }
@@ -1629,7 +1629,7 @@ void UsbService::DeviceControlDeathRecipient::OnRemoteDied(const wptr<IRemoteObj
     if (service == nullptr) {
         return;
     }
-    service->RemoveDeviceControlSubscriber(remote.GetRefPtr());
+    service->RemoveDeviceControlSubscriber(remote);
 }
 
 // LCOV_EXCL_START

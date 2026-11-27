@@ -121,6 +121,9 @@ constexpr int32_t BASE_CLASS_AUDIO = 0x01;
 constexpr int32_t RETRY_NUM = 10;
 constexpr uint32_t RETRY_INTERVAL = 100;
 constexpr int32_t INTERFACE_AUTHORIZE_RETRY_NUM = 3;
+// Keep the dynamic-control unblock path's devicesMutex_ hold bounded.
+constexpr int32_t UNBLOCK_OPEN_RETRY_NUM = 3;
+constexpr uint32_t UNBLOCK_OPEN_RETRY_INTERVAL = 50;
 constexpr uint32_t USB_PATH_LENGTH = 64;
 constexpr const char* USB_DEV_FS_PATH = "/dev/bus/usb";
 #ifdef USB_MANAGER_PASS_THROUGH
@@ -2102,13 +2105,13 @@ int32_t UsbHostManager::UnblockDisabledDevice(const HDI::Usb::V1_0::UsbDev &usbD
 int32_t UsbHostManager::OpenDeviceWithRetry(const HDI::Usb::V1_0::UsbDev &usbDev)
 {
     int32_t ret = UEC_OK;
-    for (int32_t i = 0; i < RETRY_NUM; i++) {
+    for (int32_t i = 0; i < UNBLOCK_OPEN_RETRY_NUM; i++) {
         ret = OpenDevice(usbDev.busNum, usbDev.devAddr);
         if (ret == UEC_OK) {
             break;
         }
-        // Give the kernel time to finish re-enumerating the device after it is authorized again.
-        std::this_thread::sleep_for(std::chrono::milliseconds(RETRY_INTERVAL));
+        // Bounded retry: give the kernel time to re-enumerate without holding devicesMutex_ for long.
+        std::this_thread::sleep_for(std::chrono::milliseconds(UNBLOCK_OPEN_RETRY_INTERVAL));
     }
     return ret;
 }

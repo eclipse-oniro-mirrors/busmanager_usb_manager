@@ -344,7 +344,7 @@ private:
     std::vector<sptr<IRemoteObject>> GetDeviceControlSubscribers();
     void SendDeviceControlEvent(const sptr<IRemoteObject> &remote, const UsbDevice &device, bool attached);
     void NotifyDeviceControlEvent(const UsbDevice &device, bool attached);
-    void RemoveDeviceControlSubscriber(IRemoteObject *remote);
+    void RemoveDeviceControlSubscriber(const sptr<IRemoteObject> &remote);
     std::string GetDeviceVidPidSerialNumber(const std::string &deviceName);
     int32_t GetDeviceVidPidSerialNumber(const std::string &deviceName, std::string& strDesc);
     void RemoveDeviceListener(const wptr<IRemoteObject> &object);

@@ -211,6 +211,7 @@ private:
         uint8_t configId, uint8_t interfaceId, bool authorized);
     int32_t UnblockDisabledDevice(const HDI::Usb::V1_0::UsbDev &usbDev, uint8_t configId,
         uint8_t interfaceId, USBConfig &config);
+    // Bounded retry used by the unblock path; the caller holds devicesMutex_.
     int32_t OpenDeviceWithRetry(const HDI::Usb::V1_0::UsbDev &usbDev);
     int32_t DisableNonTargetInterfaces(const HDI::Usb::V1_0::UsbDev &usbDev, uint8_t configId,
         uint8_t interfaceId, USBConfig &config);
