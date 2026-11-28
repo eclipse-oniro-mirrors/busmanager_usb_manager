@@ -254,6 +254,10 @@ public:
                                   bool authorized) override
     {
         interfaceCalls.push_back({dev.busNum, dev.devAddr, configId, interfaceId, authorized});
+        if (interfaceFailCount > 0) {
+            interfaceFailCount--;
+            return UEC_INTERFACE_INVALID_OPERATION;
+        }
         return interfaceRet;
     }
 
@@ -261,6 +265,7 @@ public:
     std::vector<InterfaceAuthorizeCall> interfaceCalls;
     int32_t deviceRet = 0;
     int32_t interfaceRet = 0;
+    int32_t interfaceFailCount = 0;
 };
 
 class MockDeviceControlRemote : public IPCObjectStub {
@@ -380,6 +385,33 @@ UsbDevice *CreateCompositeTestDevice(uint8_t busNum, uint8_t devAddr, bool inter
     device->SetConfigs({config});
     return device;
 }
+UsbDevice *CreateMultiInterfaceTestDevice(uint8_t busNum, uint8_t devAddr, int32_t deviceClass = 0x08)
+{
+    UsbDevice *device = CreateServiceTestDevice(busNum, devAddr, deviceClass);
+    if (device == nullptr) {
+        return nullptr;
+    }
+    UsbInterface firstInterface;
+    firstInterface.SetId(0);
+    firstInterface.SetClass(0x08);
+    firstInterface.SetSubClass(0x06);
+    firstInterface.SetProtocol(0x50);
+    firstInterface.SetAlternateSetting(0);
+    firstInterface.SetAuthorizeStatus(true);
+    UsbInterface secondInterface;
+    secondInterface.SetId(1);
+    secondInterface.SetClass(0x08);
+    secondInterface.SetSubClass(0x06);
+    secondInterface.SetProtocol(0x50);
+    secondInterface.SetAlternateSetting(0);
+    secondInterface.SetAuthorizeStatus(false);
+    USBConfig config;
+    config.SetId(1);
+    config.SetInterfaces({firstInterface, secondInterface});
+    device->SetConfigs({config});
+    return device;
+}
+
 
 int32_t CallUsbDeviceAuthorize(UsbService &service, uint8_t busNum, uint8_t devAddr, bool authorized)
 {
@@ -435,16 +467,6 @@ constexpr uint8_t DYN_TEST_DEV_ADDR_1 = 1;
 constexpr uint8_t DYN_TEST_BUS_NUM_2 = 2;
 constexpr uint8_t DYN_TEST_DEV_ADDR_2 = 2;
 
-/**
- * @brief Unit tests for USB dynamic control mode.
- *
- * Covered acceptance criteria:
- * - AC-1.2: dynamic control mode keeps the legacy behaviour when it is disabled.
- * - AC-3.1: full device query returns devices that the existing query filters out.
- * - AC-2.1 / AC-2.2: attach and detach events are delivered to the subscribed sink.
- * - Error code contract: parameter out of range uses UEC_INTERFACE_INVALID_VALUE; a
- *   detached target reports UEC_INTERFACE_INVALID_OPERATION.
- */
 class UsbDynamicControlTest : public testing::Test {
 public:
     static void SetUpTestCase(void);
@@ -476,13 +498,10 @@ void UsbDynamicControlTest::SetUp()
 
 void UsbDynamicControlTest::TearDown()
 {
-    // Reset the mode flag before destroying the manager so a test that enabled the
-    // mode cannot leak state into the following tests.
     if (usbHostManager_ != nullptr) {
         usbHostManager_->InitDynamicControlEnabled(false);
         usbHostManager_->SetDeviceControlEventSink(nullptr);
     }
-    // UsbHostManager owns the devices added through AddDevice() and releases them in its destructor
     usbHostManager_.reset();
 }
 
@@ -509,7 +528,7 @@ UsbDevice *UsbDynamicControlTest::CreateTestDevice(uint8_t busNum, uint8_t devAd
 
 /**
  * @tc.name: UsbDynamicControl_ModeSwitch_DefaultOffAndToggle
- * @tc.desc: mode is disabled by default and can be toggled (AC-1.2 baseline, task 1)
+ * @tc.desc: mode is disabled by default and can be toggled
  * @tc.type: FUNC
  */
 HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_ModeSwitch_DefaultOffAndToggle, TestSize.Level1)
@@ -520,7 +539,6 @@ HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_ModeSwitch_DefaultOffAndToggle
     usbHostManager_->InitDynamicControlEnabled(true);
     EXPECT_TRUE(usbHostManager_->IsDynamicControlEnabled());
 
-    // repeated set keeps the same state (idempotent)
     usbHostManager_->InitDynamicControlEnabled(true);
     EXPECT_TRUE(usbHostManager_->IsDynamicControlEnabled());
 
@@ -536,30 +554,25 @@ HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_ModeSwitch_DefaultOffAndToggle
 HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_ErrorCodeContract, TestSize.Level1)
 {
     USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_ErrorCodeContract start");
-    // failure paths use the closest existing framework error codes rather than UEC_OK
     EXPECT_NE(UEC_INTERFACE_INVALID_VALUE, UEC_OK);
     EXPECT_NE(UEC_INTERFACE_NAME_NOT_FOUND, UEC_OK);
     EXPECT_NE(UEC_INTERFACE_INVALID_OPERATION, UEC_OK);
-    // mode parameter name matches the value written by the EDM side
     EXPECT_STREQ(DYNAMIC_CONTROL_MODE_PARAM, "persist.edm.usb.intercept_enable");
 }
 
 /**
  * @tc.name: UsbDynamicControl_FullQuery_ContainsDisabledDevice
- * @tc.desc: full query returns disabled devices while the legacy query keeps filtering them (AC-3.1)
+ * @tc.desc: full query returns disabled devices while the legacy query keeps filtering them
  * @tc.type: FUNC
  */
 HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_FullQuery_ContainsDisabledDevice, TestSize.Level1)
 {
     USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_FullQuery_ContainsDisabledDevice start");
-    // enable dynamic control so the strategy entry takes the dynamic-control branch and the test
-    // does not depend on the host EDM policy state
     usbHostManager_->InitDynamicControlEnabled(true);
     UsbDevice *device = CreateTestDevice(DYN_TEST_BUS_NUM_1, DYN_TEST_DEV_ADDR_1, ENABLED);
     ASSERT_NE(device, nullptr);
     ASSERT_TRUE(usbHostManager_->AddDevice(device));
 
-    // simulate the state written by the dynamic control strategy on a disabled device
     device->SetAuthorizeStatus(DISABLED);
 
     std::vector<UsbDeviceInfo> allDevices;
@@ -588,7 +601,7 @@ HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_EmptyManager_QueryReturnsEmpty
 
 /**
  * @tc.name: UsbDynamicControl_EventSink_AttachAndDetach
- * @tc.desc: registered sink receives one attach event and one detach event (AC-2.1, AC-2.2)
+ * @tc.desc: registered sink receives one attach event and one detach event
  * @tc.type: FUNC
  */
 HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_EventSink_AttachAndDetach, TestSize.Level1)
@@ -786,6 +799,44 @@ HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_NewNonHubDefaultDisabled, Test
 }
 
 /**
+ * @tc.name: UsbDynamicControl_ReplugAfterAuthorize_DefaultDisabled
+ * @tc.desc: an authorized device is disabled again after it is unplugged and reattached in dynamic mode
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_ReplugAfterAuthorize_DefaultDisabled, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_HOST, "UsbDynamicControl_ReplugAfterAuthorize_DefaultDisabled start");
+    sptr<MockUsbDeviceInterface> mock = new (std::nothrow) MockUsbDeviceInterface();
+    ASSERT_NE(mock, nullptr);
+    usbHostManager_->usbDeviceInterface_ = mock;
+    usbHostManager_->InitDynamicControlEnabled(true);
+
+    UsbDevice *device = CreateTestDevice(DYN_TEST_BUS_NUM_1, 2, NEW_ARRIVED);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(usbHostManager_->AddDevice(device));
+    ASSERT_FALSE(mock->deviceCalls.empty());
+    EXPECT_FALSE(mock->deviceCalls.back().authorized);
+
+    mock->deviceCalls.clear();
+    ASSERT_EQ(usbHostManager_->AuthorizeDevice(DYN_TEST_BUS_NUM_1, 2, true, DYNAMIC_CONTROL_OPERATION_TYPE), UEC_OK);
+    ASSERT_EQ(mock->deviceCalls.size(), 1);
+    EXPECT_TRUE(mock->deviceCalls[0].authorized);
+
+    ASSERT_TRUE(usbHostManager_->DelDevice(DYN_TEST_BUS_NUM_1, 2));
+    UsbDevice *replugged = CreateTestDevice(DYN_TEST_BUS_NUM_1, 2, NEW_ARRIVED);
+    ASSERT_NE(replugged, nullptr);
+    ASSERT_TRUE(usbHostManager_->AddDevice(replugged));
+    ASSERT_FALSE(mock->deviceCalls.empty());
+    EXPECT_FALSE(mock->deviceCalls.back().authorized);
+
+    std::vector<UsbDeviceInfo> infos;
+    ASSERT_EQ(usbHostManager_->GetAllDevices(infos), UEC_OK);
+    ASSERT_EQ(infos.size(), 1);
+    EXPECT_FALSE(infos[0].authorized);
+    EXPECT_FALSE(infos[0].isHub);
+}
+
+/**
  * @tc.name: UsbDynamicControl_NewHubNotDisabled
  * @tc.desc: a NEW_ARRIVED HUB is not disabled by the dynamic mode
  * @tc.type: FUNC
@@ -956,6 +1007,31 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_InterfaceAuthori
 }
 
 /**
+ * @tc.name: UsbDynamicControlService_InterfaceAuthorizeKeepsDeviceAuthorized
+ * @tc.desc: interface authorize only changes the target interface and keeps the device authorized
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_InterfaceAuthorizeKeepsDeviceAuthorized,
+         TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_InterfaceAuthorizeKeepsDeviceAuthorized start");
+    UsbDevice *device = CreateServiceTestDevice(1, 2);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
+
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 0, 0, false), UEC_OK);
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 0, 0, true), UEC_OK);
+    ASSERT_EQ(mock_->interfaceCalls.size(), 2);
+    EXPECT_FALSE(mock_->interfaceCalls[0].authorized);
+    EXPECT_TRUE(mock_->interfaceCalls[1].authorized);
+
+    std::vector<UsbDeviceInfo> infos;
+    ASSERT_EQ(service_->usbHostManager_->GetAllDevices(infos), UEC_OK);
+    ASSERT_EQ(infos.size(), 1);
+    EXPECT_TRUE(infos[0].authorized);
+}
+
+/**
  * @tc.name: UsbDynamicControlService_Callbacks
  * @tc.desc: callback permission/null/duplicate/unregister/notify payload/error/death/destructor paths
  * @tc.type: FUNC
@@ -985,8 +1061,6 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_Callbacks, TestS
 
     EXPECT_EQ(service_->UnRegDeviceControlCallback(nullptr), UEC_INTERFACE_INVALID_VALUE);
     EXPECT_EQ(service_->UnRegDeviceControlCallback(remote), UEC_OK);
-    // Event delivery re-checks the caller (defense in depth); restore the authorized
-    // override before triggering a notification.
     UsbService::SetCallerValidForTest(1);
     UsbDevice *device2 = CreateServiceTestDevice(1, 4);
     ASSERT_NE(device2, nullptr);
@@ -1003,15 +1077,15 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_Callbacks, TestS
     EXPECT_EQ(remote->sendCount, 2);
     delete device3;
 
+    auto globalService = UsbService::GetGlobalInstance();
+    ASSERT_NE(globalService, nullptr);
+    EXPECT_EQ(globalService->RegDeviceControlCallback(remote), UEC_OK);
     sptr<UsbService::DeviceControlDeathRecipient> recipient =
-        new (std::nothrow) UsbService::DeviceControlDeathRecipient(service_.GetRefPtr(), remote.GetRefPtr());
+        new (std::nothrow) UsbService::DeviceControlDeathRecipient();
     ASSERT_NE(recipient, nullptr);
     wptr<IRemoteObject> remoteWptr = remote;
     recipient->OnRemoteDied(remoteWptr);
-    sptr<UsbService::DeviceControlDeathRecipient> nullRecipient =
-        new (std::nothrow) UsbService::DeviceControlDeathRecipient(nullptr, remote.GetRefPtr());
-    ASSERT_NE(nullRecipient, nullptr);
-    nullRecipient->OnRemoteDied(remoteWptr);
+    EXPECT_TRUE(globalService->GetDeviceControlSubscribers().empty());
     EXPECT_EQ(service_->UnRegDeviceControlCallback(remote), UEC_OK);
 }
 
@@ -1103,7 +1177,6 @@ HWTEST_F(UsbDynamicControlTest, UsbDynamicControl_InitAndSkipBranches, TestSize.
     mock->deviceCalls.clear();
     usbHostManager_->InitDynamicControlEnabled(true);
     EXPECT_TRUE(usbHostManager_->IsDynamicControlEnabled());
-    // setting the flag alone does not touch existing devices
     EXPECT_TRUE(mock->deviceCalls.empty());
     usbHostManager_->SetAllNonHubDevicesAuthorized(false);
     EXPECT_EQ(mock->deviceCalls.size(), 1);
@@ -1331,6 +1404,207 @@ HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_InterfaceInvalid
     ASSERT_EQ(mock_->interfaceCalls.size(), 1);
     EXPECT_EQ(mock_->interfaceCalls[0].configId, 0xFF);
     EXPECT_EQ(mock_->interfaceCalls[0].interfaceId, 0xFF);
+}
+
+/**
+ * @tc.name: UsbDynamicControlService_UnblockInterfaceEnablesDevice
+ * @tc.desc: unblocking an interface of a disabled non-HUB device enables the device and disables the others
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_UnblockInterfaceEnablesDevice, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_UnblockInterfaceEnablesDevice start");
+    UsbDevice *device = CreateMultiInterfaceTestDevice(1, 2);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
+    ASSERT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, false), UEC_OK);
+    mock_->deviceCalls.clear();
+    mock_->interfaceCalls.clear();
+
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 1, 0, true), UEC_OK);
+    ASSERT_EQ(mock_->deviceCalls.size(), 1);
+    EXPECT_TRUE(mock_->deviceCalls[0].authorized);
+    ASSERT_EQ(mock_->interfaceCalls.size(), 2);
+    EXPECT_EQ(mock_->interfaceCalls[0].interfaceId, 0);
+    EXPECT_TRUE(mock_->interfaceCalls[0].authorized);
+    EXPECT_EQ(mock_->interfaceCalls[1].interfaceId, 1);
+    EXPECT_FALSE(mock_->interfaceCalls[1].authorized);
+
+    UsbDevice queried;
+    ASSERT_TRUE(service_->usbHostManager_->GetTargetDevice(1, 2, queried));
+    EXPECT_EQ(queried.GetAuthorizeStatus(), ENABLED);
+    ASSERT_EQ(queried.GetConfigs().size(), 1);
+    ASSERT_EQ(queried.GetConfigs()[0].GetInterfaces().size(), 2);
+    EXPECT_TRUE(queried.GetConfigs()[0].GetInterfaces()[0].GetAuthorizeStatus());
+    EXPECT_FALSE(queried.GetConfigs()[0].GetInterfaces()[1].GetAuthorizeStatus());
+}
+
+/**
+ * @tc.name: UsbDynamicControlService_UnblockInterfaceOnEnabledDevice
+ * @tc.desc: unblocking an interface of an enabled device keeps the legacy single-interface behavior
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_UnblockInterfaceOnEnabledDevice, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_UnblockInterfaceOnEnabledDevice start");
+    UsbDevice *device = CreateMultiInterfaceTestDevice(1, 2);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
+    mock_->deviceCalls.clear();
+    mock_->interfaceCalls.clear();
+
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 1, 1, true), UEC_OK);
+    EXPECT_TRUE(mock_->deviceCalls.empty());
+    ASSERT_EQ(mock_->interfaceCalls.size(), 1);
+    EXPECT_EQ(mock_->interfaceCalls[0].interfaceId, 1);
+    EXPECT_TRUE(mock_->interfaceCalls[0].authorized);
+
+    // Setting the same state again must be idempotent and not touch the HDI interface API.
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 1, 1, true), UEC_OK);
+    EXPECT_EQ(mock_->interfaceCalls.size(), 1);
+
+    UsbDevice queried;
+    ASSERT_TRUE(service_->usbHostManager_->GetTargetDevice(1, 2, queried));
+    ASSERT_EQ(queried.GetConfigs().size(), 1);
+    ASSERT_EQ(queried.GetConfigs()[0].GetInterfaces().size(), 2);
+    EXPECT_TRUE(queried.GetConfigs()[0].GetInterfaces()[1].GetAuthorizeStatus());
+}
+
+/**
+ * @tc.name: UsbDynamicControlService_UnblockInterfaceInvalidConfig
+ * @tc.desc: unblocking with an unknown config or interface is rejected before the device is enabled
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_UnblockInterfaceInvalidConfig, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_UnblockInterfaceInvalidConfig start");
+    UsbDevice *device = CreateMultiInterfaceTestDevice(1, 2);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
+    ASSERT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, false), UEC_OK);
+    mock_->deviceCalls.clear();
+    mock_->interfaceCalls.clear();
+
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 2, 0, true), UEC_INTERFACE_INVALID_VALUE);
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 1, 9, true), UEC_INTERFACE_INVALID_VALUE);
+    EXPECT_TRUE(mock_->deviceCalls.empty());
+    EXPECT_TRUE(mock_->interfaceCalls.empty());
+
+    UsbDevice queried;
+    ASSERT_TRUE(service_->usbHostManager_->GetTargetDevice(1, 2, queried));
+    EXPECT_EQ(queried.GetAuthorizeStatus(), DISABLED);
+}
+
+/**
+ * @tc.name: UsbDynamicControlService_UnblockInterfaceRollback
+ * @tc.desc: a failed interface authorize rolls the auto-enabled device back to disabled
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_UnblockInterfaceRollback, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_UnblockInterfaceRollback start");
+    UsbDevice *device = CreateMultiInterfaceTestDevice(1, 2);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
+    ASSERT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, false), UEC_OK);
+    mock_->deviceCalls.clear();
+    mock_->interfaceCalls.clear();
+    mock_->interfaceRet = UEC_INTERFACE_INVALID_OPERATION;
+
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 1, 0, true), UEC_INTERFACE_INVALID_OPERATION);
+    ASSERT_EQ(mock_->deviceCalls.size(), 2);
+    EXPECT_TRUE(mock_->deviceCalls[0].authorized);
+    EXPECT_FALSE(mock_->deviceCalls[1].authorized);
+    mock_->interfaceRet = UEC_OK;
+
+    UsbDevice queried;
+    ASSERT_TRUE(service_->usbHostManager_->GetTargetDevice(1, 2, queried));
+    EXPECT_EQ(queried.GetAuthorizeStatus(), DISABLED);
+}
+
+/**
+ * @tc.name: UsbDynamicControlService_DeviceAuthorizeSyncsInterfaces
+ * @tc.desc: device authorize updates the interface authorization model to match the device state
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_DeviceAuthorizeSyncsInterfaces, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_DeviceAuthorizeSyncsInterfaces start");
+    UsbDevice *device = CreateMultiInterfaceTestDevice(1, 2);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
+
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, false), UEC_OK);
+    UsbDevice queried;
+    ASSERT_TRUE(service_->usbHostManager_->GetTargetDevice(1, 2, queried));
+    EXPECT_EQ(queried.GetAuthorizeStatus(), DISABLED);
+    ASSERT_EQ(queried.GetConfigs().size(), 1);
+    ASSERT_EQ(queried.GetConfigs()[0].GetInterfaces().size(), 2);
+    EXPECT_FALSE(queried.GetConfigs()[0].GetInterfaces()[0].GetAuthorizeStatus());
+    EXPECT_FALSE(queried.GetConfigs()[0].GetInterfaces()[1].GetAuthorizeStatus());
+
+    EXPECT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, true), UEC_OK);
+    ASSERT_TRUE(service_->usbHostManager_->GetTargetDevice(1, 2, queried));
+    EXPECT_EQ(queried.GetAuthorizeStatus(), ENABLED);
+    EXPECT_TRUE(queried.GetConfigs()[0].GetInterfaces()[0].GetAuthorizeStatus());
+    EXPECT_TRUE(queried.GetConfigs()[0].GetInterfaces()[1].GetAuthorizeStatus());
+}
+
+/**
+ * @tc.name: UsbDynamicControlService_UnblockInterfaceSkipsHub
+ * @tc.desc: HUB devices keep the legacy single-interface behavior and are not auto-enabled
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_UnblockInterfaceSkipsHub, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_UnblockInterfaceSkipsHub start");
+    UsbDevice *hub = CreateMultiInterfaceTestDevice(1, 3, BASE_CLASS_HUB);
+    ASSERT_NE(hub, nullptr);
+    ASSERT_TRUE(service_->usbHostManager_->AddDevice(hub));
+    ASSERT_EQ(CallUsbDeviceAuthorize(*service_, 1, 3, false), UEC_OK);
+    mock_->deviceCalls.clear();
+    mock_->interfaceCalls.clear();
+
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 3, 1, 0, true), UEC_OK);
+    EXPECT_TRUE(mock_->deviceCalls.empty());
+    ASSERT_EQ(mock_->interfaceCalls.size(), 1);
+    EXPECT_EQ(mock_->interfaceCalls[0].interfaceId, 0);
+}
+
+/**
+ * @tc.name: UsbDynamicControlService_UnblockInterfaceRetriesAuthorize
+ * @tc.desc: transient interface authorize failures are retried before the unblock operation succeeds
+ * @tc.type: FUNC
+ */
+HWTEST_F(UsbDynamicControlServiceTest, UsbDynamicControlService_UnblockInterfaceRetriesAuthorize, TestSize.Level1)
+{
+    USB_HILOGI(MODULE_USB_SERVICE, "UsbDynamicControlService_UnblockInterfaceRetriesAuthorize start");
+    UsbDevice *device = CreateMultiInterfaceTestDevice(1, 2);
+    ASSERT_NE(device, nullptr);
+    ASSERT_TRUE(service_->usbHostManager_->AddDevice(device));
+    ASSERT_EQ(CallUsbDeviceAuthorize(*service_, 1, 2, false), UEC_OK);
+    mock_->deviceCalls.clear();
+    mock_->interfaceCalls.clear();
+    mock_->interfaceFailCount = 2;
+
+    EXPECT_EQ(CallUsbInterfaceAuthorize(*service_, 1, 2, 1, 0, true), UEC_OK);
+    ASSERT_EQ(mock_->deviceCalls.size(), 1);
+    EXPECT_TRUE(mock_->deviceCalls[0].authorized);
+    ASSERT_EQ(mock_->interfaceCalls.size(), 4);
+    for (int32_t i = 0; i < 3; i++) {
+        EXPECT_EQ(mock_->interfaceCalls[i].interfaceId, 0);
+        EXPECT_TRUE(mock_->interfaceCalls[i].authorized);
+    }
+    EXPECT_EQ(mock_->interfaceCalls[3].interfaceId, 1);
+    EXPECT_FALSE(mock_->interfaceCalls[3].authorized);
+
+    UsbDevice queried;
+    ASSERT_TRUE(service_->usbHostManager_->GetTargetDevice(1, 2, queried));
+    EXPECT_EQ(queried.GetAuthorizeStatus(), ENABLED);
+    ASSERT_EQ(queried.GetConfigs().size(), 1);
+    ASSERT_EQ(queried.GetConfigs()[0].GetInterfaces().size(), 2);
+    EXPECT_TRUE(queried.GetConfigs()[0].GetInterfaces()[0].GetAuthorizeStatus());
+    EXPECT_FALSE(queried.GetConfigs()[0].GetInterfaces()[1].GetAuthorizeStatus());
 }
 
 } // namespace USB

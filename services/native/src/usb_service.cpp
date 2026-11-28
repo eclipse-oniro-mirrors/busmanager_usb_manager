@@ -1577,8 +1577,7 @@ int32_t UsbService::UsbInterfaceAuthorize(uint8_t busNum, uint8_t devAddr, uint8
         funcResult = UEC_INTERFACE_INVALID_OPERATION;
         return funcResult;
     }
-    const HDI::Usb::V1_0::UsbDev usbDev = {busNum, devAddr};
-    funcResult = usbHostManager_->UsbInterfaceAuthorize(usbDev, configId, interfaceId, authorized);
+    funcResult = usbHostManager_->UsbInterfaceAuthorizeForDynamicControl(dev, configId, interfaceId, authorized);
     if (funcResult != UEC_OK) {
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control interface authorize failed, ret:%{public}d", funcResult);
     }
@@ -1604,7 +1603,7 @@ int32_t UsbService::RegDeviceControlCallback(const sptr<IRemoteObject> &cb)
         }
     }
     sptr<UsbService::DeviceControlDeathRecipient> recipient =
-        new (std::nothrow) UsbService::DeviceControlDeathRecipient(this, key);
+        new (std::nothrow) UsbService::DeviceControlDeathRecipient();
     if (recipient == nullptr) {
         USB_HILOGE(MODULE_USB_SERVICE, "create dynamic control death recipient failed");
         return UEC_SERVICE_NO_MEMORY;
@@ -1646,17 +1645,17 @@ int32_t UsbService::UnRegDeviceControlCallback(const sptr<IRemoteObject> &cb)
         USB_HILOGE(MODULE_USB_SERVICE, "dynamic control callback is nullptr");
         return UEC_INTERFACE_INVALID_VALUE;
     }
-    RemoveDeviceControlSubscriber(cb.GetRefPtr());
+    RemoveDeviceControlSubscriber(cb);
     return UEC_OK;
 }
 
-void UsbService::RemoveDeviceControlSubscriber(IRemoteObject *remote)
+void UsbService::RemoveDeviceControlSubscriber(const sptr<IRemoteObject> &remote)
 {
     sptr<IRemoteObject> remoteObject = nullptr;
     sptr<UsbService::DeviceControlDeathRecipient> recipient = nullptr;
     {
         std::lock_guard<std::mutex> guard(deviceControlSubscribersMutex_);
-        auto iter = deviceControlSubscribers_.find(remote);
+        auto iter = deviceControlSubscribers_.find(remote.GetRefPtr());
         if (iter == deviceControlSubscribers_.end()) {
             return;
         }
@@ -1717,10 +1716,15 @@ void UsbService::NotifyDeviceControlEvent(const UsbDevice &device, bool attached
 void UsbService::DeviceControlDeathRecipient::OnRemoteDied(const wptr<IRemoteObject> &object)
 {
     USB_HILOGI(MODULE_USB_SERVICE, "DeviceControlDeathRecipient OnRemoteDied");
-    if (service_ == nullptr) {
+    sptr<IRemoteObject> remote = object.promote();
+    if (remote == nullptr) {
         return;
     }
-    service_->RemoveDeviceControlSubscriber(remote_);
+    sptr<UsbService> service = UsbService::GetGlobalInstance();
+    if (service == nullptr) {
+        return;
+    }
+    service->RemoveDeviceControlSubscriber(remote);
 }
 
 // LCOV_EXCL_START

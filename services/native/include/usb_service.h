@@ -299,13 +299,10 @@ private:
 #endif // USB_MANAGER_FEATURE_DEVICE
     class DeviceControlDeathRecipient : public IRemoteObject::DeathRecipient {
     public:
-        DeviceControlDeathRecipient(UsbService *service, IRemoteObject *remote) : service_(service), remote_(remote) {}
-        ~DeviceControlDeathRecipient() {}
+        DeviceControlDeathRecipient() = default;
+        ~DeviceControlDeathRecipient() = default;
+        // The recipient is held by the remote object, so it resolves the service lazily.
         void OnRemoteDied(const wptr<IRemoteObject> &object) override;
-
-    private:
-        UsbService *service_;
-        IRemoteObject *remote_;
     };
 
     class ClaimDeathRecipient : public IRemoteObject::DeathRecipient {
@@ -366,7 +363,7 @@ private:
     std::vector<sptr<IRemoteObject>> GetDeviceControlSubscribers();
     void SendDeviceControlEvent(const sptr<IRemoteObject> &remote, const UsbDevice &device, bool attached);
     void NotifyDeviceControlEvent(const UsbDevice &device, bool attached);
-    void RemoveDeviceControlSubscriber(IRemoteObject *remote);
+    void RemoveDeviceControlSubscriber(const sptr<IRemoteObject> &remote);
     std::string GetDeviceVidPidSerialNumber(const std::string &deviceName);
     int32_t GetDeviceVidPidSerialNumber(const std::string &deviceName, std::string& strDesc);
     void RemoveDeviceListener(const wptr<IRemoteObject> &object);
